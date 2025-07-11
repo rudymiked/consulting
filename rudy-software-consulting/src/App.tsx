@@ -7,6 +7,7 @@ import Header from './components/Header';
 import Footer from './components/Footer';
 import Services from './components/Services';
 import './styles/main.css';
+import ExperienceFooter from './components/ExperienceFooter';
 
 const App: React.FC = () => {
   return (
@@ -18,6 +19,7 @@ const App: React.FC = () => {
           <Services />
         </Box>
       </Container>
+      <ExperienceFooter />
       <Footer />
     </>
   );

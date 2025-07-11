@@ -7,7 +7,7 @@ import Button from '@mui/material/Button';
 import Box from '@mui/material/Box';
 
 const Header: React.FC = () => (
-  <AppBar position="static" color="primary" elevation={2}>
+  <AppBar position="static" color="default" elevation={2}>
     <Toolbar>
       <img src="/src/assets/icons/apple-touch-icon.png" alt="Logo" style={{ width: 40, height: 40, marginRight: 16 }} />
       <Typography variant="h6" component="div" align='left' sx={{ flexGrow: 1 }}>
