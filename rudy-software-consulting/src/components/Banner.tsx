@@ -55,7 +55,7 @@ const Banner: React.FC = () => {
                     fontSize: '1.2rem', // Optional: scale down font size
                     },
                 })}>
-                    Transform your ideas into reality with expert custom tailored software solutions. Our services include custom software development, SaaS, API integrations, and enterprise consulting.
+                    Transform your ideas into reality with expert custom tailored software. Our services include custom software development for web, desktop, and mobile, SaaS, API integrations, and enterprise consulting.
                 </Typography>
                 <Button variant="contained" color="primary" href="#contact" sx={{ mt: 1 }}>
                     Get Started
