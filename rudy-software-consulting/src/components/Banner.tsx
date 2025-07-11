@@ -43,7 +43,7 @@ const Banner: React.FC = () => {
                                     fontSize: '1.2rem', // Optional: scale down font size
                                 },
                             })}>
-                            Software Solutions and Technology Consulting
+                            Software Solutions and Consulting
                         </Typography>
                         <Typography
                             variant="body1"
@@ -85,10 +85,8 @@ const Banner: React.FC = () => {
                         top: 120,
                         right: 75,
                         boxShadow: 0,
-                        [theme.breakpoints.down('sm')]: {
-                            padding: 2,
-                            height: '40%',
-                            justifyContent: 'flex-start',
+                        [theme.breakpoints.down('md')]: {
+                            display: 'none',
                         },
                     })}
                 >
@@ -100,10 +98,8 @@ const Banner: React.FC = () => {
                         top: 70,
                         right: 20,
                         boxShadow: 0,
-                        [theme.breakpoints.down('sm')]: {
-                            padding: 2,
-                            height: '40%',
-                            justifyContent: 'flex-start',
+                        [theme.breakpoints.down('md')]: {
+                            display: 'none',
                         },
                     })}
                 >
