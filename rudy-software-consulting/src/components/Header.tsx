@@ -19,7 +19,7 @@ const Header: React.FC = () => (
     <Toolbar sx={{ display: 'flex', justifyContent: 'space-between' }}>
       <Box sx={{ display: 'flex', alignItems: 'center' }}>
         <img
-          src="/src/assets/rudylogo.png"
+          src="/src/assets/rudyard.png"
           alt="Logo"
           style={{ width: 'auto', height: 50, marginRight: 16 }}
         />
