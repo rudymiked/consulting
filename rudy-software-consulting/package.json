@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "A software consulting website for Rudy Software Consulting.",
   "main": "src/main.tsx",
+  "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
