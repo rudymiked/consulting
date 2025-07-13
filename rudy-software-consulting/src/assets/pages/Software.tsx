@@ -27,7 +27,7 @@ const SoftwarePage: React.FC = () => {
         <div>
             <Grid container direction="column" alignItems="center" spacing={2} sx={{ mt: 4 }}>
                 <Box>
-                    <ServicesTemplate title="Software Services" services={services} />
+                    <ServicesTemplate title="Software Development" services={services} />
                 </Box>
                 {/* <Box>
                     <Grid direction="row" spacing={2} container justifyContent="center" sx={{ mt: 4 }}>

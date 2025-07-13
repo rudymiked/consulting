@@ -9,6 +9,7 @@ import ConsultingPage from './assets/pages/Consulting';
 import HomePage from './assets/pages/Home';
 import { Box } from '@mui/material';
 import ContactPage from './assets/pages/Contact';
+import AboutPage from './assets/pages/About';
 
 const App: React.FC = () => {
   return (
@@ -21,6 +22,7 @@ const App: React.FC = () => {
             <Route path="/software" element={<SoftwarePage />} />
             <Route path="/consulting" element={<ConsultingPage />} />
             <Route path="/contact" element={<ContactPage />} />
+            <Route path="/about" element={<AboutPage />} />
           </Routes>
         </Box>
         <Footer />

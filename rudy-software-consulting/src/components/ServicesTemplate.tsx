@@ -22,12 +22,12 @@ const ServicesTemplate: React.FC<ISericeTemplateProps> = (props: ISericeTemplate
 
   return (
     <Box sx={{ py: 0, background: '#f7f9fb' }}>
-      <Typography variant="h4" align="center" gutterBottom sx={{ fontWeight: 700, py: 4 }}>
+      <Typography variant="h4" align="center" gutterBottom sx={{ fontWeight: 700, pt: 2 }}>
         {title}
       </Typography>
       <Grid container direction="row" spacing={2} alignItems="center">
         {services.map((service, idx) => (
-          <Box key={idx} padding={2} sx={{ maxWidth: 320, width: '100%' }}>
+          <Box key={idx} px={2} pb={2} pt={1} sx={{ maxWidth: 320, width: '100%' }}>
             <Card
               elevation={4}
               sx={{
