@@ -30,7 +30,7 @@ const Header: React.FC = () => (
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
         <Tab component={Link} to="/software" label="Custom software" />
         <Tab component={Link} to="/consulting" label="Consulting" />
-        <Tab component={Link} to="/security" label="Security" />
+        {/* <Tab component={Link} to="/security" label="Security" /> */}
         <Tab component={Link} to="/contact" label="Get Started" />
         <Tab component={Link} to="/about" label="About" />
         {/* <Button color="inherit" href="/consulting">Consulting</Button>
