@@ -5,9 +5,9 @@ import {
   Grid,
   Box,
   Typography,
-  Container,
-  FormControl
+  Container
 } from '@mui/material';
+import '../../styles/main.css';
 
 const ContactForm: React.FC = () => {
   const [formData, setFormData] = useState({
@@ -33,7 +33,7 @@ const ContactForm: React.FC = () => {
     <Container maxWidth="sm">
       <Box sx={{ mt: 5 }}>
         <Typography variant="h5" gutterBottom>
-          Contact Us
+          Getting in Touch:
         </Typography>
         <form onSubmit={handleSubmit}>
           <Grid container spacing={2} direction="column">
@@ -71,7 +71,7 @@ const ContactForm: React.FC = () => {
             <Box>
               <TextField
                 fullWidth
-                label="Message"
+                label="About Your Project"
                 name="message"
                 value={formData.message}
                 onChange={handleChange}
@@ -81,7 +81,7 @@ const ContactForm: React.FC = () => {
               />
             </Box>
             <Box>
-              <Button type="submit" variant="contained" fullWidth>
+              <Button className="main-button" type="submit" variant="contained" fullWidth>
                 Submit
               </Button>
             </Box>

@@ -1,6 +1,6 @@
-# Rudy Software Consulting
+# Rudyard Software Consulting
 
-Welcome to the Rudy Software Consulting website! This project is built using React and Vite, providing a modern and efficient platform for showcasing our consulting services.
+Welcome to the Rudyard Software Consulting website! This project is built using React and Vite, providing a modern and efficient platform for showcasing our consulting services.
 
 ## Project Structure
 

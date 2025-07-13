@@ -47,3 +47,15 @@ footer {
     bottom: 0;
     width: 100%;
 }
+
+.main-button {
+  background-color: #025680  !important;
+  color: white;
+  border-radius: 4px;
+  font-weight: bold;
+  transition: background-color 0.3s ease;
+}
+
+.main-button:hover {
+  background-color: #012639  !important;
+}

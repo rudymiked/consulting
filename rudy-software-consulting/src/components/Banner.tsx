@@ -58,7 +58,7 @@ const Banner: React.FC = () => {
                             })}>
                             Transform your ideas into reality with expert custom tailored software. Our services include custom software development for web, desktop and mobile, SaaS, API integrations, and enterprise consulting.
                         </Typography>
-                        <Button variant="contained" color="primary" href="#contact" sx={{ mt: 1 }}>
+                        <Button className="main-button" variant="contained" color="primary" href="#contact" sx={{ mt: 1 }}>
                             Get Started
                         </Button>
                     </Box>
