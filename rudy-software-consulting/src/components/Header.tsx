@@ -4,7 +4,7 @@ import Toolbar from '@mui/material/Toolbar';
 import Box from '@mui/material/Box';
 import { Link } from 'react-router-dom';
 import { Tab } from '@mui/material';
-import rudyard from '../assets/rudyard.png'; // Adjust the path as necessary
+import rudyard from '../assets/rudyardtech.png'; // Adjust the path as necessary
 
 const Header: React.FC = () => (
   <AppBar

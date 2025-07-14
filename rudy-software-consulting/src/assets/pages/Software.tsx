@@ -4,7 +4,25 @@ import ServicesTemplate from "../../components/ServicesTemplate";
 import CodeIcon from '@mui/icons-material/Code';
 import { CloudSync, SettingsSuggest } from '@mui/icons-material';
 
-const services = [
+const developmentServices = [
+  {
+    icon: <CodeIcon color="primary" sx={{ fontSize: 48, mb: 2 }} />,
+    title: 'Web Application Development',
+    description: 'Build scalable, responsive web apps tailored to your business goals.',
+  },
+  {
+    icon: <SettingsSuggest color="primary" sx={{ fontSize: 48, mb: 2 }} />,
+    title: 'Automated Services',
+    description: 'Streamline operations with smart automation and seamless API integrations taht work while you work.',
+  },
+  {
+    icon: <CloudSync color="primary" sx={{ fontSize: 48, mb: 2 }} />,
+    title: 'Cloud Development',
+    description: 'Design and deploy secure, cloud-native solutions with modern architectures.',
+  },
+];
+
+const modenizationServices = [
   {
     icon: <CodeIcon color="primary" sx={{ fontSize: 48, mb: 2 }} />,
     title: 'Web Application Development',
@@ -27,7 +45,7 @@ const SoftwarePage: React.FC = () => {
         <div>
             <Grid container direction="column" alignItems="center" spacing={2} sx={{ mt: 4 }}>
                 <Box>
-                    <ServicesTemplate title="Software Development" services={services} />
+                    <ServicesTemplate title="Software Development" services={developmentServices} />
                 </Box>
                 {/* <Box>
                     <Grid direction="row" spacing={2} container justifyContent="center" sx={{ mt: 4 }}>
@@ -59,6 +77,9 @@ const SoftwarePage: React.FC = () => {
                 </Box> */}
                 <Box>
                     <Experience />
+                </Box>
+                <Box>
+                    <ServicesTemplate title="Software Development" services={modenizationServices} />
                 </Box>
                 <Box>
                     <Button className="main-button" variant="contained" color="primary" href="#contact" sx={{ mt: 1 }}>
