@@ -1,4 +1,7 @@
 import { Box, Button, Grid, Typography } from "@mui/material";
+import tech from "../assets/tech.jpg"
+import marathon from "/src/assets/marathon.png";
+import realestatedash from "/src/assets/realestatedash.png";
 
 const Banner: React.FC = () => {
     return (
@@ -6,7 +9,7 @@ const Banner: React.FC = () => {
             {/* Background image */}
             <Box sx={{ width: '100%' }}>
                 <img
-                    src="src/assets/tech.jpg"
+                    src={tech}
                     alt="Banner Image"
                     style={{ width: '100%', height: 'auto', borderRadius: 8 }}
                 />
@@ -90,7 +93,7 @@ const Banner: React.FC = () => {
                         },
                     })}
                 >
-                    <img src="/src/assets/marathon.png" style={{ width: 450, height: 'auto' }} />
+                    <img src={marathon} style={{ width: 450, height: 'auto' }} />
                 </Box>
                 <Box
                     sx={(theme) => ({
@@ -103,7 +106,7 @@ const Banner: React.FC = () => {
                         },
                     })}
                 >
-                    <img src="/src/assets/realestatedash.png" style={{ width: 450, height: 'auto' }} />
+                    <img src={realestatedash} style={{ width: 450, height: 'auto' }} />
                 </Box>
             </Grid>
         </Box>

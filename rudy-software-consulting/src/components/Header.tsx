@@ -4,6 +4,7 @@ import Toolbar from '@mui/material/Toolbar';
 import Box from '@mui/material/Box';
 import { Link } from 'react-router-dom';
 import { Tab } from '@mui/material';
+import rudyard from '../assets/rudyard.png'; // Adjust the path as necessary
 
 const Header: React.FC = () => (
   <AppBar
@@ -20,7 +21,7 @@ const Header: React.FC = () => (
       <Box sx={{ display: 'flex', alignItems: 'center' }}>
         <Link to="/">
             <img
-            src="/src/assets/rudyard.png"
+            src={rudyard}
             alt="Logo"
             style={{ width: 'auto', height: 50, marginRight: 16 }}
             />

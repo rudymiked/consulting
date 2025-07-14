@@ -2,6 +2,12 @@ import React from 'react';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import { Grid } from '@mui/material';
+import microsoft from '../assets/experience/microsoft.jpg';
+import belcan from '../assets/experience/belcan.png';
+import toyota from '../assets/experience/toyota.png';
+import sikorsky from '../assets/experience/Sikorsky.png';
+import pratt from '../assets/experience/pratt.png';
+
 
 interface IExperience {
     logo: string;
@@ -10,11 +16,11 @@ interface IExperience {
 
 const ExperienceFooter: React.FC = () => {
     const [experiences, setExperiences] = React.useState<IExperience[]>([
-        { logo: 'src/assets/experience/microsoft.jpg', altText: 'Microsoft Logo' },
-        { logo: 'src/assets/experience/belcan.png', altText: 'Belcan Logo' },
-        { logo: 'src/assets/experience/toyota.png', altText: 'Toyota Logo' },
-        { logo: 'src/assets/experience/Sikorsky.png', altText: 'Sikorsky Logo' },
-        { logo: 'src/assets/experience/pratt.png', altText: 'Pratt and Whitney Logo' },
+        { logo: microsoft, altText: 'Microsoft Logo' },
+        { logo: belcan, altText: 'Belcan Logo' },
+        { logo: toyota, altText: 'Toyota Logo' },
+        { logo: sikorsky, altText: 'Sikorsky Logo' },
+        { logo: pratt, altText: 'Pratt and Whitney Logo' },
         //{ logo: 'src/assets/experience/lexmark.png', altText: 'Lexmark Logo' },
     ]);
 
