@@ -2,6 +2,7 @@ import { Box, Button, Grid, Typography } from "@mui/material";
 import tech from "../assets/tech.jpg"
 import marathon from "/src/assets/marathon.png";
 import realestatedash from "/src/assets/realestatedash.png";
+import { Link } from "react-router-dom";
 
 const Banner: React.FC = () => {
     return (
@@ -61,9 +62,11 @@ const Banner: React.FC = () => {
                             })}>
                             Transform your ideas into reality with expert custom tailored software. Our services include custom software development for web, desktop and mobile, SaaS, API integrations, and enterprise consulting.
                         </Typography>
-                        <Button className="main-button" variant="contained" color="primary" href="#contact" sx={{ mt: 1 }}>
-                            Get Started
-                        </Button>
+                        <Link to="/contact">
+                            <Button className="main-button" variant="contained" color="primary" sx={{ mt: 1 }}>
+                                Get Started
+                            </Button>
+                        </Link>
                     </Box>
                 </Box>
                 {/* <Box

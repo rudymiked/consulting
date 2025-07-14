@@ -3,6 +3,7 @@ import Experience from "../components/Experience";
 import ServicesTemplate from "../components/ServicesTemplate";
 import CodeIcon from '@mui/icons-material/Code';
 import { CloudSync, SettingsSuggest } from '@mui/icons-material';
+import { Link } from "react-router-dom";
 
 const services = [
   {
@@ -61,9 +62,11 @@ const ConsultingPage: React.FC = () => {
                     <Experience />
                 </Box>
                 <Box>
-                    <Button className="main-button" variant="contained" color="primary" href="#contact" sx={{ mt: 1 }}>
-                        Get Started
-                    </Button>
+                    <Link to="/contact">
+                        <Button className="main-button" variant="contained" color="primary" sx={{ mt: 1 }}>
+                            Get Started
+                        </Button>
+                    </Link>
                 </Box>
             </Grid>
         </div>
