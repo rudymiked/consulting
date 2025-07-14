@@ -30,7 +30,7 @@ const ExperienceFooter: React.FC = () => {
                 <strong>Powdered by engineers with experience at:</strong>
                 <br />
                 <br />
-                <Grid container spacing={4} justifyContent="center">
+                <Grid container spacing={2} justifyContent="center">
                     {experiences.map((experience, idx) => (
                         <Box key={idx} sx={{ maxWidth: 300, width: '100%' }}>
                             <img src={experience.logo} alt={experience.altText} style={{ width: 100, height: 'auto', marginBottom: 10, alignContent:"center", verticalAlign:"center" }} />
