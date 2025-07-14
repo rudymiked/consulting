@@ -1,4 +1,5 @@
 import { Box, Typography } from "@mui/material";
+import seattle from '../assets/seattle.jpg';
 
 const AboutPage: React.FC = () => {
     return (
@@ -6,9 +7,9 @@ const AboutPage: React.FC = () => {
             <Typography variant="h4" align="center" gutterBottom sx={{ fontWeight: 700, py: 4 }}>
                 About Us
             </Typography>
-            <p>Rudyard Technologies is dedicated to delivering innovative software solutions that empower businesses to thrive in the digital age.</p>
+            <img src={seattle} alt="Seattle Skyline" style={{ width: '100%', height: 'auto', borderRadius: 8, marginBottom: 20 }} />
+            <p>Located in Seattle, Rudyard Technologies is dedicated to delivering innovative software solutions that empower businesses to thrive in the digital age.</p>
             <p>With a focus on quality, performance, and user experience, we help our clients achieve their goals through custom software development, consulting, and support services.</p>
-            <p>Located in Seattle.</p>
             {/* <img src="src/assets/rudyard.png" alt="About Us" style={{ width: '50%', height: 'auto', borderRadius: 8, marginTop: 20 }} /> */}
         </Box>
     );
