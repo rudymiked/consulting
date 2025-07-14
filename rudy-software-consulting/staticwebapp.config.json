@@ -1,0 +1,11 @@
+{
+  "navigationFallback": {
+    "rewrite": "index.html",
+    "exclude": ["/assets/*.{png,jpg,jpeg,gif,svg}"]
+  },
+  "mimeTypes": {
+    ".png": "image/png",
+    ".jpg": "image/jpeg",
+    ".svg": "image/svg+xml"
+  }
+}
