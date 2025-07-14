@@ -4,12 +4,12 @@ import Header from './components/Header';
 import Footer from './components/Footer';
 import './styles/main.css';
 import { Route, Routes, BrowserRouter as Router } from 'react-router-dom';
-import SoftwarePage from './assets/pages/Software';
-import ConsultingPage from './assets/pages/Consulting';
-import HomePage from './assets/pages/Home';
+import SoftwarePage from './pages/Software';
+import ConsultingPage from './pages/Consulting';
+import HomePage from './pages/Home';
 import { Box } from '@mui/material';
-import ContactPage from './assets/pages/Contact';
-import AboutPage from './assets/pages/About';
+import ContactPage from './pages/Contact';
+import AboutPage from './pages/About';
 
 const App: React.FC = () => {
   return (

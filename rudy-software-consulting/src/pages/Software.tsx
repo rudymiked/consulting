@@ -1,6 +1,6 @@
 import { Box, Button, Grid } from "@mui/material";
-import Experience from "../../components/Experience";
-import ServicesTemplate from "../../components/ServicesTemplate";
+import Experience from "../components/Experience";
+import ServicesTemplate from "../components/ServicesTemplate";
 import CodeIcon from '@mui/icons-material/Code';
 import { CloudSync, SettingsSuggest } from '@mui/icons-material';
 
