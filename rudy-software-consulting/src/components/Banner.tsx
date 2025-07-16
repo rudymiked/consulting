@@ -9,10 +9,20 @@ const Banner: React.FC = () => {
         <Box sx={{ py: 6, position: 'relative' }}>
             {/* Background image */}
             <Box sx={{ width: '100%' }}>
-                <img
-                    src={tech}
-                    alt="Banner Image"
-                    style={{ width: '100%', height: 'auto', borderRadius: 8 }}
+                <Box
+                component="img"
+                src={tech}
+                alt="Banner Image"
+                sx={(theme) => ({
+                    width: '100%',
+                    height: 550,
+                    objectFit: 'cover',
+                    objectPosition: 'left center',
+                    borderRadius: 2,
+                    [theme.breakpoints.down('sm')]: {
+                        height: 500,
+                    },
+                })}
                 />
             </Box>
             <Grid container spacing={2}>
@@ -29,7 +39,7 @@ const Banner: React.FC = () => {
                         boxShadow: 3,
                         [theme.breakpoints.down('sm')]: {
                             padding: 2,
-                            height: '40%',
+                            height: '60%',
                             justifyContent: 'flex-start',
                         },
                     })}
@@ -41,10 +51,10 @@ const Banner: React.FC = () => {
                             gutterBottom
                             sx={(theme) => ({
                                 [theme.breakpoints.down('sm')]: {
-                                    whiteSpace: 'nowrap',
+                                    // whiteSpace: 'nowrap',
                                     overflow: 'hidden',
                                     textOverflow: 'ellipsis',
-                                    fontSize: '1.2rem', // Optional: scale down font size
+                                    fontSize: '1.3rem', // Optional: scale down font size
                                 },
                             })}>
                             Software Solutions and Consulting
@@ -53,8 +63,9 @@ const Banner: React.FC = () => {
                             variant="body1"
                             color="text.secondary"
                             sx={(theme) => ({
+                                fontSize: '1rem',
                                 [theme.breakpoints.down('sm')]: {
-                                    whiteSpace: 'nowrap',
+                                    // whiteSpace: 'nowrap',
                                     overflow: 'hidden',
                                     textOverflow: 'ellipsis',
                                     fontSize: '1.2rem', // Optional: scale down font size
