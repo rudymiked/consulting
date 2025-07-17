@@ -8,7 +8,6 @@ import toyota from '../assets/experience/toyota.png';
 import sikorsky from '../assets/experience/Sikorsky.png';
 import pratt from '../assets/experience/pratt.png';
 
-
 interface IExperience {
     logo: string;
     altText: string;

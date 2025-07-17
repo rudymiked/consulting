@@ -9,8 +9,15 @@ import {
 } from '@mui/material';
 import '../../styles/main.css';
 
+export interface IFormData {
+  name: string;
+  email: string;
+  company: string;
+  message: string;
+}
+
 const ContactForm: React.FC = () => {
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<IFormData>({
     name: '',
     email: '',
     company: '',
@@ -24,9 +31,55 @@ const ContactForm: React.FC = () => {
     }));
   };
 
+  const buildEmail = (formData: IFormData) => {
+    return {
+      to: formData.email,
+      subject: `Contact Form Submission from ${formData.name}`,
+      text: `Name: ${formData.name}\nEmail: ${formData.email}\nCompany: ${formData.company}\nMessage: ${formData.message}`,
+      html: `<p>Name: ${formData.name}</p>
+              <p>Email: ${formData.email}</p>
+              <p>Company: ${formData.company}</p>
+              <p>Message: ${formData.message}</p>`
+    };
+  }
+
   const handleSubmit = (e: any) => {
     e.preventDefault();
-    console.log('Form submitted:', formData);
+    
+    fetch('http://localhost:4000/contact', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(buildEmail(formData)),
+    }).then(response => {
+      if (!response.ok) {
+        throw new Error('Network response was not ok');
+      }
+      return response.json();
+    }).then(data => {
+      console.log('Success:', data);
+      // Optionally reset form or show success message
+      setFormData({
+        name: '',
+        email: '',
+        company: '',
+        message: '',
+      });
+    }) .catch((error) => {
+      console.error('Error:', error);
+      // Optionally show error message to user
+    });
+
+    // sendEmail({
+    //   to: 'rudymiked@gmail.com',
+    //   subject: `Contact Form Submission from ${formData.name}`,
+    //   text: `Name: ${formData.name}\nEmail: ${formData.email}\nCompany: ${formData.company}\nMessage: ${formData.message}`,
+    //   html: `<p>Name: ${formData.name}</p>
+    //           <p>Email: ${formData.email}</p>
+    //           <p>Company: ${formData.company}</p>
+    //           <p>Message: ${formData.message}</p>`
+    // })
   };
 
   return (

@@ -55,7 +55,7 @@ jobs:
         with:
           azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_CALM_ROCK_070F06C10 }}
           action: "upload"
-          app_location: "./rudy-software-consulting"
+          app_location: "./rudy-software-consulting/client"
           output_location: "dist"
           api_location: ""
           github_id_token: ${{ steps.idtoken.outputs.result }}
