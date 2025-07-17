@@ -21,7 +21,6 @@ app.get('/', (req, res) => {
 app.post('/contact', async (req, res) => {
   const { to, subject, text, html } = req.body;
 
-  // You can import your Nodemailer logic here
   try {
     await sendEmail({ to, subject, text, html });
     res.status(200).json({ message: 'Email sent successfully' });
@@ -29,9 +28,4 @@ app.post('/contact', async (req, res) => {
     console.error('Email error:', error);
     res.status(500).json({ error: 'Failed to send email' + error.message });
   }
-});
-
-// Start server
-app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
 });
