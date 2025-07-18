@@ -17,42 +17,42 @@ jobs:
       contents: read
 
     steps:
-      - name: Checkout repository
+      - name: 📥 Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Node.js
+      - name: 🔧 Set up Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '22.x' # or your preferred version
+          node-version: '22.x'
 
-      - name: Install and build API
+      - name: 📦 Install dependencies & build
         run: |
           cd rudy-software-consulting/server
           npm install
           npm run build --if-present
 
-      - name: Package server code for deployment
+      - name: 🎁 Zip server contents for deploy
         run: |
           cd rudy-software-consulting/server
-          zip -r release.zip ./*
+          zip -r ../../release.zip ./*
 
-      - name: Upload deployment artifact
+      - name: ⬆️ Upload zipped artifact
         uses: actions/upload-artifact@v4
         with:
-          name: release-zip
-          path: rudy-software-consulting/server/release.zip
+          name: api-zip
+          path: release.zip
 
   deploy:
     runs-on: ubuntu-latest
     needs: build
 
     steps:
-      - name: Download deployment artifact
+      - name: 📥 Download artifact
         uses: actions/download-artifact@v4
         with:
-          name: release-zip
+          name: api-zip
 
-      - name: Deploy ZIP to Azure App Service
+      - name: 🚀 Deploy to Azure Web App
         uses: azure/webapps-deploy@v3
         with:
           app-name: 'consulting'
