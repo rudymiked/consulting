@@ -65,8 +65,6 @@ jobs:
           output_location: "dist"
           api_location: ""
           github_id_token: ${{ steps.idtoken.outputs.result }}
-        # VS Code extension may show false warning: "Context access might be invalid"
-        # This is safe to ignore if the secret is defined in GitHub
         env:
-          VITE_API_URL: ${{ env.VITE_API_URL }}
+          VITE_API_URL: ${{ secrets.VITE_API_URL }}
 
