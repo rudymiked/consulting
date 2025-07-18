@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import {
   TextField,
   Button,
@@ -24,6 +24,10 @@ const ContactForm: React.FC = () => {
     message: '',
   });
 
+  React.useEffect(() => {
+    console.log(import.meta.env.VITE_API_URL);
+  }, []);
+
   const handleChange = (e: any) => {
     setFormData(prev => ({
       ...prev,
@@ -46,7 +50,7 @@ const ContactForm: React.FC = () => {
   const handleSubmit = (e: any) => {
     e.preventDefault();
     
-    fetch(`http://${import.meta.env.VITE_API_URL}/contact`, {
+    fetch(`https://${import.meta.env.VITE_API_URL}/contact`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
