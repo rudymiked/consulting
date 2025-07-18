@@ -33,6 +33,10 @@ app.get('/api/ping', (_, res) => {
   res.json({ message: 'pong' });
 });
 
+app.get('/api/email', (_, res) => {
+  res.json({ message: `email address: ${process.env.RUDYARD_EMAIL_USERNAME}` });
+});
+
 // Start the server
 app.listen(PORT, () => {
   console.log(`🚀 Rudy Software Consulting server is live at http://localhost:${PORT}`);
