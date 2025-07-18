@@ -5,7 +5,8 @@
   "main": "src/main.tsx",
   "type": "module",
   "scripts": {
-    "dev": "tsx src/index.ts"
+    "dev": "tsx src/index.ts",
+    "start": "npm run dev"
   },
   "keywords": [
     "consulting",
