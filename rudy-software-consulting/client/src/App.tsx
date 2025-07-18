@@ -14,7 +14,7 @@ import AboutPage from './pages/About';
 const App: React.FC = () => {
 
   React.useEffect(() => {
-    console.log("API url:", import.meta.env.VITE_API_URL);
+    console.log("API url:", import.meta.env);
     console.log('Mode:', import.meta.env.MODE);
   }, []);
 
