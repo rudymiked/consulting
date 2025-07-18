@@ -76,4 +76,5 @@ jobs:
           github_id_token: ${{ steps.idtoken.outputs.result }}
         env:
           VITE_API_URL: ${{ secrets.VITE_API_URL }}
+          VITE_EMAIL_USERNAME: ${{ secrets.VITE_EMAIL_USERNAME }}
 
