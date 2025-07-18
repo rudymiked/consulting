@@ -3,9 +3,8 @@
   "version": "1.0.0",
   "description": "A software consulting website for Rudy Software Consulting. Express server and React client.",
   "main": "src/main.tsx",
-  "type": "module",
+  "type": "commonjs",
   "scripts": {
-    "dev": "tsx src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js"
   },
@@ -31,6 +30,7 @@
   "devDependencies": {
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.3",
+    "@types/node": "^24.0.14",
     "@types/nodemailer": "^6.4.17",
     "@types/react": "^18.0.0",
     "@types/react-dom": "^18.0.0",
