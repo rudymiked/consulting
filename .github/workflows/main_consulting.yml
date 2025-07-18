@@ -23,7 +23,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '18.x' # or your preferred version
+          node-version: '22.x' # or your preferred version
 
       - name: Install and build API
         run: |
