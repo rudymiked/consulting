@@ -7,7 +7,12 @@ on:
   push:
     branches:
       - main
+    paths:
+      - 'rudy-software-consulting/server/**'
+      - '.github/workflows/**'
+
   workflow_dispatch:
+
 
 jobs:
   build:
