@@ -37,7 +37,7 @@ const ContactForm: React.FC = () => {
 
   const buildEmail = (formData: IFormData) => {
     return {
-      to: formData.email,
+      to: `${import.meta.env.VITE_EMAIL_USERNAME}`,
       subject: `Contact Form Submission from ${formData.name}`,
       text: `Name: ${formData.name}\nEmail: ${formData.email}\nCompany: ${formData.company}\nMessage: ${formData.message}`,
       html: `<p>Name: ${formData.name}</p>

@@ -17,8 +17,8 @@ export async function sendEmail(options: EmailOptions): Promise<void> {
   });
 
   const mailOptions = {
-    from: process.env.EMAIL_USERNAME,
-    to: options.to,
+    from: process.env.RUDYARD_EMAIL_USERNAME || process.env.EMAIL_USERNAME,
+    to: process.env.EMAIL_USERNAME, //options.to,
     subject: options.subject,
     text: options.text,
     html: options.html,
