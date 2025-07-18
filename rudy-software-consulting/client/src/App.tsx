@@ -15,7 +15,16 @@ const App: React.FC = () => {
 
   React.useEffect(() => {
     console.log("API url:", import.meta.env);
-    console.log('Mode:', import.meta.env.MODE);
+    
+    fetch(`https://${import.meta.env.VITE_API_URL}/api/`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
+      .then(response => response.text())
+      .then(data => console.log('API response:', data))
+      .catch(error => console.error('Error fetching API:', error));
   }, []);
 
   return (

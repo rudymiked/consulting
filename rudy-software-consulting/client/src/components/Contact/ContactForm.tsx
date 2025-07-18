@@ -50,7 +50,7 @@ const ContactForm: React.FC = () => {
   const handleSubmit = (e: any) => {
     e.preventDefault();
     
-    fetch(`https://${import.meta.env.VITE_API_URL}/contact`, {
+    fetch(`https://${import.meta.env.VITE_API_URL}/api/contact`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
