@@ -138,6 +138,11 @@ const ContactForm: React.FC = () => {
                 Submit
               </Button>
             </Box>
+            <Box>
+              <Typography variant="body2" color="textSecondary" align="center" sx={{ mt: 2 }}>
+                We guarentee a response within 24 hours.
+              </Typography>
+            </Box>
           </Grid>
         </form>
       </Box>

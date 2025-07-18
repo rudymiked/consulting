@@ -8,7 +8,7 @@
     "dev": "vite",
     "build": "vite build",
     "serve": "vite preview",
-    "start": "concurrently \"npm run dev --prefix client\" \"npm run dev --prefix server\""
+    "start": "npm run dev"
   },
   "keywords": [
     "consulting",
