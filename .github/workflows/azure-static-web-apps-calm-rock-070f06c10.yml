@@ -8,6 +8,12 @@ on:
     types: [opened, synchronize, reopened, closed]
     branches:
       - main
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Manual Run - Production'
+        required: true
+        default: 'Production'
 
 jobs:
   build_and_deploy_job:
