@@ -24,14 +24,14 @@ const ExperienceFooter: React.FC = () => {
     ]);
 
     return (
-        <Box component="footer" sx={{ py: 3, textAlign: 'center', bgcolor: 'background.paper', mt: 4 }}>
+        <Box component="footer" sx={{ py: 3, textAlign: 'center', bgcolor: 'background.paper', mt: 4, borderRadius: 1 }}>
             <Typography variant="body2" color="text.secondary">
                 <strong>Powdered by engineers with experience at:</strong>
                 <br />
                 <br />
                 <Grid container spacing={2} justifyContent="center">
                     {experiences.map((experience, idx) => (
-                        <Box key={idx} sx={{ maxWidth: 300, width: '100%' }}>
+                        <Box key={idx} sx={{ maxWidth: 300, width: '100%', borderRadius: 1 }}>
                             <img src={experience.logo} alt={experience.altText} style={{ width: 100, height: 'auto', marginBottom: 10, alignContent:"center", verticalAlign:"center" }} />
                         </Box>
                     ))}

@@ -21,7 +21,7 @@ const ServicesTemplate: React.FC<ISericeTemplateProps> = (props: ISericeTemplate
   const [title] = React.useState<string>(props.title);
 
   return (
-    <Box sx={{ py: 0, background: '#f7f9fb' }}>
+    <Box sx={{ py: 0, background: '#f7f9fb', borderRadius: 1 }}>
       <Typography variant="h4" align="center" gutterBottom sx={{ fontWeight: 700, pt: 2 }}>
         {title}
       </Typography>

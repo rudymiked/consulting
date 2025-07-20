@@ -8,8 +8,8 @@ const AboutPage: React.FC = () => {
                 About Us
             </Typography>
             <img src={seattle} alt="Seattle Skyline" style={{ width: '100%', height: 'auto', borderRadius: 8, marginBottom: 20 }} />
-            <p>Located in Seattle, Rudyard Technologies is dedicated to delivering innovative software solutions that empower businesses to thrive.</p>
-            <p>With a focus on quality, performance, and user experience, we help our clients achieve their goals through custom software development, consulting, and support services.</p>
+            <p>Located in Seattle, Rudyard Technologies is dedicated to delivering innovative software solutions that empower businesses to grow and thrive.</p>
+            <p>With a focus on quality, performance, and user experience, we help our clients achieve their goals through custom software development, consulting, and IT services.</p>
             {/* <img src="src/assets/rudyard.png" alt="About Us" style={{ width: '50%', height: 'auto', borderRadius: 8, marginTop: 20 }} /> */}
         </Box>
     );
