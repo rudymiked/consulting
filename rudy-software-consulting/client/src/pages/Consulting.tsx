@@ -2,23 +2,23 @@ import { Box, Button, Grid } from "@mui/material";
 import Experience from "../components/Experience";
 import ServicesTemplate from "../components/ServicesTemplate";
 import CodeIcon from '@mui/icons-material/Code';
-import { CloudSync, SettingsSuggest } from '@mui/icons-material';
+import { CloudSync, Lock} from '@mui/icons-material';
 import { Link } from "react-router-dom";
 
 const services = [
   {
-    icon: <CodeIcon color="primary" sx={{ fontSize: 48, mb: 2 }} />,
+    icon: <CloudSync color="primary" sx={{ fontSize: 48, mb: 2 }} />,
     title: 'Cloud Migration',
     description: 'Migrate your services to cloud-native architectures for scalability, cost-efficiency, and remote access.',
   },
   {
-    icon: <SettingsSuggest color="primary" sx={{ fontSize: 48, mb: 2 }} />,
+    icon: <Lock color="primary" sx={{ fontSize: 48, mb: 2 }} />,
     title: 'Cybersecurity & Compliance',
     description: 'With AI-powered threats and stricter data regulations, companies need airtight security. We help you build robust security frameworks and ensure compliance with industry standards.',
   },
   {
-    icon: <CloudSync color="primary" sx={{ fontSize: 48, mb: 2 }} />,
-    title: 'Cybersecurity & Compliance',
+    icon: <CodeIcon color="primary" sx={{ fontSize: 48, mb: 2 }} />,
+    title: 'AI Consulting',
     description: 'Organizations are racing to integrate AI into operations, but need guidance to do it responsibly.',
   },
 ];
