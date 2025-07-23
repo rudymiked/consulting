@@ -1,15 +1,15 @@
 import React from 'react';
 import CssBaseline from '@mui/material/CssBaseline';
-import Header from './components/Header';
-import Footer from './components/Footer';
+import Header from './components/Layout/Header';
+import Footer from './components/Layout/Footer';
 import './styles/main.css';
 import { Route, Routes, BrowserRouter as Router } from 'react-router-dom';
-import SoftwarePage from './pages/Software';
-import ConsultingPage from './pages/Consulting';
+import SoftwarePage from './pages/SoftwarePage';
+import ConsultingPage from './pages/ConsultingPage';
 import HomePage from './pages/Home';
 import { Box } from '@mui/material';
-import ContactPage from './pages/Contact';
-import AboutPage from './pages/About';
+import ContactPage from './pages/ContactPage';
+import AboutPage from './pages/AboutPage';
 import PrivacyPage from './pages/PrivacyPage';
 import TermsOfServicePage from './pages/TermsOfServicePage';
 

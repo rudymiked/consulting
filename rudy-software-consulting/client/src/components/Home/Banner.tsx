@@ -1,7 +1,7 @@
 import { Box, Button, Grid, Typography } from "@mui/material";
 import { Link } from "react-router-dom";
-import ImageFadeIn from "../components/ImageFadeIn";
-import tech from "../assets/tech.jpg";
+import ImageFadeIn from "../ImageFadeIn";
+import tech from "/src/assets/tech.jpg";
 import marathon from "/src/assets/marathon.png";
 import realestatedash from "/src/assets/realestatedash.png";
 import realestatedashiphone from "/src/assets/realestatedashiphone.png";
@@ -120,7 +120,7 @@ const Banner: React.FC = () => {
         <Box
           sx={(theme) => ({
             position: "absolute",
-            top: 230,
+            top: 85,
             right: 0,
             boxShadow: 0,
             [theme.breakpoints.down("md")]: {

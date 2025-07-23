@@ -8,13 +8,12 @@ import {
   IconButton,
   List,
   ListItem,
-  ListItemText,
   useTheme,
   useMediaQuery,
 } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
 import { Link } from 'react-router-dom';
-import rudyard from '../assets/rudyardtech.png'; // Make sure this resolves correctly
+import rudyard from '/src/assets/rudyardtech.png'; // Make sure this resolves correctly
 
 const Header: React.FC = () => {
   const theme = useTheme();

@@ -1,6 +1,6 @@
-import { Box, Container, CssBaseline } from "@mui/material";
-import Services from "../components/Services";
-import Banner from "../components/Banner";
+import { Box, Container } from "@mui/material";
+import Services from "../components/Home/Services";
+import Banner from "../components/Home/Banner";
 import ExperienceFooter from "../components/ExperienceFooter";
 
 const HomePage: React.FC = () => {
