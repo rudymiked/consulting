@@ -10,6 +10,8 @@ import HomePage from './pages/Home';
 import { Box } from '@mui/material';
 import ContactPage from './pages/Contact';
 import AboutPage from './pages/About';
+import PrivacyPage from './pages/PrivacyPage';
+import TermsOfServicePage from './pages/TermsOfServicePage';
 
 const App: React.FC = () => {
 
@@ -38,6 +40,8 @@ const App: React.FC = () => {
             <Route path="/consulting" element={<ConsultingPage />} />
             <Route path="/contact" element={<ContactPage />} />
             <Route path="/about" element={<AboutPage />} />
+            <Route path="/privacy" element={<PrivacyPage />} />
+            <Route path="/terms" element={<TermsOfServicePage />} />
           </Routes>
         </Box>
         <Footer />

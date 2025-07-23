@@ -12,3 +12,5 @@ const Testimonials: React.FC = () => {
         </Box>
     );
 }
+
+export default Testimonials;

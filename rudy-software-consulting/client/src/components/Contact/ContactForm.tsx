@@ -89,9 +89,6 @@ const ContactForm: React.FC = () => {
   return (
     <Container maxWidth="sm">
       <Box sx={{ mt: 5 }}>
-        <Typography variant="h5" gutterBottom>
-          Getting in Touch:
-        </Typography>
         <form onSubmit={handleSubmit}>
           <Grid container spacing={2} direction="column">
             <Box>
@@ -144,7 +141,7 @@ const ContactForm: React.FC = () => {
             </Box>
             <Box>
               <Typography variant="body2" color="textSecondary" align="center" sx={{ mt: 2 }}>
-                We guarentee a response within 24 hours.
+                We guarentee a response within 24 hours. We will never share your email or personal information with anyone.
               </Typography>
             </Box>
           </Grid>
