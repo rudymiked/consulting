@@ -1,7 +1,7 @@
 {
   "name": "rudy-software-consulting-client",
   "version": "1.0.0",
-  "description": "A software consulting website for Rudy Software Consulting. Express server and React client.",
+  "description": "A software consulting website for Rudyard Software Consulting. Express server and React client.",
   "main": "src/main.tsx",
   "type": "module",
   "scripts": {

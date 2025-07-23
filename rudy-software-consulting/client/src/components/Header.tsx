@@ -26,7 +26,7 @@ const Header: React.FC = () => {
   const navItems = [
     { label: 'Software Development', path: '/software' },
     { label: 'Consulting', path: '/consulting' },
-    { label: 'Contact', path: '/contact' },
+    { label: 'Get a Free Quote', path: '/contact' },
     { label: 'About', path: '/about' },
   ];
 

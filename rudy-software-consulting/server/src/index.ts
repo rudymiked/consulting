@@ -39,5 +39,5 @@ app.get('/api/email', (_, res) => {
 
 // Start the server
 app.listen(PORT, () => {
-  console.log(`🚀 Rudy Software Consulting server is live at http://localhost:${PORT}`);
+  console.log(`🚀 Rudyard Software Consulting server is live at http://localhost:${PORT}`);
 });

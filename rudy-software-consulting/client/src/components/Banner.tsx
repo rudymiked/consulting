@@ -4,6 +4,7 @@ import ImageFadeIn from "../components/ImageFadeIn";
 import tech from "../assets/tech.jpg";
 import marathon from "/src/assets/marathon.png";
 import realestatedash from "/src/assets/realestatedash.png";
+import realestatedashiphone from "/src/assets/realestatedashiphone.png";
 
 const Banner: React.FC = () => {
   return (
@@ -83,7 +84,7 @@ const Banner: React.FC = () => {
           sx={(theme) => ({
             position: "absolute",
             top: 120,
-            right: 75,
+            right: 70,
             boxShadow: 0,
             [theme.breakpoints.down("md")]: {
               display: "none",
@@ -101,7 +102,7 @@ const Banner: React.FC = () => {
         <Box
           sx={(theme) => ({
             position: "absolute",
-            top: 70,
+            top: 80,
             right: 20,
             boxShadow: 0,
             [theme.breakpoints.down("md")]: {
@@ -113,6 +114,24 @@ const Banner: React.FC = () => {
             src={realestatedash}
             alt="Real Estate Dashboard"
             style={{ width: 450, height: "auto", borderRadius: 1 }}
+          />
+        </Box>
+        {/* Real Estate Dashboard image (as app) with fade-in */}
+        <Box
+          sx={(theme) => ({
+            position: "absolute",
+            top: 230,
+            right: 0,
+            boxShadow: 0,
+            [theme.breakpoints.down("md")]: {
+              display: "none",
+            },
+          })}
+        >
+          <ImageFadeIn
+            src={realestatedashiphone}
+            alt="Real Estate Dashboard"
+            style={{ width: 200, height: "auto", borderRadius: 1 }}
           />
         </Box>
       </Grid>

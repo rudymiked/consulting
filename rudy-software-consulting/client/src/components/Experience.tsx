@@ -3,7 +3,6 @@ import { Box, Container, Typography, Grid } from '@mui/material';
 
 const milestones: string[] = [
     "15+ years of experience.",
-    "Dozens of successful projects.",
     "Industries served: Retail, Tech, Real Estate, and more.",
 ]
 

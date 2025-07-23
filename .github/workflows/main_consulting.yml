@@ -1,4 +1,4 @@
-name: Deploy Rudy Software Consulting API to Azure App Service
+name: Deploy Rudyard Software Consulting API to Azure App Service
 
 on:
   push:
