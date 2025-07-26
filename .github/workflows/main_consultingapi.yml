@@ -55,6 +55,6 @@ jobs:
       - name: 🚀 Deploy to Azure Web App
         uses: azure/webapps-deploy@v3
         with:
-          app-name: 'consulting'
+          app-name: 'consultingapi'
           package: release.zip
           publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_E2BD2AEE883042F2B4D4C80401D676DF }}
