@@ -12,6 +12,7 @@ import ContactPage from './pages/ContactPage';
 import AboutPage from './pages/AboutPage';
 import PrivacyPage from './pages/PrivacyPage';
 import TermsOfServicePage from './pages/TermsOfServicePage';
+import SecurityAndCompliancePage from './pages/SecurityAndCompliancePage';
 
 const App: React.FC = () => {
 
@@ -38,6 +39,7 @@ const App: React.FC = () => {
             <Route path="/" element={<HomePage />} />
             <Route path="/software" element={<SoftwarePage />} />
             <Route path="/consulting" element={<ConsultingPage />} />
+            <Route path="/security" element={<SecurityAndCompliancePage />} />
             <Route path="/contact" element={<ContactPage />} />
             <Route path="/about" element={<AboutPage />} />
             <Route path="/privacy" element={<PrivacyPage />} />

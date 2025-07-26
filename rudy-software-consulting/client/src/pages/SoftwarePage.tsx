@@ -2,14 +2,14 @@ import { Box, Button, Grid } from "@mui/material";
 import Experience from "../components/Experience";
 import ServicesTemplate from "../components/ServicesTemplate";
 import CodeIcon from '@mui/icons-material/Code';
-import { CloudDone, CloudSync, ImportantDevices, QueryStats, SettingsSuggest } from '@mui/icons-material';
+import { CloudDone, CloudSync, Dashboard, ImportantDevices, IntegrationInstructions, QueryStats, ScreenSearchDesktop, SettingsSuggest } from '@mui/icons-material';
 import { Link } from "react-router-dom";
 
 const developmentServices = [
   {
     icon: <CodeIcon color="primary" sx={{ fontSize: 48, mb: 2 }} />,
-    title: 'Web Application Development',
-    description: 'Build scalable, responsive web apps tailored to your business goals.',
+    title: 'Web and Application Development',
+    description: 'Build scalable, responsive web and mobile apps tailored to your business goals.',
   },
   {
     icon: <SettingsSuggest color="primary" sx={{ fontSize: 48, mb: 2 }} />,
@@ -38,6 +38,24 @@ const modenizationServices = [
     icon: <QueryStats color="primary" sx={{ fontSize: 48, mb: 2 }} />,
     title: 'Rearchitect and Optimize',
     description: 'Reengineer your applications for better performance and maintainability. Optimize existing codebases to reduce technical debt and improve user experience.',
+  },
+];
+
+const advancedServices = [
+  {
+    icon: <IntegrationInstructions color="primary" sx={{ fontSize: 48, mb: 2 }} />,
+    title: 'API Integration',
+    description: 'Connect disparate systems and services with robust API solutions. Enhance interoperability and data flow across your applications.',
+  },
+  {
+    icon: <Dashboard color="primary" sx={{ fontSize: 48, mb: 2 }} />,
+    title: 'Custom Dashboards',
+    description: 'Create intuitive, data-driven dashboards for real-time insights and decision-making. Visualize your data effectively to drive business outcomes.',
+  },
+  {
+    icon: <ScreenSearchDesktop color="primary" sx={{ fontSize: 48, mb: 2 }} />,
+    title: 'SEO and Performance Optimization',
+    description: 'Enhance your web presence with SEO best practices and performance tuning. Improve search engine rankings and user engagement through optimized content and site speed.',
   },
 ];
 
@@ -84,10 +102,20 @@ const SoftwarePage: React.FC = () => {
                     </Grid>
                 </Box> */}
                 <Box>
-                    <Experience />
+                    <ServicesTemplate title="Modernize Your Legacy Systems" services={modenizationServices} />
                 </Box>
                 <Box>
-                    <ServicesTemplate title="Modernize Your Legacy Systems" services={modenizationServices} />
+                    <Link to="/contact">
+                        <Button className="main-button" variant="contained" color="primary" sx={{ mt: 1 }}>
+                            Get Started
+                        </Button>
+                    </Link>
+                </Box>
+                <Box>
+                    <ServicesTemplate title="Software Services" services={advancedServices} />
+                </Box>
+                <Box>
+                    <Experience />
                 </Box>
                 <Box>
                     <Link to="/contact">
