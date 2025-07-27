@@ -8,6 +8,7 @@ import {
   Container
 } from '@mui/material';
 import '../../styles/main.css';
+import { CircularProgress } from '@mui/material';
 
 export interface IFormData {
   name: string;
@@ -23,6 +24,8 @@ const ContactForm: React.FC = () => {
     company: '',
     message: '',
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSubmitted, setIsSubmitted] = useState(false);
 
   React.useEffect(() => {
     console.log(import.meta.env.VITE_API_URL);
@@ -49,6 +52,7 @@ const ContactForm: React.FC = () => {
 
   const handleSubmit = (e: any) => {
     e.preventDefault();
+    setIsSubmitting(true);
     
     fetch(`https://${import.meta.env.VITE_API_URL}/api/contact`, {
       method: 'POST',
@@ -56,34 +60,29 @@ const ContactForm: React.FC = () => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(buildEmail(formData)),
-    }).then(response => {
-      if (!response.ok) {
-        throw new Error('Network response was not ok');
-      }
-      return response.json();
-    }).then(data => {
-      console.log('Success:', data);
-      // Optionally reset form or show success message
-      setFormData({
-        name: '',
-        email: '',
-        company: '',
-        message: '',
+    })
+      .then(response => {
+        if (!response.ok) {
+          throw new Error('Network response was not ok');
+        }
+        return response.json();
+      })
+      .then(data => {
+        console.log('Success:', data);
+        setFormData({
+          name: '',
+          email: '',
+          company: '',
+          message: '',
+        });
+        setIsSubmitted(true);
+      })
+      .catch(error => {
+        console.error('Error:', error);
+      })
+      .finally(() => {
+        setIsSubmitting(false);
       });
-    }) .catch((error) => {
-      console.error('Error:', error);
-      // Optionally show error message to user
-    });
-
-    // sendEmail({
-    //   to: 'rudymiked@gmail.com',
-    //   subject: `Contact Form Submission from ${formData.name}`,
-    //   text: `Name: ${formData.name}\nEmail: ${formData.email}\nCompany: ${formData.company}\nMessage: ${formData.message}`,
-    //   html: `<p>Name: ${formData.name}</p>
-    //           <p>Email: ${formData.email}</p>
-    //           <p>Company: ${formData.company}</p>
-    //           <p>Message: ${formData.message}</p>`
-    // })
   };
 
   return (
@@ -135,8 +134,14 @@ const ContactForm: React.FC = () => {
               />
             </Box>
             <Box>
-              <Button className="main-button" type="submit" variant="contained" fullWidth>
-                Submit
+              <Button
+                className="main-button"
+                type="submit"
+                variant="contained"
+                fullWidth
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? 'Please Wait' : 'Submit'}
               </Button>
             </Box>
             <Box>
@@ -144,6 +149,33 @@ const ContactForm: React.FC = () => {
                 We guarentee a response within 24 hours. We will never share your email or personal information with anyone.
               </Typography>
             </Box>
+              <Button
+                className="main-button"
+                type="submit"
+                variant="contained"
+                fullWidth
+                disabled={isSubmitting}
+                sx={{ position: 'relative' }}
+              >
+                {isSubmitting ? (
+                  <>
+                    <CircularProgress
+                      size={24}
+                      color="inherit"
+                      sx={{
+                        position: 'absolute',
+                        top: '50%',
+                        left: '50%',
+                        marginTop: '-12px',
+                        marginLeft: '-12px',
+                      }}
+                    />
+                    Please Wait
+                  </>
+                ) : (
+                  'Submit'
+                )}
+              </Button>
           </Grid>
         </form>
       </Box>
