@@ -16,7 +16,7 @@ public class APIWarmer
 
     [Function("APIWarmer")]
     public async Task<IActionResult> Run(
-        [HttpTrigger(AuthorizationLevel.Function, "get", "post")] HttpRequest req)
+        [TimerTrigger("0 */30 5-21 * * *")] TimerInfo myTimer, ILogger log)
     {
         _logger.LogInformation("Starting API warm-up call...");
 
