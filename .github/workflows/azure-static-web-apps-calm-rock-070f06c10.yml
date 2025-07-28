@@ -1,4 +1,4 @@
-name: NEW Deploy Client (Azure Static Web App)
+name: Deploy Client (Azure Static Web App)
 
 on:
   push:

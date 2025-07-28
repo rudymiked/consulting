@@ -1,4 +1,4 @@
-name: NEW Deploy API (Azure App Service)
+name: Deploy API (Azure App Service)
 
 on:
   push:
