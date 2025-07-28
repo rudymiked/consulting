@@ -1,5 +1,3 @@
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.Logging;
 
@@ -15,8 +13,8 @@ public class APIWarmer
     }
 
     [Function("APIWarmer")]
-    public async Task<IActionResult> Run(
-        [TimerTrigger("0 */30 5-21 * * *")] TimerInfo myTimer, ILogger log)
+    public async Task Run(
+        [TimerTrigger("0 */30 5-21 * * *", RunOnStartup = false)] TimerInfo timerInfo)
     {
         _logger.LogInformation("Starting API warm-up call...");
 
@@ -27,12 +25,8 @@ public class APIWarmer
 
             _logger.LogInformation($"API responded with status: {response.StatusCode}");
             _logger.LogInformation($"Response content: {content}");
-
-            return new OkObjectResult("API warmed successfully.");
         } catch (Exception ex) {
             _logger.LogError($"Error warming up API: {ex.Message}");
-            return new StatusCodeResult(StatusCodes.Status500InternalServerError);
         }
     }
-
 }
