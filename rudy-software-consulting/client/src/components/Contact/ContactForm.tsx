@@ -134,15 +134,6 @@ const ContactForm: React.FC = () => {
               />
             </Box>
             <Box>
-              <Button
-                className="main-button"
-                type="submit"
-                variant="contained"
-                fullWidth
-                disabled={isSubmitting}
-              >
-                {isSubmitting ? 'Please Wait' : 'Submit'}
-              </Button>
             </Box>
             <Box>
               <Typography variant="body2" color="textSecondary" align="center" sx={{ mt: 2 }}>
@@ -162,6 +153,7 @@ const ContactForm: React.FC = () => {
                     <CircularProgress
                       size={24}
                       color="inherit"
+                      thickness={5}
                       sx={{
                         position: 'absolute',
                         top: '50%',
@@ -176,6 +168,11 @@ const ContactForm: React.FC = () => {
                   'Submit'
                 )}
               </Button>
+            {isSubmitted && (
+              <Typography variant="body1" color="success.main" align="center" sx={{ mt: 2 }}>
+                Thank you for contacting us! We will get back to you soon.
+              </Typography>
+            )}
           </Grid>
         </form>
       </Box>
