@@ -32,7 +32,7 @@ export async function sendEmail(options: EmailOptions): Promise<void> {
 
   const mailOptions = {
     from: process.env.RUDYARD_EMAIL_USERNAME || process.env.EMAIL_USERNAME,
-    to: process.env.EMAIL_USERNAME, //options.to,
+    to: process.env.RUDYARD_EMAIL_USERNAME, //options.to,
     subject: options.subject,
     text: options.text,
     html: options.html,
