@@ -9,9 +9,9 @@ export interface EmailOptions {
 
 export async function sendEmail(options: EmailOptions): Promise<void> {
   const transporter = nodemailer.createTransport({
-    host: process.env.EMAIL_HOST,  //'mail.privateemail.com',
-    port: 465, // Use 587 for TLS/STARTTLS
-    secure: true, // true for SSL (port 465), false for TLS (port 587)
+    host: process.env.EMAIL_HOST,  //'mail.privateemail.com' or 'gmail',
+    port: Number(process.env.EMAIL_PORT), // Use 587 for TLS/STARTTLS, 465 for SSL
+    secure: Boolean(process.env.EMAIL_SECURE), // true for SSL (port 465), false for TLS (port 587)
     auth: {
       user: process.env.EMAIL_USERNAME,
       pass: process.env.EMAIL_PASSWORD
@@ -27,6 +27,8 @@ export async function sendEmail(options: EmailOptions): Promise<void> {
   //     pass: process.env.EMAIL_PASSWORD,
   //   },
   // });
+
+  await transporter.verify();
 
   const mailOptions = {
     from: process.env.RUDYARD_EMAIL_USERNAME || process.env.EMAIL_USERNAME,
