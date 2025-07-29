@@ -8,25 +8,29 @@ export interface EmailOptions {
 }
 
 export async function sendEmail(options: EmailOptions): Promise<void> {
-  const transporter = nodemailer.createTransport({
-    host: process.env.EMAIL_HOST,  //'mail.privateemail.com' or 'gmail',
-    port: Number(process.env.EMAIL_PORT), // Use 587 for TLS/STARTTLS, 465 for SSL
-    secure: Boolean(process.env.EMAIL_SECURE), // true for SSL (port 465), false for TLS (port 587)
-    auth: {
-      user: process.env.EMAIL_USERNAME,
-      pass: process.env.EMAIL_PASSWORD
-    },
-    logger: true,
-    debug: true
-  });
+  let transporter;
 
-  // const transporter = nodemailer.createTransport({
-  //   service: 'gmail',
-  //   auth: {
-  //     user: process.env.EMAIL_USERNAME,
-  //     pass: process.env.EMAIL_PASSWORD,
-  //   },
-  // });
+  if (Boolean(process.env.EMAIL_USE_GMAIL)) {
+      transporter = nodemailer.createTransport({
+      service: process.env.EMAIL_SERVICE || 'gmail',
+      auth: {
+        user: process.env.GMAIL_USERNAME,
+        pass: process.env.GMAIL_PASSWORD,
+      },
+    });
+  } else {
+    transporter = nodemailer.createTransport({
+      host: process.env.EMAIL_HOST || 'mail.privateemail.com',  //'mail.privateemail.com' or 'gmail',
+      port: Number(process.env.EMAIL_PORT || 465), // Use 587 for TLS/STARTTLS, 465 for SSL
+      secure: Boolean(process.env.EMAIL_SECURE || true), // true for SSL (port 465), false for TLS (port 587)
+      auth: {
+        user: process.env.EMAIL_USERNAME,
+        pass: process.env.EMAIL_PASSWORD
+      },
+      logger: true,
+      debug: true
+    });
+  }
 
   await transporter.verify();
 
