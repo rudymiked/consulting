@@ -9,12 +9,24 @@ export interface EmailOptions {
 
 export async function sendEmail(options: EmailOptions): Promise<void> {
   const transporter = nodemailer.createTransport({
-    service: 'gmail',
+    host: process.env.EMAIL_HOST,  //'mail.privateemail.com',
+    port: 465, // Use 587 for TLS/STARTTLS
+    secure: true, // true for SSL (port 465), false for TLS (port 587)
     auth: {
       user: process.env.EMAIL_USERNAME,
-      pass: process.env.EMAIL_PASSWORD,
+      pass: process.env.EMAIL_PASSWORD
     },
+    logger: true,
+    debug: true
   });
+
+  // const transporter = nodemailer.createTransport({
+  //   service: 'gmail',
+  //   auth: {
+  //     user: process.env.EMAIL_USERNAME,
+  //     pass: process.env.EMAIL_PASSWORD,
+  //   },
+  // });
 
   const mailOptions = {
     from: process.env.RUDYARD_EMAIL_USERNAME || process.env.EMAIL_USERNAME,
