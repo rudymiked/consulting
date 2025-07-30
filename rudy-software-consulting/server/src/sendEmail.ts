@@ -10,10 +10,12 @@ export interface EmailOptions {
 export async function sendEmail(options: EmailOptions): Promise<void> {
   let transporter;
 
-  console.log('Transport using Gmail?', Boolean(process.env.EMAIL_USE_GMAIL));
+  const useGmail = (process.env.EMAIL_USE_GMAIL || '').trim().toLowerCase() === 'true';
+
+  console.log('Transport using Gmail?', useGmail);
   console.log('Host used:', process.env.EMAIL_HOST);
 
-  if (Boolean(process.env.EMAIL_USE_GMAIL)) {
+  if (useGmail) {
       transporter = nodemailer.createTransport({
       service: process.env.EMAIL_SERVICE || 'gmail',
       auth: {
