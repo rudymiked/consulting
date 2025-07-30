@@ -33,8 +33,8 @@ export async function sendEmail(options: EmailOptions): Promise<void> {
 
     transporter = nodemailer.createTransport({
       host: process.env.EMAIL_HOST || 'mail.privateemail.com',  //'mail.privateemail.com' or 'gmail',
-      port: port || 465, // Use 587 for TLS/STARTTLS, 465 for SSL
-      secure: secure || true, // true for SSL (port 465), false for TLS (port 587)
+      port: port, // Use 587 for TLS/STARTTLS, 465 for SSL
+      secure: secure, // true for SSL (port 465), false for TLS (port 587)
       auth: {
         user: process.env.EMAIL_USERNAME,
         pass: process.env.EMAIL_PASSWORD
