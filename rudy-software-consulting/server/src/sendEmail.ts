@@ -10,6 +10,9 @@ export interface EmailOptions {
 export async function sendEmail(options: EmailOptions): Promise<void> {
   let transporter;
 
+  console.log('Transport using Gmail?', Boolean(process.env.EMAIL_USE_GMAIL));
+  console.log('Host used:', process.env.EMAIL_HOST);
+
   if (Boolean(process.env.EMAIL_USE_GMAIL)) {
       transporter = nodemailer.createTransport({
       service: process.env.EMAIL_SERVICE || 'gmail',
@@ -21,8 +24,8 @@ export async function sendEmail(options: EmailOptions): Promise<void> {
   } else {
     transporter = nodemailer.createTransport({
       host: process.env.EMAIL_HOST || 'mail.privateemail.com',  //'mail.privateemail.com' or 'gmail',
-      port: Number(process.env.EMAIL_PORT || 465), // Use 587 for TLS/STARTTLS, 465 for SSL
-      secure: Boolean(process.env.EMAIL_SECURE || true), // true for SSL (port 465), false for TLS (port 587)
+      port: Number(process.env.EMAIL_PORT) || 465, // Use 587 for TLS/STARTTLS, 465 for SSL
+      secure: Boolean(process.env.EMAIL_SECURE) || true, // true for SSL (port 465), false for TLS (port 587)
       auth: {
         user: process.env.EMAIL_USERNAME,
         pass: process.env.EMAIL_PASSWORD
@@ -41,6 +44,8 @@ export async function sendEmail(options: EmailOptions): Promise<void> {
     text: options.text,
     html: options.html,
   };
+
+  console.log('Sending email with options:', mailOptions);
 
   try {
     await transporter.sendMail(mailOptions);

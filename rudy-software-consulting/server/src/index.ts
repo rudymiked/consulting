@@ -14,6 +14,7 @@ app.use(express.json());
 
 // Routes
 app.get('/api', (_, res) => {
+  console.log('API is running 🚀');
   res.send('API is running 🚀');
 });
 
@@ -34,6 +35,7 @@ app.get('/api/ping', (_, res) => {
 });
 
 app.get('/api/email', (_, res) => {
+  console.log('Email address:', process.env.RUDYARD_EMAIL_USERNAME);
   res.json({ message: `email address: ${process.env.RUDYARD_EMAIL_USERNAME}` });
 });
 
