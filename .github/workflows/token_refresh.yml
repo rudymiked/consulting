@@ -15,5 +15,5 @@ jobs:
         uses: azure/cli@v1
         with:
           inlineScript: |
-            az login --service-principal -u ${{ secrets.AZURE_CLIENT_ID }} -p ${{ secrets.AZURE_CLIENT_SECRET }} --tenant ${{ secrets.AZURE_TENANT_ID }}
-            az staticwebapp appsettings set --name <your-app-name> --resource-group <your-rg> --setting-names CLIENT_TOKEN=${{ env.CLIENT_TOKEN }}
+            az login --service-principal -u ${{ secrets.RUDYARD_CLIENT_APP_REG_AZURE_CLIENT_ID }} -p ${{ secrets.RUDYARD_CLIENT_APP_REG_AZURE_CLIENT_SECRET }} --tenant ${{ secrets.RUDYARD_CLIENT_APP_REG_AZURE_TENANT_ID }}
+            az staticwebapp appsettings set --name webclient --resource-group Rudyard --setting-names CLIENT_TOKEN=${{ env.CLIENT_TOKEN }}
