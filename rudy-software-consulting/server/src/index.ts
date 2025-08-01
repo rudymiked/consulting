@@ -2,8 +2,10 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { sendEmail } from './emailHelper';
+import jwksClient from 'jwks-rsa';
+import { expressjwt } from 'express-jwt';
 
-dotenv.config(); // Load environment variables from .env
+dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 4001;
@@ -12,13 +14,43 @@ const PORT = process.env.PORT || 4001;
 app.use(cors());
 app.use(express.json());
 
+// 🔑 JWT Validation Setup
+const client = jwksClient({
+  jwksUri: `https://login.microsoftonline.com/${process.env.AZURE_TENANT_ID}/discovery/v2.0/keys`
+});
+
+async function getSigningKey(header: any): Promise<string> {
+  return new Promise((resolve, reject) => {
+    client.getSigningKey(header.kid, (err, key) => {
+      if (err) {
+        reject(err);
+      } else {
+        const signingKey = key?.getPublicKey();
+        if (typeof signingKey === 'string') {
+          resolve(signingKey);
+        } else {
+          reject(new Error('Signing key is undefined'));
+        }
+      }
+    });
+  });
+}
+
+const jwtCheck = expressjwt({
+  secret: getSigningKey,
+  algorithms: ['RS256'],
+  issuer: `https://login.microsoftonline.com/${process.env.AZURE_TENANT_ID}/v2.0`,
+  audience: `api://${process.env.RUDYARD_CLIENT_APP_REG_AZURE_CLIENT_ID}`
+});
+
 // Routes
 app.get('/api', (_, res) => {
   console.log('API is running 🚀');
   res.send('API is running 🚀');
 });
 
-app.post('/api/contact', async (req, res) => {
+// 🚫 Protected route example
+app.post('/api/contact', jwtCheck, async (req, res) => {
   const { to, subject, text, html } = req.body;
 
   try {
@@ -39,7 +71,7 @@ app.get('/api/email', (_, res) => {
   res.json({ message: `email address: ${process.env.RUDYARD_EMAIL_USERNAME}` });
 });
 
-// Start the server
+// Start server
 app.listen(PORT, () => {
   console.log(`🚀 Rudyard Software Consulting server is live at http://localhost:${PORT}`);
 });
