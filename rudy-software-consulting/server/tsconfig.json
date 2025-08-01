@@ -1,8 +1,8 @@
 {
   "compilerOptions": {
     "moduleResolution": "node16",
-    "module": "ESNext",
-    "target": "ES2022",         // or ESNext
+    "module": "Node16",
+    "target": "ES2022",
     "resolveJsonModule": true,
     "esModuleInterop": true,
     "lib": ["ES2022", "DOM"],
