@@ -1,4 +1,5 @@
 import nodemailer from 'nodemailer';
+import { insertEntity, queryEntities, updateEntity } from './tableClientHelper';
 
 export interface EmailOptions {
   to: string;
@@ -61,6 +62,52 @@ export async function sendEmail(options: EmailOptions): Promise<void> {
     console.log(`Email sent to ${mailOptions.to} from ${mailOptions.from}`);
   } catch (error) {
     console.error('Error sending email:', error);
+    throw error;
+  }
+}
+
+export async function insertIntoContactLogs(options: EmailOptions): Promise<void> {
+  const { to, subject, text, html } = options;
+  const emailData = {
+    to,
+    subject,
+    text,
+    html,
+    timestamp: new Date().toISOString(),
+    sent: false,
+  };
+
+  insertEntity('ContactLogs', emailData).then(() => {
+    console.log('Email data inserted into ContactLogs table:', emailData);
+  }).catch(error => {
+    console.error('Error inserting email data into ContactLogs table:', error);
+    throw error;
+  });
+}
+
+export async function sendEmailsFromLog(): Promise<void> {
+  try {
+    const contactLogs = await queryEntities('ContactLogs', "sent eq false");
+
+    for (const log of contactLogs) {
+      const emailOptions: EmailOptions = {
+        to: log.to,
+        subject: log.subject,
+        text: log.text,
+        html: log.html,
+      };
+
+      await sendEmail(emailOptions);
+      console.log(`Email sent from log: ${log.to} - ${log.subject}`);
+
+      log.sent = true; // Mark as sent
+      log.timestamp = new Date().toISOString(); // Update timestamp
+      console.log('Updating log entry:', log);
+      
+      await updateEntity('ContactLogs', log); // Update the log entry
+    }
+  } catch (error) {
+    console.error('Error in sendAndLogEmail:', error);
     throw error;
   }
 }

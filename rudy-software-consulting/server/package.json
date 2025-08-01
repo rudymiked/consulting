@@ -17,6 +17,9 @@
   "author": "Rudy",
   "license": "MIT",
   "dependencies": {
+    "@azure/data-tables": "^13.3.1",
+    "@azure/identity": "^4.10.2",
+    "@hcaptcha/react-hcaptcha": "^1.12.0",
     "@react-email/components": "^0.3.1",
     "concurrently": "^9.2.0",
     "cors": "^2.8.5",
@@ -30,7 +33,7 @@
   "devDependencies": {
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.3",
-    "@types/node": "^24.0.14",
+    "@types/node": "^24.1.0",
     "@types/nodemailer": "^6.4.17",
     "@types/react": "^18.0.0",
     "@types/react-dom": "^18.0.0",

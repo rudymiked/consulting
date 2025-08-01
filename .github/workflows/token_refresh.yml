@@ -1,0 +1,19 @@
+name: Rotate API Token
+
+on:
+  schedule:
+    - cron: '0 0 * * 0' # Every Sunday
+
+jobs:
+  rotate-token:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Generate GUID
+        run: echo "CLIENT_TOKEN=$(uuidgen)" >> $GITHUB_ENV
+
+      - name: Update Azure App Setting
+        uses: azure/cli@v1
+        with:
+          inlineScript: |
+            az login --service-principal -u ${{ secrets.AZURE_CLIENT_ID }} -p ${{ secrets.AZURE_CLIENT_SECRET }} --tenant ${{ secrets.AZURE_TENANT_ID }}
+            az staticwebapp appsettings set --name <your-app-name> --resource-group <your-rg> --setting-names CLIENT_TOKEN=${{ env.CLIENT_TOKEN }}

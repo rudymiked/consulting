@@ -1,7 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import { sendEmail } from './sendEmail';
+import { sendEmail } from './emailHelper';
 
 dotenv.config(); // Load environment variables from .env
 
