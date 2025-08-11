@@ -3,17 +3,51 @@ name: Rotate API Token
 on:
   schedule:
     - cron: '0 0 * * 0' # Every Sunday
+  workflow_dispatch: # Optional: allows manual trigger
 
 jobs:
   rotate-token:
     runs-on: ubuntu-latest
-    steps:
-      - name: Generate GUID
-        run: echo "CLIENT_TOKEN=$(uuidgen)" >> $GITHUB_ENV
 
-      - name: Update Azure App Setting
+    steps:
+      - name: Generate New GUID Token
+        run: |
+          NEW_TOKEN=$(uuidgen)
+          echo "CLIENT_TOKEN=$NEW_TOKEN" >> $GITHUB_ENV
+          echo "Generated new CLIENT_TOKEN: $NEW_TOKEN"
+
+      - name: Log in to Azure
         uses: azure/cli@v1
         with:
           inlineScript: |
-            az login --service-principal -u ${{ secrets.RUDYARD_CLIENT_APP_REG_AZURE_CLIENT_ID }} -p ${{ secrets.RUDYARD_CLIENT_APP_REG_AZURE_CLIENT_SECRET }} --tenant ${{ secrets.RUDYARD_CLIENT_APP_REG_AZURE_TENANT_ID }}
-            az staticwebapp appsettings set --name webclient --resource-group Rudyard --setting-names CLIENT_TOKEN=${{ env.CLIENT_TOKEN }}
+            echo "Authenticating with Azure..."
+            az login --service-principal \
+              -u ${{ secrets.RUDYARD_CLIENT_APP_REG_AZURE_CLIENT_ID }} \
+              -p ${{ secrets.RUDYARD_CLIENT_APP_REG_AZURE_CLIENT_SECRET }} \
+              --tenant ${{ secrets.RUDYARD_CLIENT_APP_REG_AZURE_TENANT_ID }}
+
+            if [ $? -ne 0 ]; then
+              echo "❌ Azure login failed."
+              exit 1
+            fi
+
+            echo "Setting subscription..."
+            az account set --subscription ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+            if [ $? -ne 0 ]; then
+              echo "❌ Failed to set subscription."
+              exit 1
+            fi
+
+            echo "Updating Static Web App setting..."
+            az staticwebapp appsettings set \
+              --name webclient \
+              --resource-group Rudyard \
+              --setting-names CLIENT_TOKEN=${{ env.CLIENT_TOKEN }}
+
+            if [ $? -ne 0 ]; then
+              echo "❌ Failed to update app settings."
+              exit 1
+            fi
+
+            echo "✅ CLIENT_TOKEN successfully rotated and updated in Azure Static Web App."

@@ -17,8 +17,6 @@ import SecurityAndCompliancePage from './pages/SecurityAndCompliancePage';
 const App: React.FC = () => {
 
   React.useEffect(() => {
-    console.log("API url:", import.meta.env);
-    
     fetch(`https://${import.meta.env.VITE_API_URL}/api/`, {
         method: 'GET',
         headers: {
