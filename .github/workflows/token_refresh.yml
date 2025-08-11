@@ -32,7 +32,7 @@ jobs:
             fi
 
             echo "Setting subscription..."
-            az account set --subscription ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+            az account set --subscription ${{ secrets.RUDYARD_AZURE_SUBSCRIPTION_ID }}
 
             if [ $? -ne 0 ]; then
               echo "❌ Failed to set subscription."
@@ -49,5 +49,3 @@ jobs:
               echo "❌ Failed to update app settings."
               exit 1
             fi
-
-            echo "✅ CLIENT_TOKEN successfully rotated and updated in Azure Static Web App."
