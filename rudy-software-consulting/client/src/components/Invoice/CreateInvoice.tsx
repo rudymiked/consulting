@@ -7,7 +7,7 @@ async function saveInvoice(invoice: {
     notes: string;
     contact: string;
 }) {
-    await fetch('/api/invoice', { method: 'POST', body: JSON.stringify(invoice) }).then(res => {
+    await fetch(`https://${import.meta.env.VITE_API_URL}/api/invoice`, { method: 'POST', body: JSON.stringify(invoice) }).then(res => {
         if (!res.ok) 
             throw new Error('Failed to save invoice');
 

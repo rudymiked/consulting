@@ -11,7 +11,7 @@ import { loadStripe } from '@stripe/stripe-js';
 const stripePromise = loadStripe('pk_test_TYooMQauvdEDq54NiTphI7jx');
 
 const fetchClientSecret = () => {
-  return fetch('/create-checkout-session', {method: 'POST'})
+  return fetch(`https://${import.meta.env.VITE_API_URL}/create-checkout-session`, {method: 'POST'})
     .then((response) => response.json())
     .then((json) => json.checkoutSessionClientSecret)
 };
