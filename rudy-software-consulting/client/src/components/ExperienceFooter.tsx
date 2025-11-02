@@ -25,7 +25,7 @@ const ExperienceFooter: React.FC = () => {
 
     return (
         <Box component="footer" sx={{ py: 3, textAlign: 'center', bgcolor: 'background.paper', mt: 4, borderRadius: 1 }}>
-            <Typography variant="body2" color="text.secondary">
+            <Typography variant="body2" color="text.secondary" component="div">
                 <strong>Powdered by engineers with experience at:</strong>
                 <br />
                 <br />
