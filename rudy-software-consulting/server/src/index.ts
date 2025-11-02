@@ -5,7 +5,7 @@ import { sendEmail } from './emailHelper';
 import jwksClient from 'jwks-rsa';
 import { expressjwt } from 'express-jwt';
 import Stripe from 'stripe';
-import { getInvoiceDetails, saveInvoice } from './paymentHelper';
+import { createInvoice, getInvoiceDetails, updateInvoice } from './paymentHelper';
 
 dotenv.config();
 
@@ -13,7 +13,32 @@ const app = express();
 const PORT = process.env.PORT || 4001;
 
 // Middleware
-app.use(cors());
+// Allow CORS from localhost:3000 (dev) and other allowed origins. Also ensure preflight (OPTIONS) is handled.
+const corsOptions = {
+  origin: (origin: any, callback: any) => {
+    // allow requests with no origin (like mobile apps, curl) or from localhost during development
+    const allowedOrigins = [
+      'http://localhost:3000',
+      process.env.FRONTEND_ORIGIN, // optional, set in env for production
+    ].filter(Boolean) as string[];
+
+    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      // For stricter security, replace the next line with: callback(new Error('Not allowed by CORS'))
+      callback(null, true);
+    }
+  },
+  methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  credentials: true,
+  optionsSuccessStatus: 204,
+};
+
+app.use(cors(corsOptions));
+// respond to preflight requests
+app.options('*', cors(corsOptions));
+
 app.use(express.json());
 
 // 🔑 JWT Validation Setup
@@ -117,7 +142,7 @@ app.post('/api/payInvoice', async (req, res) => {
     }
 
       // update invoice in DB
-    await saveInvoice({
+    await updateInvoice({
       id: invoiceId,
       status: 'paid',
       name: invoiceDetails.clientName,
@@ -161,7 +186,7 @@ app.post('/api/invoice', async (req, res) => {
   }
 
   try {
-    const result = await saveInvoice({ id, name, amount, notes, contact, status: 'new' });
+    const result = await createInvoice({ id, name, amount, notes, contact, status: 'new' });
     res.status(201).json(result);
   } catch (error: any) {
     console.error('Error saving invoice:', error.message);

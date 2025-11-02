@@ -3,7 +3,7 @@ import { TableClient } from "@azure/data-tables";
 import { DefaultAzureCredential } from "@azure/identity";
 
 export const getInvoiceDetails = async (invoiceId: string) => {
-    const account = "rudyard9e11";
+    const account = process.env.RUDYARD_STORAGE_ACCOUNT_NAME;
     const tableName = "invoices";
 
     const credential = new DefaultAzureCredential();
@@ -34,15 +34,15 @@ export const getInvoiceDetails = async (invoiceId: string) => {
     throw new Error("Invoice not found");
 }
 
-export const saveInvoice = async (invoiceData: InvoiceData) => {
-    const account = "rudyard9e11";
+export const createInvoice = async (invoiceData: InvoiceData) => {
+    const account = process.env.RUDYARD_STORAGE_ACCOUNT_NAME;
     const tableName = "invoices";
 
     const credential = new DefaultAzureCredential();
     const tableClient = new TableClient(
-    `https://${account}.table.core.windows.net`,
-    tableName,
-    credential
+        `https://${account}.table.core.windows.net`,
+        tableName,
+        credential
     );
 
     const entity = {
@@ -51,15 +51,48 @@ export const saveInvoice = async (invoiceData: InvoiceData) => {
         ...invoiceData,
     };
 
-    await tableClient.createEntity(entity).then(() => {
-        console.log("Invoice saved successfully:", entity)
+    try {
+        await tableClient.createEntity(entity);
+        console.log("Invoice created successfully:", entity);
         return {
             success: true,
-            message: "Invoice saved successfully",
+            message: "Invoice created successfully",
             invoiceId: invoiceData.id,
-        };
-    }).catch((error) => {
-        console.error("Error saving invoice:", error)
-        throw new Error("Failed to save invoice")    
-    });
+        } as const;
+    } catch (error) {
+        console.error("Error creating invoice:", error);
+        throw new Error("Failed to create invoice");
+    }
+}
+
+export const updateInvoice = async (invoiceData: InvoiceData) => {
+    const account = process.env.RUDYARD_STORAGE_ACCOUNT_NAME;
+    const tableName = "invoices";
+
+    const credential = new DefaultAzureCredential();
+    const tableClient = new TableClient(
+        `https://${account}.table.core.windows.net`,
+        tableName,
+        credential
+    );
+
+    const entity = {
+        partitionKey: invoiceData.contact || "default",
+        rowKey: invoiceData.id,
+        ...invoiceData,
+    };
+
+    try {
+        // Update by merging properties; will throw if entity doesn't exist
+        await tableClient.updateEntity(entity, "Merge");
+        console.log("Invoice updated successfully:", entity);
+        return {
+            success: true,
+            message: "Invoice updated successfully",
+            invoiceId: invoiceData.id,
+        } as const;
+    } catch (error) {
+        console.error("Error updating invoice:", error);
+        throw new Error("Failed to update invoice");
+    }
 }
