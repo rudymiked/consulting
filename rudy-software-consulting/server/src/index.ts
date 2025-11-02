@@ -36,8 +36,15 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
-// respond to preflight requests
-app.options('*', cors(corsOptions));
+
+// Handle preflight requests centrally without using a path pattern that breaks path-to-regexp.
+app.use((req, res, next) => {
+  if (req.method === 'OPTIONS') {
+    // run the CORS middleware for this request then end with 204
+    return cors(corsOptions)(req as any, res as any, () => res.sendStatus(204));
+  }
+  next();
+});
 
 app.use(express.json());
 
@@ -72,8 +79,9 @@ const jwtCheck = expressjwt({
 
 // Routes
 app.get('/api', (_, res) => {
+  console.log(process.env.FRONTEND_ORIGIN);
   console.log('API is running 🚀');
-  res.send('API is running 🚀');
+  res.send('API is running 🚀 origin:' + process.env.FRONTEND_ORIGIN);
 });
 
 // 🚫 Protected route example
@@ -100,7 +108,7 @@ app.get('/api/email', (_, res) => {
 
 // Initialize Stripe
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, {
-  apiVersion: '2025-03-31.basil',
+  apiVersion: '2025-08-27.basil',
 });
 
 app.post('/api/payInvoice', async (req, res) => {
