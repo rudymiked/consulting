@@ -12,6 +12,18 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 4001;
 
+const required = [
+  'RUDYARD_STORAGE_ACCOUNT_NAME',
+  'AZURE_TENANT_ID',
+  'RUDYARD_CLIENT_APP_REG_AZURE_CLIENT_ID'
+];
+
+const missing = required.filter(k => !process.env[k]);
+if (missing.length) {
+  console.error('Missing required env vars:', missing);
+  process.exit(1); // fail fast so App Service shows startup error
+}
+
 // Middleware
 // Allow CORS from localhost:3000 (dev) and other allowed origins. Also ensure preflight (OPTIONS) is handled.
 const corsOptions = {
