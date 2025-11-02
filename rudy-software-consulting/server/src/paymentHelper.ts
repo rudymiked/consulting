@@ -6,12 +6,18 @@ export const getInvoiceDetails = async (invoiceId: string) => {
     const account = process.env.RUDYARD_STORAGE_ACCOUNT_NAME;
     const tableName = "invoices";
 
-    const credential = new DefaultAzureCredential();
-    const tableClient = new TableClient(
-    `https://${account}.table.core.windows.net`,
-    tableName,
-    credential
-    );
+    // If a connection string is provided (useful for local development), prefer it.
+    const connectionString = process.env.AZURE_STORAGE_CONNECTION_STRING;
+    let tableClient: TableClient;
+    if (connectionString) {
+        console.log("Using AZURE_STORAGE_CONNECTION_STRING for TableClient");
+        tableClient = TableClient.fromConnectionString(connectionString, tableName);
+    } else {
+        // Use DefaultAzureCredential which will pick up managed identity in Azure App Service
+        console.log("Using DefaultAzureCredential (managed identity / environment creds) for TableClient");
+        const credential = new DefaultAzureCredential();
+        tableClient = new TableClient(`https://${account}.table.core.windows.net`, tableName, credential);
+    }
 
     const entities = tableClient.listEntities<InvoiceData>({
         queryOptions: {
@@ -38,12 +44,16 @@ export const createInvoice = async (invoiceData: InvoiceData) => {
     const account = process.env.RUDYARD_STORAGE_ACCOUNT_NAME;
     const tableName = "invoices";
 
-    const credential = new DefaultAzureCredential();
-    const tableClient = new TableClient(
-        `https://${account}.table.core.windows.net`,
-        tableName,
-        credential
-    );
+    const connectionString = process.env.AZURE_STORAGE_CONNECTION_STRING;
+    let tableClient: TableClient;
+    if (connectionString) {
+        console.log("Using AZURE_STORAGE_CONNECTION_STRING for TableClient");
+        tableClient = TableClient.fromConnectionString(connectionString, tableName);
+    } else {
+        console.log("Using DefaultAzureCredential (managed identity / environment creds) for TableClient");
+        const credential = new DefaultAzureCredential();
+        tableClient = new TableClient(`https://${account}.table.core.windows.net`, tableName, credential);
+    }
 
     const entity = {
         partitionKey: invoiceData.contact || "default",
@@ -61,7 +71,7 @@ export const createInvoice = async (invoiceData: InvoiceData) => {
         } as const;
     } catch (error) {
         console.error("Error creating invoice:", error);
-        throw new Error("Failed to create invoice");
+        throw new Error("Failed to create invoice" + error.message);
     }
 }
 
@@ -69,12 +79,16 @@ export const updateInvoice = async (invoiceData: InvoiceData) => {
     const account = process.env.RUDYARD_STORAGE_ACCOUNT_NAME;
     const tableName = "invoices";
 
-    const credential = new DefaultAzureCredential();
-    const tableClient = new TableClient(
-        `https://${account}.table.core.windows.net`,
-        tableName,
-        credential
-    );
+    const connectionString = process.env.AZURE_STORAGE_CONNECTION_STRING;
+    let tableClient: TableClient;
+    if (connectionString) {
+        console.log("Using AZURE_STORAGE_CONNECTION_STRING for TableClient");
+        tableClient = TableClient.fromConnectionString(connectionString, tableName);
+    } else {
+        console.log("Using DefaultAzureCredential (managed identity / environment creds) for TableClient");
+        const credential = new DefaultAzureCredential();
+        tableClient = new TableClient(`https://${account}.table.core.windows.net`, tableName, credential);
+    }
 
     const entity = {
         partitionKey: invoiceData.contact || "default",

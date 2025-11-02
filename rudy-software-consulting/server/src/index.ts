@@ -212,10 +212,13 @@ app.post('/api/invoice', async (req, res) => {
 
   try {
     const result = await createInvoice({ id, name, amount, notes, contact, status: 'new' });
+
+    console.log(result);
+
     res.status(201).json(result);
   } catch (error: any) {
     console.error('Error saving invoice:', error.message);
-    res.status(500).json({ error: 'Failed to save invoice.' });
+    res.status(500).json({ error: 'Failed to save invoice.' + error.message });
   }
 });
 
