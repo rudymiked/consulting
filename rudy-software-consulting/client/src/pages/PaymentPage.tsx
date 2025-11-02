@@ -8,7 +8,7 @@ import { loadStripe } from '@stripe/stripe-js';
 
 // Make sure to call `loadStripe` outside of a component’s render to avoid
 // recreating the `Stripe` object on every render.
-const stripePromise = loadStripe(process.env.STRIPE_SECRET_KEY!);
+const stripePromise = loadStripe(import.meta.env.STRIPE_SECRET_KEY!);
 
 const fetchClientSecret = () => {
   return fetch(`https://${import.meta.env.VITE_API_URL}/api/create-checkout-session`, {method: 'POST'})
