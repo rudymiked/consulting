@@ -90,6 +90,11 @@ const jwtCheck = expressjwt({
 });
 
 // Routes
+
+app.get('/', (_, res) => {
+  res.send('Welcome to the Rudyard Software Consulting API 🚀');
+});
+
 app.get('/api', (_, res) => {
   console.log(process.env.FRONTEND_ORIGIN);
   console.log('API is running 🚀');
@@ -214,7 +219,11 @@ app.post('/api/invoice', async (req, res) => {
   }
 });
 
-// Start server
-app.listen(PORT, () => {
-  console.log(`🚀 Rudyard Software Consulting server is live at http://localhost:${PORT}`);
-});
+// Export app for testing and start server when run directly
+export default app;
+
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`🚀 Rudyard Software Consulting server is live at http://localhost:${PORT}`);
+  });
+}
