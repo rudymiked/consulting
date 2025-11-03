@@ -1,13 +1,51 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import * as appInsights from 'applicationinsights';
 import { sendEmail } from './emailHelper';
 import jwksClient from 'jwks-rsa';
 import { expressjwt } from 'express-jwt';
 import Stripe from 'stripe';
 import { createInvoice, getInvoiceDetails, updateInvoice } from './paymentHelper';
+import { trackEvent, trackException, trackTrace } from './telemetry';
 
 dotenv.config();
+
+// Application Insights setup (optional)
+// Provide either APPINSIGHTS_CONNECTION_STRING or APPINSIGHTS_INSTRUMENTATIONKEY in App Settings
+(() => {
+  const conn = process.env.APPINSIGHTS_CONNECTION_STRING;
+
+  console.log(conn ? 'Application Insights connection found' : 'No Application Insights connection found');
+
+  if (!conn) {
+    console.log('Application Insights not configured (no connection string or instrumentation key).');
+    return;
+  }
+
+  try {
+    appInsights.setup(conn)
+      .setAutoCollectRequests(true)
+      .setAutoCollectDependencies(true)
+      .setAutoCollectConsole(true, true)
+      .setAutoCollectExceptions(true)
+      .setAutoDependencyCorrelation(true)
+      .start();
+
+    // Tag role for clarity in App Insights
+    const client = appInsights.defaultClient;
+    console.log('App Insights client:', client);
+
+    if (client && client.context && client.context.tags) {
+      const roleKey = client.context.keys.cloudRole as string;
+      client.context.tags[roleKey] = process.env.APPINSIGHTS_ROLE_NAME || 'rudyard-api';
+    }
+
+    console.log('Application Insights configured.');
+  } catch (err: any) {
+    console.error('Failed to initialize Application Insights:', err?.message || err);
+  }
+})();
 
 const app = express();
 const PORT = process.env.PORT || 4001;
@@ -98,6 +136,7 @@ app.get('/', (_, res) => {
 app.get('/api', (_, res) => {
   console.log(process.env.FRONTEND_ORIGIN);
   console.log('API is running 🚀');
+  trackEvent('API_Hit', { origin: process.env.FRONTEND_ORIGIN });
   res.send('API is running 🚀 origin:' + process.env.FRONTEND_ORIGIN);
 });
 
@@ -136,6 +175,7 @@ app.post('/api/payInvoice', async (req, res) => {
   }
 
   try {
+    trackEvent('PayInvoice_Attempt', { invoiceId });
     const invoiceDetails = await getInvoiceDetails(invoiceId);
     if (!invoiceDetails) {
       return res.status(404).json({ error: 'Invalid invoice ID.' });
@@ -176,9 +216,11 @@ app.post('/api/payInvoice', async (req, res) => {
       contact: invoiceDetails.contact,
     }).then(() => {
       console.log('Invoice updated successfully');
+      trackEvent('PayInvoice_Success', { invoiceId });
       res.status(200).json({ message: 'Invoice updated successfully' });  
     }).catch((error) => {
       console.error('Error saving invoice:', error);
+      trackException(error, { invoiceId });
       res.status(500).json({ error: 'Failed to save invoice.' });
     });
 

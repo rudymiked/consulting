@@ -1,6 +1,7 @@
 import { InvoiceData } from "./models";
 import { TableClient } from "@azure/data-tables";
 import { DefaultAzureCredential } from "@azure/identity";
+import { trackEvent, trackDependency, trackException, trackTrace } from './telemetry';
 
 export const getInvoiceDetails = async (invoiceId: string) => {
     const account = process.env.RUDYARD_STORAGE_ACCOUNT_NAME;
@@ -19,14 +20,15 @@ export const getInvoiceDetails = async (invoiceId: string) => {
         tableClient = new TableClient(`https://${account}.table.core.windows.net`, tableName, credential);
     }
 
+    trackEvent('GetInvoice_Attempt', { invoiceId });
     const entities = tableClient.listEntities<InvoiceData>({
         queryOptions: {
             filter: `RowKey eq '${invoiceId}'`
         }
     });
-    
+
     for await (const entity of entities) {
-        return {
+        const result = {
             invoiceId: entity.rowKey,
             status: entity.status,
             clientName: entity.name,
@@ -34,10 +36,15 @@ export const getInvoiceDetails = async (invoiceId: string) => {
             notes: entity.notes,
             contact: entity.contact
         };
+        trackEvent('GetInvoice_Success', { invoiceId });
+        return result;
     }
 
+    trackTrace(`Invoice ${invoiceId} not found`, undefined, { invoiceId });
     // no match is found
-    throw new Error("Invoice not found");
+    const err = new Error("Invoice not found");
+    trackException(err, { invoiceId });
+    throw err;
 }
 
 export const createInvoice = async (invoiceData: InvoiceData) => {
@@ -61,17 +68,43 @@ export const createInvoice = async (invoiceData: InvoiceData) => {
         ...invoiceData,
     };
 
+    trackEvent('CreateInvoice_Attempt', { invoiceId: invoiceData.id, client: invoiceData.contact });
+    const start = Date.now();
     try {
         await tableClient.createEntity(entity);
+        const duration = Date.now() - start;
+        trackDependency({
+            target: process.env.RUDYARD_STORAGE_ACCOUNT_NAME,
+            name: 'Table:createEntity',
+            data: `invoices/${invoiceData.id}`,
+            durationMs: duration,
+            resultCode: '201',
+            success: true,
+            dependencyTypeName: 'Azure Table'
+        });
+        trackEvent('CreateInvoice_Success', { invoiceId: invoiceData.id });
+        trackTrace(`Invoice ${invoiceData.id} created`, undefined, { amount: invoiceData.amount });
         console.log("Invoice created successfully:", entity);
         return {
             success: true,
             message: "Invoice created successfully",
             invoiceId: invoiceData.id,
         } as const;
-    } catch (error) {
+    } catch (error: any) {
+        const duration = Date.now() - start;
+        trackDependency({
+            target: process.env.RUDYARD_STORAGE_ACCOUNT_NAME,
+            name: 'Table:createEntity',
+            data: `invoices/${invoiceData.id}`,
+            durationMs: duration,
+            resultCode: error?.statusCode || '500',
+            success: false,
+            dependencyTypeName: 'Azure Table',
+            properties: { message: error?.message }
+        });
+        trackException(error, { invoiceId: invoiceData.id });
         console.error("Error creating invoice:", error);
-        throw new Error("Failed to create invoice" + error.message);
+        throw new Error("Failed to create invoice" + (error?.message ?? ''));
     }
 }
 
@@ -96,16 +129,41 @@ export const updateInvoice = async (invoiceData: InvoiceData) => {
         ...invoiceData,
     };
 
+    trackEvent('UpdateInvoice_Attempt', { invoiceId: invoiceData.id });
+    const start = Date.now();
     try {
         // Update by merging properties; will throw if entity doesn't exist
         await tableClient.updateEntity(entity, "Merge");
+        const duration = Date.now() - start;
+        trackDependency({
+            target: process.env.RUDYARD_STORAGE_ACCOUNT_NAME,
+            name: 'Table:updateEntity',
+            data: `invoices/${invoiceData.id}`,
+            durationMs: duration,
+            resultCode: '204',
+            success: true,
+            dependencyTypeName: 'Azure Table'
+        });
+        trackEvent('UpdateInvoice_Success', { invoiceId: invoiceData.id });
         console.log("Invoice updated successfully:", entity);
         return {
             success: true,
             message: "Invoice updated successfully",
             invoiceId: invoiceData.id,
         } as const;
-    } catch (error) {
+    } catch (error: any) {
+        const duration = Date.now() - start;
+        trackDependency({
+            target: process.env.RUDYARD_STORAGE_ACCOUNT_NAME,
+            name: 'Table:updateEntity',
+            data: `invoices/${invoiceData.id}`,
+            durationMs: duration,
+            resultCode: error?.statusCode || '500',
+            success: false,
+            dependencyTypeName: 'Azure Table',
+            properties: { message: error?.message }
+        });
+        trackException(error, { invoiceId: invoiceData.id });
         console.error("Error updating invoice:", error);
         throw new Error("Failed to update invoice");
     }
