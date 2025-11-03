@@ -8,16 +8,13 @@ export interface InvoiceProps {
 
 // Mock API function (replace with your actual API call)
 async function fetchInvoice(id: string) {
-    // Example: return await fetch(`/api/invoices/${id}`).then(res => res.json());
-    // Mock data for demonstration:
-    return new Promise<{ name: string; amount: number; notes: string; contact: string }>((resolve) =>
-        setTimeout(() => resolve({
-            name: 'Sample Client',
-            amount: 1234.56,
-            notes: 'Sample invoice notes.',
-            contact: 'client@email.com'
-        }), 1000)
-    );
+    return await fetch(`https://${import.meta.env.VITE_API_URL}/api/invoice/${id}`)
+        .then(res => {
+            if (!res.ok) throw new Error('Invoice not found');
+            return res.json();
+        }).catch((error) => {
+            throw error;
+        });
 }
 const Invoice: React.FC<InvoiceProps> = (props: InvoiceProps) => {
     const invoiceId = props.invoiceId;
