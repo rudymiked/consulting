@@ -143,7 +143,7 @@ app.post('/api/contact', async (req, res) => {
   const options: EmailOptions = { to, subject, text, html };
   
   await insertIntoContactLogs(options);
-  res.status(200).json({ message: 'Contact log inserted successfully' });
+  res.status(200).json({ message: 'Contacted successfully' });
   trackEvent('InsertContactLog_API', { to, subject });
 });
 
@@ -262,11 +262,13 @@ app.post('/api/invoice', async (req, res) => {
   try {
     const result = await createInvoice({ id, name, amount, notes, contact, status: 'new' });
 
+    trackEvent('CreateInvoice_API_Success', { invoiceId: result.invoiceId });
     console.log(result);
 
     res.status(201).json(result);
   } catch (error: any) {
     console.error('Error saving invoice:', error.message);
+    trackException(error, { name, contact });
     res.status(500).json({ error: 'Failed to save invoice.' + error.message });
   }
 });
