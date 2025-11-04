@@ -7,14 +7,33 @@ async function saveInvoice(invoice: {
     notes: string;
     contact: string;
 }) {
-    await fetch(`https://${import.meta.env.VITE_API_URL}/api/invoice`, { method: 'POST', body: JSON.stringify(invoice) }).then(res => {
-        if (!res.ok) 
-            throw new Error('Failed to save invoice');
-
-        return res.json();
-    }).catch(err => {
-        throw err;
+    const res = await fetch(`https://${import.meta.env.VITE_API_URL}/api/invoice`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+        },
+        body: JSON.stringify(invoice)
     });
+
+    if (!res.ok) {
+        // try to surface server error message
+        let errText = 'Failed to save invoice';
+        try {
+            const body = await res.json();
+            if (body && body.error) errText = body.error;
+        } catch (_e) {
+            try { errText = await res.text(); } catch (_) {}
+        }
+        throw new Error(errText);
+    }
+
+    // return parsed json (if any)
+    try {
+        return await res.json();
+    } catch (_e) {
+        return null;
+    }
 }
 
 const CreateInvoice: React.FC = () => {

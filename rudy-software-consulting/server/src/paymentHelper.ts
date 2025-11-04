@@ -57,7 +57,7 @@ export const createInvoice = async (invoiceData: InvoiceData) => {
 
         trackEvent('CreateInvoice_Success', { invoiceId: invoiceData.id });
         trackTrace(`Invoice ${invoiceData.id} created`, undefined, { amount: invoiceData.amount });
-        
+
         console.log("Invoice created successfully:", entity);
         return {
             success: true,
@@ -78,7 +78,8 @@ export const createInvoice = async (invoiceData: InvoiceData) => {
         });
         trackException(error, { invoiceId: invoiceData.id });
         console.error("Error creating invoice:", error);
-        throw new Error("Failed to create invoice" + (error?.message ?? ''));
+        // Rethrow original error to preserve full SDK/RestError details and stack
+        throw error;
     }
 }
 
@@ -127,6 +128,6 @@ export const updateInvoice = async (invoiceData: InvoiceData) => {
         });
         trackException(error, { invoiceId: invoiceData.id });
         console.error("Error updating invoice:", error);
-        throw new Error("Failed to update invoice");
+        throw error;
     }
 }
