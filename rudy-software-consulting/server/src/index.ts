@@ -11,8 +11,6 @@ import { trackEvent, trackException, trackTrace } from './telemetry';
 
 dotenv.config();
 
-// Application Insights setup (optional)
-// Provide either APPINSIGHTS_CONNECTION_STRING or APPINSIGHTS_INSTRUMENTATIONKEY in App Settings
 (() => {
   const conn = process.env.APPINSIGHTS_CONNECTION_STRING;
 

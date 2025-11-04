@@ -1,33 +1,16 @@
 import { InvoiceData } from "./models";
-import { TableClient } from "@azure/data-tables";
-import { DefaultAzureCredential, ManagedIdentityCredential } from "@azure/identity";
 import { trackEvent, trackDependency, trackException, trackTrace } from './telemetry';
+import { insertEntity, queryEntities, updateEntity } from './tableClientHelper';
 
 export const getInvoiceDetails = async (invoiceId: string) => {
-    const account = process.env.RUDYARD_STORAGE_ACCOUNT_NAME;
     const tableName = "invoices";
 
-    // If a connection string is provided (useful for local development), prefer it.
-    const connectionString = process.env.AZURE_STORAGE_CONNECTION_STRING;
-    let tableClient: TableClient;
-    if (connectionString) {
-        console.log("Using AZURE_STORAGE_CONNECTION_STRING for TableClient");
-        tableClient = TableClient.fromConnectionString(connectionString, tableName);
-    } else {
-        // Use DefaultAzureCredential which will pick up managed identity in Azure App Service
-        console.log("Using DefaultAzureCredential (managed identity / environment creds) for TableClient");
-        const credential = new ManagedIdentityCredential(process.env.RUDYARD_MANAGED_IDENTITY_CLIENT_ID!);
-        tableClient = new TableClient(`https://${account}.table.core.windows.net`, tableName, credential);
-    }
-
     trackEvent('GetInvoice_Attempt', { invoiceId });
-    const entities = tableClient.listEntities<InvoiceData>({
-        queryOptions: {
-            filter: `RowKey eq '${invoiceId}'`
-        }
-    });
+    const filter = `RowKey eq '${invoiceId}'`;
+    const entities = await queryEntities(tableName, filter);
 
-    for await (const entity of entities) {
+    if (entities && entities.length > 0) {
+        const entity = entities[0];
         const result = {
             invoiceId: entity.rowKey,
             status: entity.status,
@@ -41,26 +24,13 @@ export const getInvoiceDetails = async (invoiceId: string) => {
     }
 
     trackTrace(`Invoice ${invoiceId} not found`, undefined, { invoiceId });
-    // no match is found
     const err = new Error("Invoice not found");
     trackException(err, { invoiceId });
     throw err;
 }
 
 export const createInvoice = async (invoiceData: InvoiceData) => {
-    const account = process.env.RUDYARD_STORAGE_ACCOUNT_NAME;
     const tableName = "invoices";
-
-    const connectionString = process.env.AZURE_STORAGE_CONNECTION_STRING;
-    let tableClient: TableClient;
-    if (connectionString) {
-        console.log("Using AZURE_STORAGE_CONNECTION_STRING for TableClient");
-        tableClient = TableClient.fromConnectionString(connectionString, tableName);
-    } else {
-        console.log("Using DefaultAzureCredential (managed identity / environment creds) for TableClient");
-        const credential = new DefaultAzureCredential();
-        tableClient = new TableClient(`https://${account}.table.core.windows.net`, tableName, credential);
-    }
 
     const entity = {
         partitionKey: invoiceData.contact || "default",
@@ -71,7 +41,7 @@ export const createInvoice = async (invoiceData: InvoiceData) => {
     trackEvent('CreateInvoice_Attempt', { invoiceId: invoiceData.id, client: invoiceData.contact });
     const start = Date.now();
     try {
-        await tableClient.createEntity(entity);
+    await insertEntity(tableName, entity);
         const duration = Date.now() - start;
         trackDependency({
             target: process.env.RUDYARD_STORAGE_ACCOUNT_NAME,
@@ -109,19 +79,7 @@ export const createInvoice = async (invoiceData: InvoiceData) => {
 }
 
 export const updateInvoice = async (invoiceData: InvoiceData) => {
-    const account = process.env.RUDYARD_STORAGE_ACCOUNT_NAME;
     const tableName = "invoices";
-
-    const connectionString = process.env.AZURE_STORAGE_CONNECTION_STRING;
-    let tableClient: TableClient;
-    if (connectionString) {
-        console.log("Using AZURE_STORAGE_CONNECTION_STRING for TableClient");
-        tableClient = TableClient.fromConnectionString(connectionString, tableName);
-    } else {
-        console.log("Using DefaultAzureCredential (managed identity / environment creds) for TableClient");
-        const credential = new DefaultAzureCredential();
-        tableClient = new TableClient(`https://${account}.table.core.windows.net`, tableName, credential);
-    }
 
     const entity = {
         partitionKey: invoiceData.contact || "default",
@@ -133,7 +91,7 @@ export const updateInvoice = async (invoiceData: InvoiceData) => {
     const start = Date.now();
     try {
         // Update by merging properties; will throw if entity doesn't exist
-        await tableClient.updateEntity(entity, "Merge");
+    await updateEntity(tableName, entity);
         const duration = Date.now() - start;
         trackDependency({
             target: process.env.RUDYARD_STORAGE_ACCOUNT_NAME,

@@ -72,7 +72,10 @@ export async function sendEmail(options: EmailOptions): Promise<void> {
 
 export async function insertIntoContactLogs(options: EmailOptions): Promise<void> {
   const { to, subject, text, html } = options;
-  const emailData = {
+  // Azure Table Storage requires PartitionKey and RowKey and disallows undefined values.
+  const entity: any = {
+    partitionKey: to || 'unknown',
+    rowKey: `contact-${Date.now()}-${Math.floor(Math.random() * 100000)}`,
     to,
     subject,
     text,
@@ -81,9 +84,14 @@ export async function insertIntoContactLogs(options: EmailOptions): Promise<void
     sent: false,
   };
 
-  insertEntity('ContactLogs', emailData).then(() => {
-    console.log('Email data inserted into ContactLogs table:', emailData);
-  trackEvent('InsertContactLog_Success', { to, subject });
+  // Remove undefined properties (Table service rejects properties with undefined values)
+  Object.keys(entity).forEach(k => {
+    if (entity[k] === undefined) delete entity[k];
+  });
+
+  insertEntity('ContactLogs', entity).then(() => {
+    console.log('Email data inserted into ContactLogs table:', entity);
+    trackEvent('InsertContactLog_Success', { to, subject });
   }).catch(error => {
     trackException(error, { to, subject });
     console.error('Error inserting email data into ContactLogs table:', error);

@@ -1,15 +1,36 @@
-import { ManagedIdentityCredential } from "@azure/identity";
+import { ManagedIdentityCredential, DefaultAzureCredential } from "@azure/identity";
 import { TableClient } from "@azure/data-tables";
 
-const credential = new ManagedIdentityCredential(process.env.RUDYARD_MANAGED_IDENTITY_CLIENT_ID!);
-
-// Helper to create a client for any table
+// Helper to create a client for any table.
+// Behavior:
+// - If AZURE_STORAGE_CONNECTION_STRING is set, use TableClient.fromConnectionString (local/dev convenience).
+// - Otherwise, prefer DefaultAzureCredential (supports system-assigned MI, user-assigned MI via env, Azure CLI, VS Code).
+// - If RUDYARD_MANAGED_IDENTITY_CLIENT_ID is set, construct a ManagedIdentityCredential for that client id.
 export function getTableClient(tableName: string): TableClient {
-  return new TableClient(
-    `https://${process.env.RUDYARD_STORAGE_ACCOUNT_NAME}.table.core.windows.net`,
-    tableName,
-    credential
-  );
+  const connectionString = process.env.AZURE_STORAGE_CONNECTION_STRING;
+  // Only allow a connection string in non-production (local dev). In production prefer managed identity / DefaultAzureCredential.
+  if (connectionString && process.env.NODE_ENV !== 'production') {
+    // log a short masked hint for debugging (do not print full secret)
+    const hint = connectionString.length > 12 ? connectionString.slice(0, 8) + '...' : 'present';
+    console.log(`Using AZURE_STORAGE_CONNECTION_STRING for TableClient (local): ${hint}`);
+    return TableClient.fromConnectionString(connectionString, tableName);
+  }
+  if (connectionString && process.env.NODE_ENV === 'production') {
+    console.warn('AZURE_STORAGE_CONNECTION_STRING is set but NODE_ENV=production — ignoring the connection string and using managed identity for security.');
+  }
+
+  const account = process.env.RUDYARD_STORAGE_ACCOUNT_NAME;
+  if (!account) {
+    throw new Error('RUDYARD_STORAGE_ACCOUNT_NAME must be set when not using AZURE_STORAGE_CONNECTION_STRING');
+  }
+
+  const managedClientId = process.env.RUDYARD_MANAGED_IDENTITY_CLIENT_ID;
+  const credential = managedClientId
+    ? new ManagedIdentityCredential(managedClientId)
+    : new DefaultAzureCredential();
+
+  const endpoint = `https://${account}.table.core.windows.net`;
+  return new TableClient(endpoint, tableName, credential);
 }
 
 export async function insertEntity(tableName: string, entity: any): Promise<void> {
