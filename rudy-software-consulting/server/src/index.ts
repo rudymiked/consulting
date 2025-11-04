@@ -202,7 +202,7 @@ app.post('/api/payInvoice', async (req, res) => {
       metadata: {
         paymentId: invoiceId,
         invoiceNumber: invoiceDetails.invoiceId,
-        customerName: invoiceDetails.clientName,
+        customerName: invoiceDetails.name,
       },
     });
 
@@ -217,7 +217,7 @@ app.post('/api/payInvoice', async (req, res) => {
     await updateInvoice({
       id: invoiceId,
       status: 'paid',
-      name: invoiceDetails.clientName,
+      name: invoiceDetails.name,
       amount: invoiceDetails.amount,
       notes: invoiceDetails.notes + '/n/nPayment received',
       contact: invoiceDetails.contact,

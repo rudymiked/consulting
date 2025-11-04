@@ -14,7 +14,7 @@ export const getInvoiceDetails = async (invoiceId: string) => {
         const result = {
             invoiceId: entity.rowKey,
             status: entity.status,
-            clientName: entity.name,
+            name: entity.name,
             amount: entity.amount,
             notes: entity.notes,
             contact: entity.contact
