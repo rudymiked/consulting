@@ -41,8 +41,10 @@ export const createInvoice = async (invoiceData: InvoiceData) => {
     trackEvent('CreateInvoice_Attempt', { invoiceId: invoiceData.id, client: invoiceData.contact });
     const start = Date.now();
     try {
-    await insertEntity(tableName, entity);
+        await insertEntity(tableName, entity);
+
         const duration = Date.now() - start;
+
         trackDependency({
             target: process.env.RUDYARD_STORAGE_ACCOUNT_NAME,
             name: 'Table:createEntity',
@@ -52,8 +54,10 @@ export const createInvoice = async (invoiceData: InvoiceData) => {
             success: true,
             dependencyTypeName: 'Azure Table'
         });
+
         trackEvent('CreateInvoice_Success', { invoiceId: invoiceData.id });
         trackTrace(`Invoice ${invoiceData.id} created`, undefined, { amount: invoiceData.amount });
+        
         console.log("Invoice created successfully:", entity);
         return {
             success: true,

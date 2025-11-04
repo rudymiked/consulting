@@ -251,6 +251,16 @@ app.get('/api/invoice/:invoiceId', async (req, res) => {
 });
 
 app.post('/api/invoice', async (req, res) => {
+  // Log incoming request for debugging differences between direct API calls and UI calls.
+  try {
+    const safeHeaders = { ...req.headers } as any;
+    if (safeHeaders.authorization) safeHeaders.authorization = 'REDACTED';
+    console.log('/api/invoice request headers:', safeHeaders);
+    console.log('/api/invoice request body:', req.body);
+  } catch (e) {
+    console.error('Failed to log request debug info:', e);
+  }
+
   const { name, amount, notes, contact } = req.body;
 
   const id = `inv-${Date.now()}`; // Simple unique ID generation
