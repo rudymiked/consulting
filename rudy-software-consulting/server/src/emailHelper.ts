@@ -1,5 +1,6 @@
 import nodemailer from 'nodemailer';
 import { insertEntity, queryEntities, updateEntity } from './tableClientHelper';
+import { trackEvent, trackDependency, trackException } from './telemetry';
 
 export interface EmailOptions {
   to: string;
@@ -14,6 +15,7 @@ export async function sendEmail(options: EmailOptions): Promise<void> {
   const useGmail = (process.env.EMAIL_USE_GMAIL || '').trim().toLowerCase() === 'true';
 
   console.log('Transport using Gmail?', useGmail);
+  trackEvent('SendEmail_Attempt', { to: options.to, subject: options.subject });
   console.log('Host used:', process.env.EMAIL_HOST);
 
   if (useGmail) {
@@ -60,7 +62,9 @@ export async function sendEmail(options: EmailOptions): Promise<void> {
   try {
     await transporter.sendMail(mailOptions);
     console.log(`Email sent to ${mailOptions.to} from ${mailOptions.from}`);
+    trackEvent('SendEmail_Success', { to: mailOptions.to, subject: mailOptions.subject });
   } catch (error) {
+    trackException(error, { to: mailOptions.to, subject: mailOptions.subject });
     console.error('Error sending email:', error);
     throw error;
   }
@@ -79,7 +83,9 @@ export async function insertIntoContactLogs(options: EmailOptions): Promise<void
 
   insertEntity('ContactLogs', emailData).then(() => {
     console.log('Email data inserted into ContactLogs table:', emailData);
+  trackEvent('InsertContactLog_Success', { to, subject });
   }).catch(error => {
+    trackException(error, { to, subject });
     console.error('Error inserting email data into ContactLogs table:', error);
     throw error;
   });
@@ -105,8 +111,10 @@ export async function sendEmailsFromLog(): Promise<void> {
       console.log('Updating log entry:', log);
       
       await updateEntity('ContactLogs', log); // Update the log entry
+      trackEvent('UpdateContactLog_Sent', { to: log.to, subject: log.subject });
     }
   } catch (error) {
+    trackException(error);
     console.error('Error in sendAndLogEmail:', error);
     throw error;
   }

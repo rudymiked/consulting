@@ -2,7 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import * as appInsights from 'applicationinsights';
-import { sendEmail } from './emailHelper';
+import { EmailOptions, insertIntoContactLogs, sendEmail } from './emailHelper';
 import jwksClient from 'jwks-rsa';
 import { expressjwt } from 'express-jwt';
 import Stripe from 'stripe';
@@ -140,8 +140,17 @@ app.get('/api', (_, res) => {
   res.send('API is running 🚀 origin:' + process.env.FRONTEND_ORIGIN);
 });
 
+app.post('/api/contact', async (req, res) => {
+  const { to, subject, text, html } = req.body;
+  const options: EmailOptions = { to, subject, text, html };
+  
+  await insertIntoContactLogs(options);
+  res.status(200).json({ message: 'Contact log inserted successfully' });
+  trackEvent('InsertContactLog_API', { to, subject });
+});
+
 // 🚫 Protected route example
-app.post('/api/contact', jwtCheck, async (req, res) => {
+app.post('/api/sendEmail', jwtCheck, async (req, res) => {
   const { to, subject, text, html } = req.body;
 
   try {

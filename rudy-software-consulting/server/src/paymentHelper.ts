@@ -1,6 +1,6 @@
 import { InvoiceData } from "./models";
 import { TableClient } from "@azure/data-tables";
-import { DefaultAzureCredential } from "@azure/identity";
+import { DefaultAzureCredential, ManagedIdentityCredential } from "@azure/identity";
 import { trackEvent, trackDependency, trackException, trackTrace } from './telemetry';
 
 export const getInvoiceDetails = async (invoiceId: string) => {
@@ -16,7 +16,7 @@ export const getInvoiceDetails = async (invoiceId: string) => {
     } else {
         // Use DefaultAzureCredential which will pick up managed identity in Azure App Service
         console.log("Using DefaultAzureCredential (managed identity / environment creds) for TableClient");
-        const credential = new DefaultAzureCredential();
+        const credential = new ManagedIdentityCredential(process.env.RUDYARD_MANAGED_IDENTITY_CLIENT_ID!);
         tableClient = new TableClient(`https://${account}.table.core.windows.net`, tableName, credential);
     }
 
