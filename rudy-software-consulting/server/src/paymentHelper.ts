@@ -12,7 +12,7 @@ export const getInvoiceDetails = async (invoiceId: string) => {
     if (entities && entities.length > 0) {
         const entity = entities[0];
         const result = {
-            invoiceId: entity.rowKey,
+            invoiceId: entity.id,
             status: entity.status,
             name: entity.name,
             amount: entity.amount,
