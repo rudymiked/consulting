@@ -52,7 +52,14 @@ const App: React.FC = () => {
               <Route path="/terms" element={<TermsOfServicePage />} />
               <Route path="/payment" element={<PaymentPage />} />
               <Route path="/payment/:invoiceId" element={<PaymentPage />} />
-              <Route path="/createinvoice" element={<CreateInvoicePage />} />
+              <Route 
+                path="/createinvoice" 
+                element={
+                  <ProtectedRoute>
+                    <CreateInvoicePage />
+                  </ProtectedRoute>
+                } 
+              />
               <Route path="/invoice/" element={<InvoicePage />} />
               <Route path="/invoice/:invoiceId" element={<InvoicePage />} />
               <Route path="/admin/login" element={<LoginPage />} />
