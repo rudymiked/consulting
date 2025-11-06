@@ -4,7 +4,13 @@ export interface InvoiceRequest {
     amount: number; // in cents
     notes: string;
     contact: string;
-    status: 'new' | 'paid' | 'cancelled'; // Status of the invoice
+    status: InvoiceStatus; // Status of the invoice
+}
+
+export enum InvoiceStatus {
+    NEW = 'new',
+    PAID = 'paid',
+    CANCELLED = 'cancelled',
 }
 
 export interface Invoice {
@@ -15,6 +21,6 @@ export interface Invoice {
     contact: string; // Contact information for the client
     createdDate: Date; // Timestamp of when the invoice was created
     updatedDate: Date; // Timestamp of when the invoice was last updated
-    status: 'new' | 'paid' | 'cancelled'; // Status of the invoice
+    status: InvoiceStatus; // Status of the invoice
     dueDate?: Date; // Optional due date for the invoice
 }

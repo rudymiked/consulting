@@ -7,8 +7,9 @@ import jwksClient from 'jwks-rsa';
 import { expressjwt } from 'express-jwt';
 import Stripe from 'stripe';
 import { createInvoice, getInvoiceDetails, getInvoices, updateInvoice } from './invoiceHelper';
-import { trackEvent, trackException, trackTrace } from './telemetry';
+import { trackEvent, trackException } from './telemetry';
 import { loginUser, registerUser, verifyToken } from './authHelper';
+import { InvoiceStatus } from './models';
 
 dotenv.config();
 
@@ -211,7 +212,7 @@ app.post('/api/payInvoice', async (req, res) => {
       // update invoice in DB
     await updateInvoice({
       id: invoiceId,
-      status: 'paid',
+      status: InvoiceStatus.PAID,
       name: invoiceDetails.name,
       amount: invoiceDetails.amount,
       notes: invoiceDetails.notes + '/n/nPayment received',
@@ -282,7 +283,7 @@ app.post('/api/invoice', async (req, res) => {
   }
 
   try {
-    const result = await createInvoice({ id, name, amount, notes, contact, status: 'new' });
+    const result = await createInvoice({ id, name, amount, notes, contact, status: InvoiceStatus.NEW });
 
     trackEvent('CreateInvoice_API_Success', { invoiceId: result.invoiceId });
     console.log(result);

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Box, Button, TextField, Typography, Alert, CircularProgress, Paper } from '@mui/material';
+import { Link } from 'react-router-dom';
 
 async function saveInvoice(invoice: {
     name: string;
@@ -70,71 +71,80 @@ const CreateInvoice: React.FC = () => {
     };
 
     return (
-        <Paper elevation={3} sx={{ maxWidth: 420, mx: 'auto', mt: 6, p: 4 }}>
-            <Typography variant="h5" component="h2" gutterBottom align="center">
-                New Invoice
-            </Typography>
-            <Box component="form" onSubmit={handleSubmit} noValidate>
-                <TextField
-                    label="Name"
-                    value={name}
-                    onChange={e => setName(e.target.value)}
-                    required
-                    fullWidth
-                    margin="normal"
-                />
-                <TextField
-                    label="Amount"
-                    type="number"
-                    value={amount}
-                    onChange={e => setAmount(e.target.value)}
-                    required
-                    fullWidth
-                    margin="normal"
-                    inputProps={{ min: 0, step: 0.01 }}
-                />
-                <TextField
-                    label="Notes"
-                    value={notes}
-                    onChange={e => setNotes(e.target.value)}
-                    fullWidth
-                    margin="normal"
-                    multiline
-                    rows={3}
-                />
-                <TextField
-                    label="Contact Information"
-                    value={contact}
-                    onChange={e => setContact(e.target.value)}
-                    required
-                    fullWidth
-                    margin="normal"
-                />
-                <Box sx={{ mt: 3, textAlign: 'center' }}>
-                    <Button
-                        type="submit"
-                        variant="contained"
-                        color="primary"
-                        disabled={loading}
+        <>
+            <Paper elevation={3} sx={{ maxWidth: 420, mx: 'auto', mt: 6, p: 4 }}>
+                <Typography variant="h5" component="h2" gutterBottom align="center">
+                    New Invoice
+                </Typography>
+                <Box component="form" onSubmit={handleSubmit} noValidate>
+                    <TextField
+                        label="Name"
+                        value={name}
+                        onChange={e => setName(e.target.value)}
+                        required
                         fullWidth
-                        size="large"
-                        startIcon={loading ? <CircularProgress size={20} /> : null}
-                    >
-                        {loading ? 'Saving...' : 'Create Invoice'}
-                    </Button>
+                        margin="normal"
+                    />
+                    <TextField
+                        label="Amount"
+                        type="number"
+                        value={amount}
+                        onChange={e => setAmount(e.target.value)}
+                        required
+                        fullWidth
+                        margin="normal"
+                        inputProps={{ min: 0, step: 0.01 }}
+                    />
+                    <TextField
+                        label="Notes"
+                        value={notes}
+                        onChange={e => setNotes(e.target.value)}
+                        fullWidth
+                        margin="normal"
+                        multiline
+                        rows={3}
+                    />
+                    <TextField
+                        label="Contact Information"
+                        value={contact}
+                        onChange={e => setContact(e.target.value)}
+                        required
+                        fullWidth
+                        margin="normal"
+                    />
+                    <Box sx={{ mt: 3, textAlign: 'center' }}>
+                        <Button
+                            type="submit"
+                            variant="contained"
+                            color="primary"
+                            disabled={loading}
+                            fullWidth
+                            size="large"
+                            startIcon={loading ? <CircularProgress size={20} /> : null}
+                        >
+                            {loading ? 'Saving...' : 'Create Invoice'}
+                        </Button>
+                    </Box>
+                    {success && (
+                        <Alert severity="success" sx={{ mt: 2 }}>
+                            Invoice saved!
+                        </Alert>
+                    )}
+                    {error && (
+                        <Alert severity="error" sx={{ mt: 2 }}>
+                            {error}
+                        </Alert>
+                    )}
                 </Box>
-                {success && (
-                    <Alert severity="success" sx={{ mt: 2 }}>
-                        Invoice saved!
-                    </Alert>
-                )}
-                {error && (
-                    <Alert severity="error" sx={{ mt: 2 }}>
-                        {error}
-                    </Alert>
-                )}
+            </Paper>
+            <Box sx={{ mt: 2, textAlign: 'center' }}>
+                <Link to="/admin">
+                    <Button variant="contained" className="main-button">
+                    Admin Dashboard
+                    </Button>
+                </Link>
             </Box>
-        </Paper>
+        </>
     );
 };
 
