@@ -21,6 +21,7 @@ import AdminPage from './pages/AdminPage';
 import { AuthProvider } from './components/Auth/AuthContext';
 import ProtectedRoute from './components/Auth/ProtectedRoute';
 import RegistrationPage from './pages/RegistrationPage';
+import InvoicesPage from './pages/InvoicesPage';
 
 const App: React.FC = () => {
   React.useEffect(() => {
@@ -60,7 +61,7 @@ const App: React.FC = () => {
                   </ProtectedRoute>
                 } 
               />
-              <Route path="/invoice/" element={<InvoicePage />} />
+              <Route path="/invoices/" element={<InvoicesPage />} />
               <Route path="/invoice/:invoiceId" element={<InvoicePage />} />
               <Route path="/admin/login" element={<LoginPage />} />
               <Route path="/register" element={<RegistrationPage />} />

@@ -6,7 +6,7 @@ import { EmailOptions, insertIntoContactLogs, sendEmail } from './emailHelper';
 import jwksClient from 'jwks-rsa';
 import { expressjwt } from 'express-jwt';
 import Stripe from 'stripe';
-import { createInvoice, getInvoiceDetails, updateInvoice } from './paymentHelper';
+import { createInvoice, getInvoiceDetails, getInvoices, updateInvoice } from './invoiceHelper';
 import { trackEvent, trackException, trackTrace } from './telemetry';
 import { loginUser, registerUser, verifyToken } from './authHelper';
 
@@ -148,7 +148,7 @@ app.post('/api/contact', async (req, res) => {
   trackEvent('InsertContactLog_API', { to, subject });
 });
 
-// 🚫 Protected route example
+// Protected route example
 app.post('/api/sendEmail', jwtCheck, async (req, res) => {
   const { to, subject, text, html } = req.body;
 
@@ -202,7 +202,7 @@ app.post('/api/payInvoice', async (req, res) => {
       confirm: true,
       metadata: {
         paymentId: invoiceId,
-        invoiceNumber: invoiceDetails.invoiceId,
+        invoiceNumber: invoiceDetails.id,
         customerName: invoiceDetails.name,
       },
     });
@@ -236,6 +236,23 @@ app.post('/api/payInvoice', async (req, res) => {
   } catch (error: any) {
     console.error('Stripe error:', error.message);
     res.status(400).send({ error: error.message });
+  }
+});
+
+app.get('/api/invoices', async (_, res) => {
+  try {
+    const entities = await getInvoices();
+    const invoices = entities.map(entity => ({
+      invoiceId: entity.id,
+      amount: entity.amount,
+      contact: entity.contact,
+      status: entity.status,
+    }));
+
+    res.json(invoices);
+  } catch (error: any) {
+    console.error('Error fetching invoices:', error.message);
+    res.status(500).json({ error: 'Failed to fetch invoices.' });
   }
 });
 

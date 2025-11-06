@@ -1,4 +1,4 @@
-export interface InvoiceData {
+export interface InvoiceRequest {
     id: string;
     name: string;
     amount: number; // in cents
@@ -6,6 +6,7 @@ export interface InvoiceData {
     contact: string;
     status: 'new' | 'paid' | 'cancelled'; // Status of the invoice
 }
+
 export interface Invoice {
     id: string; // Unique identifier for the invoice
     name: string; // Name of the client or entity being invoiced

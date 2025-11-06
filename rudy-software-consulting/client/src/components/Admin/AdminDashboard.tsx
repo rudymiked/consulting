@@ -37,6 +37,11 @@ const AdminDashboard: React.FC = () => {
                 Create Invoice
               </Button>
             </Link>
+            <Link to="/invoices">
+              <Button variant="contained" className="main-button">
+                Manage Invoices
+              </Button>
+            </Link>
           </Paper>
         </Box>
 

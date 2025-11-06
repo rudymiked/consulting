@@ -1,26 +1,51 @@
-import { InvoiceData } from "./models";
+import { InvoiceRequest, Invoice } from "./models";
 import { trackEvent, trackDependency, trackException, trackTrace } from './telemetry';
 import { insertEntity, queryEntities, updateEntity } from './tableClientHelper';
 
-export const getInvoiceDetails = async (invoiceId: string) => {
+export const getInvoices = async (filter?: string | undefined): Promise<Invoice[]> => {
+    const tableName = "invoices";
+    trackEvent('GetInvoices_Attempt');
+
+    const entities = await queryEntities(tableName, filter);
+    const invoices: Invoice[] = entities.map(entity => ({
+        id: entity.rowKey,
+        name: entity.name,
+        amount: entity.amount,
+        notes: entity.notes,
+        contact: entity.contact,
+        createdDate: new Date(entity.createdDate),
+        updatedDate: new Date(entity.updatedDate),
+        status: entity.status,
+        dueDate: entity.dueDate ? new Date(entity.dueDate) : undefined,
+    }));
+
+    trackEvent('GetInvoices_Success', { count: invoices.length });
+    return invoices;
+}
+
+export const getInvoiceDetails = async (invoiceId: string): Promise<Invoice> => {
     const tableName = "invoices";
 
     trackEvent('GetInvoice_Attempt', { invoiceId });
     const filter = `RowKey eq '${invoiceId}'`;
     const entities = await queryEntities(tableName, filter);
 
-    if (entities && entities.length > 0) {
+    
+    if (entities.length > 0) {
         const entity = entities[0];
-        const result = {
-            invoiceId: entity.id,
-            status: entity.status,
+        const invoice: Invoice = {
+            id: entity.rowKey,
             name: entity.name,
             amount: entity.amount,
             notes: entity.notes,
-            contact: entity.contact
+            contact: entity.contact,
+            createdDate: new Date(entity.createdDate),
+            updatedDate: new Date(entity.updatedDate),
+            status: entity.status,
+            dueDate: entity.dueDate ? new Date(entity.dueDate) : undefined,
         };
         trackEvent('GetInvoice_Success', { invoiceId });
-        return result;
+        return invoice;
     }
 
     trackTrace(`Invoice ${invoiceId} not found`, undefined, { invoiceId });
@@ -29,7 +54,7 @@ export const getInvoiceDetails = async (invoiceId: string) => {
     throw err;
 }
 
-export const createInvoice = async (invoiceData: InvoiceData) => {
+export const createInvoice = async (invoiceData: InvoiceRequest) => {
     const tableName = "invoices";
 
     const entity = {
@@ -83,7 +108,7 @@ export const createInvoice = async (invoiceData: InvoiceData) => {
     }
 }
 
-export const updateInvoice = async (invoiceData: InvoiceData) => {
+export const updateInvoice = async (invoiceData: InvoiceRequest) => {
     const tableName = "invoices";
 
     const entity = {
