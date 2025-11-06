@@ -17,7 +17,7 @@ import rudyard from '/src/assets/rudyardtech.png'; // Make sure this resolves co
 
 const Header: React.FC = () => {
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const isMobile = useMediaQuery(theme.breakpoints.down('lg'));
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   const toggleDrawer = (open: boolean) => () => setDrawerOpen(open);
