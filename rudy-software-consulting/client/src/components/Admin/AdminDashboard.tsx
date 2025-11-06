@@ -37,6 +37,7 @@ const AdminDashboard: React.FC = () => {
                 Create Invoice
               </Button>
             </Link>
+            <br />
             <Link to="/invoices">
               <Button variant="contained" className="main-button">
                 Manage Invoices

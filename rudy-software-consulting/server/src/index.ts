@@ -15,8 +15,6 @@ dotenv.config();
 (() => {
   const conn = process.env.APPINSIGHTS_CONNECTION_STRING;
 
-  console.log(conn ? 'Application Insights connection found' : 'No Application Insights connection found');
-
   if (!conn) {
     console.log('Application Insights not configured (no connection string or instrumentation key).');
     return;
@@ -65,6 +63,7 @@ const corsOptions = {
     // allow requests with no origin (like mobile apps, curl) or from localhost during development
     const allowedOrigins = [
       'http://localhost:3000',
+      'http://localhost:3001',
       process.env.FRONTEND_ORIGIN, // optional, set in env for production
     ].filter(Boolean) as string[];
 

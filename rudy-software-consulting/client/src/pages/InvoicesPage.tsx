@@ -10,10 +10,10 @@ import {
   TableHead,
   TableRow,
   Paper,
-  Link,
-  CircularProgress
+  CircularProgress,
+  Button
 } from '@mui/material';
-import { Link as RouterLink } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 
 export interface Invoice {
     id: string; // Unique identifier for the invoice
@@ -50,6 +50,13 @@ const InvoicesPage: React.FC = () => {
   return (
     <Box sx={{ pt: 9, pb: 7, backgroundColor: '#f0f4f8' }}>
       <Container maxWidth="xl">
+        <Link to="/admin">
+            <Button variant="contained" className="main-button">
+            Admin Dashboard
+            </Button>
+        </Link>
+        <br />
+        <br />
         <Typography variant="h4" gutterBottom>
           Invoices
         </Typography>
@@ -76,7 +83,7 @@ const InvoicesPage: React.FC = () => {
                     <TableCell>${invoice.amount.toFixed(2)}</TableCell>
                     <TableCell>{invoice.status}</TableCell>
                     <TableCell>
-                      <Link component={RouterLink} to={`/invoice/${invoice.id}`}>
+                      <Link to={`/invoice/${invoice.id}`}>
                         View
                       </Link>
                     </TableCell>
