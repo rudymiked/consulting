@@ -23,7 +23,7 @@ const Invoices: React.FC = () => {
     useEffect(() => {
         const fetchInvoices = async () => {
             try {
-                const response = await fetch('/api/invoices');
+                const response = await fetch(`${import.meta.env.VITE_API_URL}/api/invoices`);
                 const data = await response.json();
                 setInvoices(data);
             } catch (error) {
