@@ -31,6 +31,7 @@ app.post('/api/contact', async (req, res) => {
 app.get('/api/ping', (_, res) => {
     res.json({ message: 'pong' });
 });
+
 // Start the server
 app.listen(PORT, () => {
     console.log(`🚀 Rudyard Software Consulting server is live at http://localhost:${PORT}`);

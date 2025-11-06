@@ -35,7 +35,6 @@ export async function loginUser(email: string, password: string) {
   }
 
   const computedHash = crypto.pbkdf2Sync(password, user.salt, 1000, 64, 'sha512').toString('hex');
-  console.log({ storedHash: user.hash, computedHash });
 
   if (computedHash !== user.hash) throw new Error('Invalid credentials');
 

@@ -12,7 +12,7 @@ export function getTableClient(tableName: string): TableClient {
   if (connectionString && process.env.NODE_ENV !== 'production') {
     // log a short masked hint for debugging (do not print full secret)
     const hint = connectionString.length > 12 ? connectionString.slice(0, 8) + '...' : 'present';
-    console.log(`Using AZURE_STORAGE_CONNECTION_STRING for TableClient (local): ${hint}`);
+    
     return TableClient.fromConnectionString(connectionString, tableName);
   }
   if (connectionString && process.env.NODE_ENV === 'production') {
