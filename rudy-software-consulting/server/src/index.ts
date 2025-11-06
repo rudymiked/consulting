@@ -238,7 +238,7 @@ app.get('/api/invoices', async (_, res) => {
   try {
     const entities = await getInvoices();
     const invoices = entities.map(entity => ({
-      invoiceId: entity.id,
+      id: entity.id,
       amount: entity.amount,
       contact: entity.contact,
       status: entity.status,
