@@ -48,6 +48,12 @@ const CreateInvoice: React.FC = () => {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        if (!name || !amount || !contact) {
+            setError('Please fill in all required fields.');
+            return;
+        }
+        
         setLoading(true);
         setError(null);
         setSuccess(false);

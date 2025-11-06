@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Paper, Typography, Box, CircularProgress, Alert, Divider, Button } from '@mui/material';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 
 export interface InvoiceProps {
     invoiceId: string;
@@ -58,38 +58,47 @@ const Invoice: React.FC<InvoiceProps> = (props: InvoiceProps) => {
     if (!invoice) return null;
 
     return (
-        <Paper elevation={3} sx={{ maxWidth: 420, mx: 'auto', mt: 8, p: 4 }}>
-            <Typography variant="h5" component="h2" gutterBottom align="center">
-                Invoice Details
-            </Typography>
-            <Divider sx={{ mb: 3 }} />
-            <Box sx={{ mb: 2 }}>
-                <Typography variant="subtitle2" color="text.secondary">Name</Typography>
-                <Typography variant="body1" sx={{ mb: 1 }}>{invoice.name}</Typography>
+        <>
+            <Paper elevation={3} sx={{ maxWidth: 420, mx: 'auto', mt: 8, p: 4 }}>
+                <Typography variant="h5" component="h2" gutterBottom align="center">
+                    Invoice Details
+                </Typography>
+                <Divider sx={{ mb: 3 }} />
+                <Box sx={{ mb: 2 }}>
+                    <Typography variant="subtitle2" color="text.secondary">Name</Typography>
+                    <Typography variant="body1" sx={{ mb: 1 }}>{invoice.name}</Typography>
+                </Box>
+                <Box sx={{ mb: 2 }}>
+                    <Typography variant="subtitle2" color="text.secondary">Amount</Typography>
+                    <Typography variant="body1" sx={{ mb: 1 }}>${invoice.amount.toFixed(2)}</Typography>
+                </Box>
+                <Box sx={{ mb: 2 }}>
+                    <Typography variant="subtitle2" color="text.secondary">Notes</Typography>
+                    <Typography variant="body1" sx={{ mb: 1 }}>{invoice.notes}</Typography>
+                </Box>
+                <Box>
+                    <Typography variant="subtitle2" color="text.secondary">Contact</Typography>
+                    <Typography variant="body1">{invoice.contact}</Typography>
+                </Box>
+                <Divider sx={{ my: 3 }} />
+                <Button
+                    variant="contained"
+                    color="primary"
+                    fullWidth
+                    sx={{ mt: 4 }}
+                    onClick={() => navigate(`/payment/${invoiceId}`)}
+                >
+                    Pay Invoice
+                </Button>
+            </Paper>
+            <Box sx={{ mt: 2, textAlign: 'center' }}>
+                <Link to="/admin">
+                    <Button variant="contained" className="main-button">
+                        Admin Dashboard
+                    </Button>
+                </Link>
             </Box>
-            <Box sx={{ mb: 2 }}>
-                <Typography variant="subtitle2" color="text.secondary">Amount</Typography>
-                <Typography variant="body1" sx={{ mb: 1 }}>${invoice.amount.toFixed(2)}</Typography>
-            </Box>
-            <Box sx={{ mb: 2 }}>
-                <Typography variant="subtitle2" color="text.secondary">Notes</Typography>
-                <Typography variant="body1" sx={{ mb: 1 }}>{invoice.notes}</Typography>
-            </Box>
-            <Box>
-                <Typography variant="subtitle2" color="text.secondary">Contact</Typography>
-                <Typography variant="body1">{invoice.contact}</Typography>
-            </Box>
-            <Divider sx={{ my: 3 }} />
-            <Button
-                variant="contained"
-                color="primary"
-                fullWidth
-                sx={{ mt: 4 }}
-                onClick={() => navigate(`/payment/${invoiceId}`)}
-            >
-                Pay Invoice
-            </Button>
-        </Paper>
+        </>
     );
 };
 

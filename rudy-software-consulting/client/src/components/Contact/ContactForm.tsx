@@ -17,6 +17,8 @@ export interface IFormData {
   message: string;
 }
 
+const successMessage: string = 'Thank you for contacting us! We will get back to you soon.';
+
 const ContactForm: React.FC = () => {
   const [formData, setFormData] = useState<IFormData>({
     name: '',
@@ -26,6 +28,7 @@ const ContactForm: React.FC = () => {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [message, SetMessage] = useState('');
 
   React.useEffect(() => {
     console.log(import.meta.env.VITE_API_URL);
@@ -52,6 +55,12 @@ const ContactForm: React.FC = () => {
 
   const handleSubmit = (e: any) => {
     e.preventDefault();
+
+    if (!formData.name || !formData.email || !formData.message) {
+      SetMessage('Please fill in all required fields.');
+      return;
+    }
+    
     setIsSubmitting(true);
     
     fetch(`https://${import.meta.env.VITE_API_URL}/api/contact`, {
@@ -82,6 +91,7 @@ const ContactForm: React.FC = () => {
       })
       .finally(() => {
         setIsSubmitting(false);
+        SetMessage(successMessage);
       });
   };
 
@@ -170,7 +180,7 @@ const ContactForm: React.FC = () => {
               </Button>
             {isSubmitted && (
               <Typography variant="body1" color="success.main" align="center" sx={{ mt: 2 }}>
-                Thank you for contacting us! We will get back to you soon.
+                {message}
               </Typography>
             )}
           </Grid>
