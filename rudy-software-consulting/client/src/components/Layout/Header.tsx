@@ -28,6 +28,7 @@ const Header: React.FC = () => {
     { label: 'Security & Compliance', path: '/security' },
     { label: 'Get a Free Quote', path: '/contact' },
     { label: 'About', path: '/about' },
+    { label: 'Admin', path: '/admin' },
   ];
 
   return (

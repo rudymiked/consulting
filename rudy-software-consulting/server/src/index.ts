@@ -8,6 +8,7 @@ import { expressjwt } from 'express-jwt';
 import Stripe from 'stripe';
 import { createInvoice, getInvoiceDetails, updateInvoice } from './paymentHelper';
 import { trackEvent, trackException, trackTrace } from './telemetry';
+import { loginUser, registerUser, verifyToken } from './authHelper';
 
 dotenv.config();
 
@@ -282,6 +283,38 @@ app.post('/api/invoice', async (req, res) => {
     res.status(500).json({ error: 'Failed to save invoice.' + error.message });
   }
 });
+
+app.post('/api/register', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    const result = await registerUser(email, password);
+    res.json(result);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+app.post('/api/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    const { token } = await loginUser(email, password);
+    res.json({ token });
+  } catch (err) {
+    trackException(err, { email: req.body.email });
+    console.log(err);
+    res.status(401).json({ error: err.message });
+  }
+});
+
+app.get('/api/protected', (req, res) => {
+  const token = req.headers.authorization?.split(' ')[1];
+  const user = verifyToken(token || '');
+
+  if (!user) return res.status(403).json({ error: 'Unauthorized' });
+    
+  res.json({ message: `Welcome ${user.email}` });  
+});
+
 
 // Export app for testing and start server when run directly
 export default app;

@@ -16,9 +16,12 @@ import SecurityAndCompliancePage from './pages/SecurityAndCompliancePage';
 import PaymentPage from './pages/PaymentPage';
 import CreateInvoicePage from './pages/CreateInvoicePage';
 import InvoicePage from './pages/InvoicePage';
+import LoginPage from './pages/LoginPage';
+import AdminPage from './pages/AdminPage';
+import { AuthProvider } from './components/Auth/AuthContext';
+import ProtectedRoute from './components/Auth/ProtectedRoute';
 
 const App: React.FC = () => {
-
   React.useEffect(() => {
     fetch(`https://${import.meta.env.VITE_API_URL}/api/`, {
         method: 'GET',
@@ -32,29 +35,40 @@ const App: React.FC = () => {
   }, []);
 
   return (
-    <Router>
-        <CssBaseline />
-        <Header />
-        <Box sx={{ paddingTop: 8, padding: 2 }}>
-          <Routes>
-            <Route path="/" element={<HomePage />} />
-            <Route path="/software" element={<SoftwarePage />} />
-            <Route path="/consulting" element={<ConsultingPage />} />
-            <Route path="/security" element={<SecurityAndCompliancePage />} />
-            <Route path="/contact" element={<ContactPage />} />
-            <Route path="/about" element={<AboutPage />} />
-            <Route path="/privacy" element={<PrivacyPage />} />
-            <Route path="/terms" element={<TermsOfServicePage />} />
-            <Route path="/payment" element={<PaymentPage />} />
-            <Route path="/payment/:invoiceId" element={<PaymentPage />} /> {/* include invoiceId */}\
-            <Route path="/createinvoice" element={<CreateInvoicePage />} />
-            <Route path="/invoice/" element={<InvoicePage />} />
-            <Route path="/invoice/:invoiceId" element={<InvoicePage />} />
-            <Route path="*" element={<div>404 Not Found</div>} />
-          </Routes>
-        </Box>
-        <Footer />
-    </Router>
+    <AuthProvider>
+      <Router>
+          <CssBaseline />
+          <Header />
+          <Box sx={{ paddingTop: 8, padding: 2 }}>
+            <Routes>
+              <Route path="/" element={<HomePage />} />
+              <Route path="/software" element={<SoftwarePage />} />
+              <Route path="/consulting" element={<ConsultingPage />} />
+              <Route path="/security" element={<SecurityAndCompliancePage />} />
+              <Route path="/contact" element={<ContactPage />} />
+              <Route path="/about" element={<AboutPage />} />
+              <Route path="/privacy" element={<PrivacyPage />} />
+              <Route path="/terms" element={<TermsOfServicePage />} />
+              <Route path="/payment" element={<PaymentPage />} />
+              <Route path="/payment/:invoiceId" element={<PaymentPage />} />
+              <Route path="/createinvoice" element={<CreateInvoicePage />} />
+              <Route path="/invoice/" element={<InvoicePage />} />
+              <Route path="/invoice/:invoiceId" element={<InvoicePage />} />
+              <Route path="/admin/login" element={<LoginPage />} />
+              <Route 
+                path="/admin"
+                element={
+                  <ProtectedRoute>
+                    <AdminPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route path="*" element={<div>404 Not Found</div>} />
+            </Routes>
+          </Box>
+          <Footer />
+      </Router>
+    </AuthProvider>
   );
 };
 
