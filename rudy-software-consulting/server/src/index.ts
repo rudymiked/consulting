@@ -8,7 +8,7 @@ import { expressjwt } from 'express-jwt';
 import Stripe from 'stripe';
 import { createInvoice, getInvoiceDetails, getInvoices, updateInvoice } from './invoiceHelper';
 import { trackEvent, trackException } from './telemetry';
-import { loginUser, registerUser, verifyToken } from './authHelper';
+import { approveUser, loginUser, registerUser, verifyToken } from './authHelper';
 import { InvoiceStatus } from './models';
 
 dotenv.config();
@@ -302,6 +302,24 @@ app.post('/api/register', async (req, res) => {
     const result = await registerUser(email, password);
     res.json(result);
   } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+app.post('api/approveUser', jwtCheck, async (req, res) => {
+  try {
+    const { email } = req.body;
+    // Only allow if the requester is an admin
+    const token = req.headers.authorization?.split(' ')[1];
+
+    console.log(token);
+    trackEvent('ApproveUser_API_Attempt', { email });
+    trackEvent(token || 'no token');
+
+    const result = await approveUser(email, token);
+    res.json(result);
+  }
+  catch (err) {
     res.status(400).json({ error: err.message });
   }
 });

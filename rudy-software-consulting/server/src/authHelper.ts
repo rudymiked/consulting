@@ -17,8 +17,25 @@ export async function registerUser(email: string, password: string) {
     rowKey: email,
     salt,
     hash,
-    createdAt: new Date().toISOString()
+    createdAt: new Date().toISOString(),
+    approved: false,
   });
+
+  return { success: true };
+}
+
+export async function approveUser(email: string, adminToken: string) {
+  const adminPayload = verifyToken(adminToken);
+  
+  if (!adminPayload || adminPayload.email !== process.env.ADMIN_EMAIL) {
+    throw new Error('Unauthorized');
+  }
+
+  const user = await getEntity(TABLE_NAME, 'user', email);
+  if (!user) throw new Error('User not found');
+  user.approved = true;
+
+  await insertEntity(TABLE_NAME, user);
 
   return { success: true };
 }
