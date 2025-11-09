@@ -1,12 +1,12 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
-interface AuthContextType {
+interface IAuthContextType {
     isAuthenticated: boolean;
     login: (email: string, password: string) => Promise<void>;
     logout: () => void;
 }
 
-const AuthContext = createContext<AuthContextType>({
+const AuthContext = createContext<IAuthContextType>({
     isAuthenticated: false,
     login: async () => { },
     logout: () => { },

@@ -5,10 +5,6 @@ import React from "react";
 
 const InvoicePage: React.FC = () => {
     const { invoiceId: invoiceId } = useParams<{ invoiceId: string }>();
-    
-    React.useEffect(() => {
-        console.log("InvoicePage loaded with invoiceId:", invoiceId);
-    }, [invoiceId]);
 
     return (
         <Box sx={{ pt: 9, pb: 7, backgroundColor: '#f0f4f8' }}>

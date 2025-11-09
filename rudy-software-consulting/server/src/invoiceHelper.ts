@@ -1,14 +1,14 @@
-import { InvoiceRequest, Invoice, InvoiceStatus, InvoiceResult } from "./models";
+import { IInvoiceRequest, IInvoice, IInvoiceStatus, IInvoiceResult } from "./models";
 import { trackEvent, trackDependency, trackException, trackTrace } from './telemetry';
 import { insertEntity, queryEntities, updateEntity } from './tableClientHelper';
 import Stripe from 'stripe';
 
-export const getInvoices = async (filter?: string | undefined): Promise<Invoice[]> => {
+export const getInvoices = async (filter?: string | undefined): Promise<IInvoice[]> => {
     const tableName = "invoices";
     trackEvent('GetInvoices_Attempt');
 
     const entities = await queryEntities(tableName, filter);
-    const invoices: Invoice[] = entities.map(entity => ({
+    const invoices: IInvoice[] = entities.map(entity => ({
         id: entity.rowKey,
         name: entity.name,
         amount: entity.amount,
@@ -24,7 +24,7 @@ export const getInvoices = async (filter?: string | undefined): Promise<Invoice[
     return invoices;
 }
 
-export const getInvoiceDetails = async (invoiceId: string): Promise<Invoice> => {
+export const getInvoiceDetails = async (invoiceId: string): Promise<IInvoice> => {
     const tableName = "invoices";
 
     trackEvent('GetInvoice_Attempt', { invoiceId });
@@ -33,7 +33,7 @@ export const getInvoiceDetails = async (invoiceId: string): Promise<Invoice> => 
 
     if (entities.length > 0) {
         const entity = entities[0];
-        const invoice: Invoice = {
+        const invoice: IInvoice = {
             id: entity.rowKey,
             name: entity.name,
             amount: entity.amount,
@@ -55,7 +55,7 @@ export const getInvoiceDetails = async (invoiceId: string): Promise<Invoice> => 
     throw err;
 }
 
-export const createInvoice = async (invoiceData: InvoiceRequest) => {
+export const createInvoice = async (invoiceData: IInvoiceRequest) => {
     const tableName = "invoices";
 
     const entity = {
@@ -109,7 +109,7 @@ export const createInvoice = async (invoiceData: InvoiceRequest) => {
     }
 }
 
-export const updateInvoice = async (invoiceData: InvoiceRequest) => {
+export const updateInvoice = async (invoiceData: IInvoiceRequest) => {
     const tableName = "invoices";
 
     const entity = {
@@ -158,7 +158,7 @@ export const updateInvoice = async (invoiceData: InvoiceRequest) => {
     }
 }
 
-export const payInvoice = async (invoiceId: string, amount: number, paymentMethodId: string): Promise<InvoiceResult> => {
+export const payInvoice = async (invoiceId: string, amount: number, paymentMethodId: string): Promise<IInvoiceResult> => {
     // Initialize Stripe
     const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, {
         apiVersion: '2025-08-27.basil',
@@ -174,16 +174,16 @@ export const payInvoice = async (invoiceId: string, amount: number, paymentMetho
             return { Success: false, Message: message, InvoiceId: invoiceId };
         }
 
-        let invoiceStatus: InvoiceStatus = invoiceDetails.status;
+        let invoiceStatus: IInvoiceStatus = invoiceDetails.status;
         let paymentNode: string;
 
         switch (invoiceDetails.status) {
-            case InvoiceStatus.CANCELLED: {
+            case IInvoiceStatus.CANCELLED: {
                 const message = `Cannot pay a cancelled invoice ${invoiceId}`;
                 trackTrace(message, undefined, { invoiceId });
                 return { Success: false, Message: message, InvoiceId: invoiceId };
             }
-            case InvoiceStatus.PAID: {
+            case IInvoiceStatus.PAID: {
                 const message = `Invoice ${invoiceId} is already paid`;
                 trackTrace(message, undefined, { invoiceId });
                 return { Success: false, Message: message, InvoiceId: invoiceId };
@@ -195,12 +195,12 @@ export const payInvoice = async (invoiceId: string, amount: number, paymentMetho
 
         switch (true) {
             case amount === invoiceAmountCents: {
-                invoiceStatus = InvoiceStatus.PAID;
+                invoiceStatus = IInvoiceStatus.PAID;
                 paymentNode = '\n\nPayment received in full';
                 break;
             }
             case amount > 0 && amount < invoiceAmountCents: {
-                invoiceStatus = InvoiceStatus.PARTIAL_PAYMENT;
+                invoiceStatus = IInvoiceStatus.PARTIAL_PAYMENT;
                 paymentNode = `\n\nPartial payment received of amount $${(amount / 100).toFixed(2)}`;
                 break;
             }

@@ -2,13 +2,13 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import * as appInsights from 'applicationinsights';
-import { EmailOptions, insertIntoContactLogs, sendEmail } from './emailHelper';
+import { IEmailOptions, insertIntoContactLogs, sendEmail } from './emailHelper';
 import jwksClient from 'jwks-rsa';
 import { expressjwt } from 'express-jwt';
 import { createInvoice, getInvoiceDetails, getInvoices, payInvoice } from './invoiceHelper';
 import { trackEvent, trackException } from './telemetry';
 import { approveUser, loginUser, registerUser, verifyToken } from './authHelper';
-import { InvoiceResult, InvoiceStatus } from './models';
+import { IInvoiceResult, IInvoiceStatus } from './models';
 
 dotenv.config();
 
@@ -135,7 +135,7 @@ app.get('/api', (_, res) => {
 
 app.post('/api/contact', async (req, res) => {
   const { to, subject, text, html } = req.body;
-  const options: EmailOptions = { to, subject, text, html };
+  const options: IEmailOptions = { to, subject, text, html };
 
   await insertIntoContactLogs(options);
   res.status(200).json({ message: 'Contacted successfully' });
@@ -171,7 +171,7 @@ app.post('/api/invoice/pay', async (req, res) => {
     return res.status(400).json({ error: 'Missing required fields.' });
   }
 
-  const result: InvoiceResult = await payInvoice(invoiceId, amount, paymentMethodId);
+  const result: IInvoiceResult = await payInvoice(invoiceId, amount, paymentMethodId);
 
   if (result.Success) {
     res.status(200).json({ success: true, message: result.Message });
@@ -222,7 +222,7 @@ app.post('/api/invoice', async (req, res) => {
   }
 
   try {
-    const result = await createInvoice({ id, name, amount, notes, contact, status: InvoiceStatus.NEW });
+    const result = await createInvoice({ id, name, amount, notes, contact, status: IInvoiceStatus.NEW });
 
     trackEvent('CreateInvoice_API_Success', { invoiceId: result.invoiceId });
     console.log(result);

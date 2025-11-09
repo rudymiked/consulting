@@ -1,15 +1,15 @@
 import nodemailer from 'nodemailer';
 import { insertEntity, queryEntities, updateEntity } from './tableClientHelper';
-import { trackEvent, trackDependency, trackException } from './telemetry';
+import { trackEvent, trackException } from './telemetry';
 
-export interface EmailOptions {
+export interface IEmailOptions {
   to: string;
   subject: string;
   text?: string;
   html?: string;
 }
 
-export async function sendEmail(options: EmailOptions): Promise<void> {
+export async function sendEmail(options: IEmailOptions): Promise<void> {
   let transporter;
 
   const useGmail = (process.env.EMAIL_USE_GMAIL || '').trim().toLowerCase() === 'true';
@@ -70,7 +70,7 @@ export async function sendEmail(options: EmailOptions): Promise<void> {
   }
 }
 
-export async function insertIntoContactLogs(options: EmailOptions): Promise<void> {
+export async function insertIntoContactLogs(options: IEmailOptions): Promise<void> {
   const { to, subject, text, html } = options;
   // Azure Table Storage requires PartitionKey and RowKey and disallows undefined values.
   const entity: any = {
@@ -104,7 +104,7 @@ export async function sendEmailsFromLog(): Promise<void> {
     const contactLogs = await queryEntities('ContactLogs', "sent eq false");
 
     for (const log of contactLogs) {
-      const emailOptions: EmailOptions = {
+      const emailOptions: IEmailOptions = {
         to: log.to,
         subject: log.subject,
         text: log.text,

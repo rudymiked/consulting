@@ -2,14 +2,14 @@
 import { Box } from "@mui/material";
 import { useState } from "react";
 
-interface ImageFadeInProps {
+interface IImageFadeInProps {
   src: string;
   alt: string;
   style?: React.CSSProperties;
   sx?: any;
 }
 
-const ImageFadeIn: React.FC<ImageFadeInProps> = ({ src, alt, style, sx }) => {
+const ImageFadeIn: React.FC<IImageFadeInProps> = ({ src, alt, style, sx }) => {
   const [loaded, setLoaded] = useState(false);
 
   return (

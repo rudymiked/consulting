@@ -2,11 +2,11 @@ import React from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from './AuthContext';
 
-interface ProtectedRouteProps {
+interface IProtectedRouteProps {
     children: React.ReactNode;
 }
 
-const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
+const ProtectedRoute: React.FC<IProtectedRouteProps> = ({ children }) => {
 
     if (import.meta.env.VITE_TESTING === 'true') {
         return <>{children}</>;

@@ -9,11 +9,11 @@ import {
   CircularProgress
 } from '@mui/material';
 
-interface LoginFormProps {
+interface ILoginFormProps {
   onLogin: (email: string, password: string) => Promise<void>;
 }
 
-const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
+const LoginForm: React.FC<ILoginFormProps> = ({ onLogin }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);

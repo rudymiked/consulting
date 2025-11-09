@@ -2,13 +2,13 @@ import { Box, Container } from '@mui/material';
 import React from 'react';
 import Invoices from '../components/Invoice/Invoices';
 
-export interface InvoiceStatus {
+export interface IInvoiceStatus {
     NEW: 'new';
     PAID: 'paid';
     CANCELLED: 'cancelled';
 }
 
-export interface Invoice {
+export interface IInvoice {
     id: string; // Unique identifier for the invoice
     name: string; // Name of the client or entity being invoiced
     amount: number; // Amount in cents (e.g., $50.00 is stored
@@ -16,7 +16,7 @@ export interface Invoice {
     contact: string; // Contact information for the client
     createdDate: Date; // Timestamp of when the invoice was created
     updatedDate: Date; // Timestamp of when the invoice was last updated
-    status: InvoiceStatus; // Status of the invoice
+    status: IInvoiceStatus; // Status of the invoice
     dueDate?: Date; // Optional due date for the invoice
 }
 

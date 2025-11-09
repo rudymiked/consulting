@@ -13,7 +13,7 @@ import AboutPage from './pages/AboutPage';
 import PrivacyPage from './pages/PrivacyPage';
 import TermsOfServicePage from './pages/TermsOfServicePage';
 import SecurityAndCompliancePage from './pages/SecurityAndCompliancePage';
-import PaymentPage from './pages/PaymentPage';
+import Payment from './pages/PaymentPage';
 import CreateInvoicePage from './pages/CreateInvoicePage';
 import InvoicePage from './pages/InvoicePage';
 import LoginPage from './pages/LoginPage';
@@ -51,8 +51,6 @@ const App: React.FC = () => {
               <Route path="/about" element={<AboutPage />} />
               <Route path="/privacy" element={<PrivacyPage />} />
               <Route path="/terms" element={<TermsOfServicePage />} />
-              <Route path="/payment" element={<PaymentPage />} />
-              <Route path="/payment/:invoiceId" element={<PaymentPage />} />
               <Route 
                 path="/createinvoice" 
                 element={

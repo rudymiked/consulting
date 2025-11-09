@@ -1,29 +1,27 @@
 import React, { useEffect, useState } from 'react';
 import { Paper, Typography, Box, CircularProgress, Alert, Divider, Button } from '@mui/material';
 import { useNavigate, Link } from 'react-router-dom';
+import PaymentForm from '../Payment/PaymentForm';
+import { Elements } from '@stripe/react-stripe-js';
+import { IInvoice } from '../../pages/InvoicesPage';
+import { loadStripe, StripeElementsOptions } from '@stripe/stripe-js';
 
-export interface InvoiceProps {
+export interface IInvoiceProps {
     invoiceId: string;
 }
 
-// Mock API function (replace with your actual API call)
-async function fetchInvoice(id: string) {
-    return await fetch(`https://${import.meta.env.VITE_API_URL}/api/invoice/${id}`)
-        .then(res => {
-            if (!res.ok) throw new Error('Invoice not found');
-            return res.json();
-        }).catch((error) => {
-            throw error;
-        });
-}
-const Invoice: React.FC<InvoiceProps> = (props: InvoiceProps) => {
+const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_SECRET_KEY!);
+
+const Invoice: React.FC<IInvoiceProps> = (props: IInvoiceProps) => {
     const invoiceId = props.invoiceId;
     const navigate = useNavigate();
-    const [invoice, setInvoice] = useState<{ name: string; amount: number; notes: string; contact: string } | null>(null);
+    const [invoice, setInvoice] = useState<IInvoice | undefined>(undefined);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+    const [error, setError] = useState<string | undefined>(undefined);
+    const [clientSecret, setClientSecret] = React.useState<string | undefined>(undefined);
+    const [stripeOptions, setStripeOptions] = React.useState<StripeElementsOptions | undefined>(undefined);
 
-    useEffect(() => {
+    React.useEffect(() => {
         if (!invoiceId) {
             setError('No invoice ID provided.');
             setLoading(false);
@@ -40,6 +38,44 @@ const Invoice: React.FC<InvoiceProps> = (props: InvoiceProps) => {
             });
     }, [invoiceId]);
 
+    React.useEffect(() => {
+        if (invoiceId == null) 
+            return;
+
+        const body: string = JSON.stringify({ invoiceId: invoice?.id, amount: invoice?.amount });
+
+        const fetchClientSecret = async () => {
+            const response = await fetch(`https://${import.meta.env.VITE_API_URL}/api/create-checkout-session`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: body,
+            });
+            
+            const json = await response.json();
+
+            setClientSecret(json.checkoutSessionClientSecret);
+
+            const options: StripeElementsOptions  = {
+                clientSecret: json.checkoutSessionClientSecret,
+                appearance: { theme: 'stripe' },
+            };
+
+            setStripeOptions(options);
+        };
+
+        fetchClientSecret();
+    }, [invoice, invoiceId]);
+
+    const fetchInvoice = async (id: string) => {
+        return await fetch(`https://${import.meta.env.VITE_API_URL}/api/invoice/${id}`)
+            .then(res => {
+                if (!res.ok) throw new Error('Invoice not found');
+                return res.json();
+            }).catch((error) => {
+                throw error;
+            });
+    }
+
     if (loading) {
         return (
             <Box sx={{ maxWidth: 420, mx: 'auto', mt: 8, textAlign: 'center' }}>
@@ -55,7 +91,14 @@ const Invoice: React.FC<InvoiceProps> = (props: InvoiceProps) => {
             </Box>
         );
     }
-    if (!invoice) return null;
+
+    if (!invoice) {
+        return (
+            <Box sx={{ maxWidth: 420, mx: 'auto', mt: 8 }}>
+                <Alert severity="error">Invoice not found.</Alert>
+            </Box>
+        );
+    }
 
     return (
         <>
@@ -81,15 +124,18 @@ const Invoice: React.FC<InvoiceProps> = (props: InvoiceProps) => {
                     <Typography variant="body1">{invoice.contact}</Typography>
                 </Box>
                 <Divider sx={{ my: 3 }} />
-                <Button
-                    variant="contained"
-                    color="primary"
-                    fullWidth
-                    sx={{ mt: 4 }}
-                    onClick={() => navigate(`/payment/${invoiceId}`)}
-                >
-                    Pay Invoice
-                </Button>
+
+                {/* PAYMENT FORM */}
+                <Elements stripe={stripePromise} options={stripeOptions}>
+                    {clientSecret ? (
+                        <PaymentForm invoiceId={invoice.id} amount={invoice.amount} />
+                    ) : (
+                        <CircularProgress />
+                    )}
+                </Elements>
+
+                {/* END PAYMENT FORM */}
+
             </Paper>
             <Box sx={{ mt: 2, textAlign: 'center' }}>
                 <Link to="/admin">

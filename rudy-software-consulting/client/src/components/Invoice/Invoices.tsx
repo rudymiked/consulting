@@ -14,10 +14,10 @@ import {
     Button
 } from '@mui/material';
 import { Link } from 'react-router-dom';
-import { Invoice } from '../../pages/InvoicesPage';
+import { IInvoice } from '../../pages/InvoicesPage';
 
 const Invoices: React.FC = () => {
-    const [invoices, setInvoices] = useState<Invoice[]>([]);
+    const [invoices, setInvoices] = useState<IInvoice[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {

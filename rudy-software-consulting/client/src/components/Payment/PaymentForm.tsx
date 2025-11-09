@@ -1,12 +1,13 @@
 import React from 'react';
-import { CardElement, useStripe, useElements, PaymentElement } from '@stripe/react-stripe-js';
+import { CardElement, useStripe, useElements, PaymentElement, CheckoutProvider } from '@stripe/react-stripe-js';
+import { loadStripe } from '@stripe/stripe-js';
 
-interface PaymentFormProps {
+interface IPaymentFormProps {
   invoiceId: string;
   amount: number;
 }
 
-const PaymentForm: React.FC<PaymentFormProps> = ({ invoiceId, amount }) => {
+const PaymentForm: React.FC<IPaymentFormProps> = ({ invoiceId, amount }) => {
   const [message, setMessage] = React.useState<string | null>(null);
   const [isProcessing, setIsProcessing] = React.useState(false);
 
