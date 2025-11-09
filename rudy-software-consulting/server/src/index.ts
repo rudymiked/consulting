@@ -5,11 +5,10 @@ import * as appInsights from 'applicationinsights';
 import { EmailOptions, insertIntoContactLogs, sendEmail } from './emailHelper';
 import jwksClient from 'jwks-rsa';
 import { expressjwt } from 'express-jwt';
-import Stripe from 'stripe';
-import { createInvoice, getInvoiceDetails, getInvoices, updateInvoice } from './invoiceHelper';
+import { createInvoice, getInvoiceDetails, getInvoices, payInvoice } from './invoiceHelper';
 import { trackEvent, trackException } from './telemetry';
 import { approveUser, loginUser, registerUser, verifyToken } from './authHelper';
-import { InvoiceStatus } from './models';
+import { InvoiceResult, InvoiceStatus } from './models';
 
 dotenv.config();
 
@@ -137,7 +136,7 @@ app.get('/api', (_, res) => {
 app.post('/api/contact', async (req, res) => {
   const { to, subject, text, html } = req.body;
   const options: EmailOptions = { to, subject, text, html };
-  
+
   await insertIntoContactLogs(options);
   res.status(200).json({ message: 'Contacted successfully' });
   trackEvent('InsertContactLog_API', { to, subject });
@@ -165,86 +164,26 @@ app.get('/api/email', (_, res) => {
   res.json({ message: `email address: ${process.env.RUDYARD_EMAIL_USERNAME}` });
 });
 
-// Initialize Stripe
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, {
-  apiVersion: '2025-08-27.basil',
-});
-
-app.post('/api/payInvoice', async (req, res) => {
+app.post('/api/invoice/pay', async (req, res) => {
   const { paymentMethodId, invoiceId, amount } = req.body;
 
   if (!paymentMethodId || !invoiceId || !amount) {
     return res.status(400).json({ error: 'Missing required fields.' });
   }
 
-  try {
-    trackEvent('PayInvoice_Attempt', { invoiceId });
-    const invoiceDetails = await getInvoiceDetails(invoiceId);
-    if (!invoiceDetails) {
-      return res.status(404).json({ error: 'Invalid invoice ID.' });
-    }
+  const result: InvoiceResult = await payInvoice(invoiceId, amount, paymentMethodId);
 
-    // Optional: Verify amount matches expected value
-    if (invoiceDetails.amount !== amount) {
-      return res.status(400).json({ error: 'Amount mismatch.' });
-    }
-
-    const paymentIntent = await stripe.paymentIntents.create({
-      amount, // Use the amount from the request
-      currency: 'usd',
-      payment_method: paymentMethodId,
-      confirmation_method: 'manual',
-      confirm: true,
-      metadata: {
-        paymentId: invoiceId,
-        invoiceNumber: invoiceDetails.id,
-        customerName: invoiceDetails.name,
-      },
-    });
-
-    if (paymentIntent.status === 'requires_action') {
-      return res.send({
-        requiresAction: true,
-        clientSecret: paymentIntent.client_secret,
-      });
-    }
-
-      // update invoice in DB
-    await updateInvoice({
-      id: invoiceId,
-      status: InvoiceStatus.PAID,
-      name: invoiceDetails.name,
-      amount: invoiceDetails.amount,
-      notes: invoiceDetails.notes + '/n/nPayment received',
-      contact: invoiceDetails.contact,
-    }).then(() => {
-      console.log('Invoice updated successfully');
-      trackEvent('PayInvoice_Success', { invoiceId });
-      res.status(200).json({ message: 'Invoice updated successfully' });  
-    }).catch((error) => {
-      console.error('Error saving invoice:', error);
-      trackException(error, { invoiceId });
-      res.status(500).json({ error: 'Failed to save invoice.' });
-    });
-
-    res.send({ success: true });
-  } catch (error: any) {
-    console.error('Stripe error:', error.message);
-    res.status(400).send({ error: error.message });
+  if (result.Success) {
+    res.status(200).json({ success: true, message: result.Message });
+  } else {
+    res.status(500).json({ error: result.Message });
   }
 });
 
 app.get('/api/invoices', async (_, res) => {
   try {
     const entities = await getInvoices();
-    const invoices = entities.map(entity => ({
-      id: entity.id,
-      amount: entity.amount,
-      contact: entity.contact,
-      status: entity.status,
-    }));
-
-    res.json(invoices);
+    res.json(entities);
   } catch (error: any) {
     console.error('Error fetching invoices:', error.message);
     res.status(500).json({ error: 'Failed to fetch invoices.' });
@@ -341,8 +280,8 @@ app.get('/api/protected', (req, res) => {
   const user = verifyToken(token || '');
 
   if (!user) return res.status(403).json({ error: 'Unauthorized' });
-    
-  res.json({ message: `Welcome ${user.email}` });  
+
+  res.json({ message: `Welcome ${user.email}` });
 });
 
 

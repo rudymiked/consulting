@@ -42,7 +42,7 @@ const PaymentForm: React.FC<PaymentFormProps> = ({ invoiceId, amount }) => {
       return;
     }
 
-    const res = await fetch(`https://${import.meta.env.VITE_API_URL}/api/pay`, {
+    const res = await fetch(`https://${import.meta.env.VITE_API_URL}/api/invoice/pay`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

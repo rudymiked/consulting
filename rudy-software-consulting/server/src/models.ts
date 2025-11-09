@@ -5,12 +5,20 @@ export interface InvoiceRequest {
     notes: string;
     contact: string;
     status: InvoiceStatus; // Status of the invoice
+    dueDate?: Date; // Optional due date for the invoice
 }
 
 export enum InvoiceStatus {
     NEW = 'new',
     PAID = 'paid',
+    PARTIAL_PAYMENT = 'partial_payment',
     CANCELLED = 'cancelled',
+}
+
+export interface InvoiceResult {
+    Success: boolean;
+    Message: string;
+    InvoiceId: string;
 }
 
 export interface Invoice {
