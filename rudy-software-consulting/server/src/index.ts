@@ -9,6 +9,7 @@ import { createInvoice, getInvoiceDetails, getInvoices, payInvoice } from './inv
 import { trackEvent, trackException } from './telemetry';
 import { approveUser, loginUser, registerUser, verifyToken } from './authHelper';
 import { IInvoiceResult, IInvoiceStatus } from './models';
+import Stripe from 'stripe';
 
 dotenv.config();
 
@@ -283,6 +284,33 @@ app.get('/api/protected', (req, res) => {
 
   res.json({ message: `Welcome ${user.email}` });
 });
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+  apiVersion: '2025-08-27.basil',
+});
+
+app.post('/api/create-checkout-session', async (req, res) => {
+  const { invoiceId, amount } = req.body;
+
+  if (!invoiceId || !amount) {
+    return res.status(400).json({ error: 'Missing invoiceId or amount' });
+  }
+
+  try {
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount,
+      currency: 'usd',
+      metadata: { invoiceId },
+      automatic_payment_methods: { enabled: true },
+    });
+
+    res.json({ checkoutSessionClientSecret: paymentIntent.client_secret });
+  } catch (err) {
+    console.error('Stripe error:', err);
+    res.status(500).json({ error: 'Failed to create payment intent' });
+  }
+});
+
 
 
 // Export app for testing and start server when run directly

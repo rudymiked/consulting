@@ -39,7 +39,7 @@ const Invoice: React.FC<IInvoiceProps> = (props: IInvoiceProps) => {
     }, [invoiceId]);
 
     React.useEffect(() => {
-        if (invoiceId == null) 
+        if (invoiceId == null)
             return;
 
         const body: string = JSON.stringify({ invoiceId: invoice?.id, amount: invoice?.amount });
@@ -50,12 +50,12 @@ const Invoice: React.FC<IInvoiceProps> = (props: IInvoiceProps) => {
                 headers: { 'Content-Type': 'application/json' },
                 body: body,
             });
-            
+
             const json = await response.json();
 
             setClientSecret(json.checkoutSessionClientSecret);
 
-            const options: StripeElementsOptions  = {
+            const options: StripeElementsOptions = {
                 clientSecret: json.checkoutSessionClientSecret,
                 appearance: { theme: 'stripe' },
             };
