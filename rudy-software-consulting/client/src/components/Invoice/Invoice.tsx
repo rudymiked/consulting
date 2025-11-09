@@ -5,6 +5,7 @@ import PaymentForm from '../Payment/PaymentForm';
 import { Elements } from '@stripe/react-stripe-js';
 import { IInvoice } from '../../pages/InvoicesPage';
 import { loadStripe, StripeElementsOptions } from '@stripe/stripe-js';
+import { isNullOrEmpty } from '../../shared/SharedFunctions';
 
 export interface IInvoiceProps {
     invoiceId: string;
@@ -39,7 +40,7 @@ const Invoice: React.FC<IInvoiceProps> = (props: IInvoiceProps) => {
     }, [invoiceId]);
 
     React.useEffect(() => {
-        if (invoiceId == null)
+        if (isNullOrEmpty(invoiceId) || isNullOrEmpty(invoice?.id) || isNullOrEmpty(invoice?.amount.toString()))
             return;
 
         const body: string = JSON.stringify({ invoiceId: invoice?.id, amount: invoice?.amount });

@@ -307,7 +307,8 @@ app.post('/api/create-checkout-session', async (req, res) => {
     res.json({ checkoutSessionClientSecret: paymentIntent.client_secret });
   } catch (err) {
     console.error('Stripe error:', err);
-    res.status(500).json({ error: 'Failed to create payment intent' });
+    trackException(err, { invoiceId, amount });
+    res.status(500).json({ error: 'Failed to create payment intent' + err.message });
   }
 });
 
