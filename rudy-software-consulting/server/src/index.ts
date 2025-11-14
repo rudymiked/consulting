@@ -65,7 +65,8 @@ const corsOptions = {
     const allowedOrigins = [
       'http://localhost:3000',
       'http://localhost:3001',
-      process.env.FRONTEND_ORIGIN, // optional, set in env for production
+      'https://' + process.env.FRONTEND_ORIGIN, // optional, set in env for production
+      'https://www' + process.env.FRONTEND_ORIGIN
     ].filter(Boolean) as string[];
 
     if (!origin || allowedOrigins.indexOf(origin) !== -1) {
@@ -131,7 +132,7 @@ app.get('/', (_, res) => {
 
 app.get('/api', (_, res) => {
   console.log('API is running 🚀');
-  res.send('API is running 🚀 origin:' + process.env.FRONTEND_ORIGIN);
+  res.send('API is running 🚀');
 });
 
 app.post('/api/contact', async (req, res) => {
