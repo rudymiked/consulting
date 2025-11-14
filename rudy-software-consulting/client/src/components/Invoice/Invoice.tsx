@@ -15,7 +15,6 @@ const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_SECRET_KEY!);
 
 const Invoice: React.FC<IInvoiceProps> = (props: IInvoiceProps) => {
     const invoiceId = props.invoiceId;
-    const navigate = useNavigate();
     const [invoice, setInvoice] = useState<IInvoice | undefined>(undefined);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | undefined>(undefined);
@@ -39,10 +38,6 @@ const Invoice: React.FC<IInvoiceProps> = (props: IInvoiceProps) => {
                 setLoading(false);
             });
     }, [invoiceId]);
-
-    React.useEffect(() => {
-        console.log(clientSecret);
-    }, [clientSecret]);
 
     React.useEffect(() => {
         if (!invoice || !invoice.id || !invoice.amount) return;
