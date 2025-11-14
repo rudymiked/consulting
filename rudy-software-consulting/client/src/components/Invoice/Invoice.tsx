@@ -46,7 +46,7 @@ const Invoice: React.FC<IInvoiceProps> = (props: IInvoiceProps) => {
         const body: string = JSON.stringify({ invoiceId: invoice?.id, amount: invoice?.amount });
 
         const fetchClientSecret = async () => {
-            const response = await fetch(`https://${import.meta.env.VITE_API_URL}/api/create-checkout-session`, {
+            const response = await fetch(`https://${import.meta.env.VITE_API_URL}/api/invoice/create-payment-intent`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: body,
@@ -54,15 +54,15 @@ const Invoice: React.FC<IInvoiceProps> = (props: IInvoiceProps) => {
 
             const json = await response.json();
 
-            setClientSecret(json.checkoutSessionClientSecret);
-
+            setClientSecret(json.clientSecret); // updated key
             const options: StripeElementsOptions = {
-                clientSecret: json.checkoutSessionClientSecret,
+                clientSecret: json.clientSecret,
                 appearance: { theme: 'stripe' },
             };
 
             setStripeOptions(options);
         };
+
 
         fetchClientSecret();
     }, [invoice, invoiceId]);
@@ -128,11 +128,11 @@ const Invoice: React.FC<IInvoiceProps> = (props: IInvoiceProps) => {
 
                 {/* PAYMENT FORM */}
                 <Elements stripe={stripePromise} options={stripeOptions}>
-                    {clientSecret ? (
-                        <PaymentForm invoiceId={invoice.id} amount={invoice.amount} />
-                    ) : (
+                    {clientSecret ?
+                        <PaymentForm />
+                        :
                         <CircularProgress />
-                    )}
+                    }
                 </Elements>
 
                 {/* END PAYMENT FORM */}
