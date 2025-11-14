@@ -49,7 +49,7 @@ const Invoice: React.FC<IInvoiceProps> = (props: IInvoiceProps) => {
 
         const fetchClientSecret = async () => {
             try {
-                const response = await fetch(`https://${import.meta.env.VITE_API_URL}/api/create-payment-intent`, {
+                const response = await fetch(`https://${import.meta.env.VITE_API_URL}/api/invoice/create-payment-intent`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ invoiceId: invoice.id, amount: invoice.amount }),
