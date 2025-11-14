@@ -28,6 +28,7 @@ const Invoice: React.FC<IInvoiceProps> = (props: IInvoiceProps) => {
             setLoading(false);
             return;
         }
+
         fetchInvoice(invoiceId)
             .then(data => {
                 setInvoice(data);
@@ -40,32 +41,35 @@ const Invoice: React.FC<IInvoiceProps> = (props: IInvoiceProps) => {
     }, [invoiceId]);
 
     React.useEffect(() => {
-        if (isNullOrEmpty(invoiceId) || isNullOrEmpty(invoice?.id) || isNullOrEmpty(invoice?.amount.toString()))
-            return;
+        console.log(clientSecret);
+    }, [clientSecret]);
 
-        const body: string = JSON.stringify({ invoiceId: invoice?.id, amount: invoice?.amount });
+    React.useEffect(() => {
+        if (!invoice || !invoice.id || !invoice.amount) return;
 
         const fetchClientSecret = async () => {
-            const response = await fetch(`https://${import.meta.env.VITE_API_URL}/api/invoice/create-payment-intent`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: body,
-            });
+            try {
+                const response = await fetch(`https://${import.meta.env.VITE_API_URL}/api/create-payment-intent`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ invoiceId: invoice.id, amount: invoice.amount }),
+                });
 
-            const json = await response.json();
+                const json = await response.json();
+                console.log('PaymentIntent response:', json);
 
-            setClientSecret(json.clientSecret); // updated key
-            const options: StripeElementsOptions = {
-                clientSecret: json.clientSecret,
-                appearance: { theme: 'stripe' },
-            };
-
-            setStripeOptions(options);
+                setClientSecret(json.clientSecret);
+                setStripeOptions({
+                    clientSecret: json.clientSecret,
+                    appearance: { theme: 'stripe' },
+                });
+            } catch (err) {
+                setError('Failed to initialize payment.');
+            }
         };
 
-
         fetchClientSecret();
-    }, [invoice, invoiceId]);
+    }, [invoice]);
 
     const fetchInvoice = async (id: string) => {
         return await fetch(`https://${import.meta.env.VITE_API_URL}/api/invoice/${id}`)
@@ -127,13 +131,13 @@ const Invoice: React.FC<IInvoiceProps> = (props: IInvoiceProps) => {
                 <Divider sx={{ my: 3 }} />
 
                 {/* PAYMENT FORM */}
-                <Elements stripe={stripePromise} options={stripeOptions}>
-                    {clientSecret ?
+                {clientSecret && stripeOptions ? (
+                    <Elements stripe={stripePromise} options={stripeOptions}>
                         <PaymentForm />
-                        :
-                        <CircularProgress />
-                    }
-                </Elements>
+                    </Elements>
+                ) : (
+                    <CircularProgress />
+                )}
 
                 {/* END PAYMENT FORM */}
 

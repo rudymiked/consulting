@@ -289,30 +289,28 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2025-08-27.basil',
 });
 
-app.post('/api/create-checkout-session', async (req, res) => {
+app.post('/api/invoice/create-payment-intent', async (req, res) => {
   const { invoiceId, amount } = req.body;
 
   if (!invoiceId || !amount) {
     return res.status(400).json({ error: 'Missing invoiceId or amount' });
   }
 
-  try {
-    const paymentIntent = await stripe.paymentIntents.create({
-      amount,
-      currency: 'usd',
-      metadata: { invoiceId },
-      automatic_payment_methods: { enabled: true },
-    });
+  const paymentIntent = await stripe.paymentIntents.create({
+    amount,
+    currency: 'usd',
+    metadata: { invoiceId },
+    automatic_payment_methods: { enabled: true },
+  });
 
-    res.json({ checkoutSessionClientSecret: paymentIntent.client_secret });
+  try {
+    res.send({ clientSecret: paymentIntent.client_secret });
   } catch (err) {
     console.error('Stripe error:', err);
     trackException(err, { invoiceId, amount });
     res.status(500).json({ error: 'Failed to create payment intent' + err.message });
   }
 });
-
-
 
 // Export app for testing and start server when run directly
 export default app;

@@ -13,7 +13,6 @@ import AboutPage from './pages/AboutPage';
 import PrivacyPage from './pages/PrivacyPage';
 import TermsOfServicePage from './pages/TermsOfServicePage';
 import SecurityAndCompliancePage from './pages/SecurityAndCompliancePage';
-import Payment from './pages/PaymentPage';
 import CreateInvoicePage from './pages/CreateInvoicePage';
 import InvoicePage from './pages/InvoicePage';
 import LoginPage from './pages/LoginPage';
