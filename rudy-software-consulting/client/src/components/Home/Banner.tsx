@@ -69,7 +69,7 @@ const Banner: React.FC = () => {
                 },
               })}
             >
-              Transform your ideas into reality with expert custom tailored software. Our services include custom software development for web, desktop and mobile, SaaS, API integrations, and enterprise consulting.
+              Transform your ideas into reality with expert custom tailored software and managed IT services. Our services include custom software development for web, desktop, mobile, SaaS, API integrations, and enterprise consulting.
             </Typography>
             <Link to="/contact">
               <Button className="main-button" variant="contained" color="primary" sx={{ mt: 1 }}>
