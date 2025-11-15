@@ -1,17 +1,15 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { Paper, Typography, Box, CircularProgress, Alert, Divider, Button } from '@mui/material';
-import { useNavigate, Link } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import PaymentForm from '../Payment/PaymentForm';
 import { Elements } from '@stripe/react-stripe-js';
 import { IInvoice } from '../../pages/InvoicesPage';
-import { loadStripe, StripeElementsOptions } from '@stripe/stripe-js';
-import { isNullOrEmpty } from '../../shared/SharedFunctions';
+import { StripeElementsOptions } from '@stripe/stripe-js';
+import { stripePromise } from '../../shared/stripe';
 
 export interface IInvoiceProps {
     invoiceId: string;
 }
-
-const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_SECRET_KEY!);
 
 const Invoice: React.FC<IInvoiceProps> = (props: IInvoiceProps) => {
     const invoiceId = props.invoiceId;
@@ -38,6 +36,11 @@ const Invoice: React.FC<IInvoiceProps> = (props: IInvoiceProps) => {
                 setLoading(false);
             });
     }, [invoiceId]);
+
+    React.useEffect(() => {
+        console.log('VITE_STRIPE_PUBLISHABLE_KEY', import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
+        console.log(stripePromise);
+    }, [stripePromise]);
 
     React.useEffect(() => {
         if (!invoice || !invoice.id || !invoice.amount) return;
