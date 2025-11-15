@@ -65,9 +65,9 @@ const ContactForm: React.FC = () => {
       setMessage('Please fill in all required fields.');
       return;
     }
-    
+
     setIsSubmitting(true);
-    
+
     fetch(`https://${import.meta.env.VITE_API_URL}/api/contact`, {
       method: 'POST',
       headers: {
@@ -158,37 +158,37 @@ const ContactForm: React.FC = () => {
                 We guarentee a response within 24 hours. We will never share your email or personal information with anyone.
               </Typography>
             </Box>
-              <Button
-                className="main-button"
-                type="submit"
-                variant="contained"
-                fullWidth
-                disabled={isSubmitting}
-                sx={{ position: 'relative' }}
-              >
-                {isSubmitting ? (
-                  <>
-                    <CircularProgress
-                      size={24}
-                      color="inherit"
-                      thickness={5}
-                      sx={{
-                        position: 'absolute',
-                        top: '50%',
-                        left: '50%',
-                        marginTop: '-12px',
-                        marginLeft: '-12px',
-                      }}
-                    />
-                    Please Wait
-                  </>
-                ) : (
-                  'Submit'
-                )}
-              </Button>
-              <Typography variant="body1" color={isError ? "error" : "success.main"} align="center" sx={{ mt: 2 }}>
-                {message}
-              </Typography>
+            <Button
+              className="main-button"
+              type="submit"
+              variant="contained"
+              fullWidth
+              disabled={isSubmitting}
+              sx={{ position: 'relative' }}
+            >
+              {isSubmitting ? (
+                <>
+                  <CircularProgress
+                    size={24}
+                    color="inherit"
+                    thickness={5}
+                    sx={{
+                      position: 'absolute',
+                      top: '50%',
+                      left: '50%',
+                      marginTop: '-12px',
+                      marginLeft: '-12px',
+                    }}
+                  />
+                  Please Wait
+                </>
+              ) : (
+                'Submit'
+              )}
+            </Button>
+            <Typography variant="body1" color={isError ? "error" : "success.main"} align="center" sx={{ mt: 2 }}>
+              {message}
+            </Typography>
           </Grid>
         </form>
       </Box>
