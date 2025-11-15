@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Paper, Typography, Box, CircularProgress, Alert, Divider, Button } from '@mui/material';
+import { Paper, Typography, Box, CircularProgress, Alert, Divider, Button, TextField } from '@mui/material';
 import { Link } from 'react-router-dom';
 import PaymentForm from '../Payment/PaymentForm';
 import { Elements } from '@stripe/react-stripe-js';
@@ -14,10 +14,15 @@ export interface IInvoiceProps {
 const Invoice: React.FC<IInvoiceProps> = (props: IInvoiceProps) => {
     const invoiceId = props.invoiceId;
     const [invoice, setInvoice] = useState<IInvoice | undefined>(undefined);
+    const [editableAmount, setEditableAmount] = useState<number | undefined>(undefined);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | undefined>(undefined);
     const [clientSecret, setClientSecret] = React.useState<string | undefined>(undefined);
     const [stripeOptions, setStripeOptions] = React.useState<StripeElementsOptions | undefined>(undefined);
+
+    const isAmountValid = editableAmount !== undefined &&
+        editableAmount > 0 &&
+        editableAmount <= invoice!.amount;
 
     React.useEffect(() => {
         if (!invoiceId) {
@@ -29,6 +34,7 @@ const Invoice: React.FC<IInvoiceProps> = (props: IInvoiceProps) => {
         fetchInvoice(invoiceId)
             .then(data => {
                 setInvoice(data);
+                setEditableAmount(data.amount); // initialize editable amount
                 setLoading(false);
             })
             .catch(() => {
@@ -42,32 +48,29 @@ const Invoice: React.FC<IInvoiceProps> = (props: IInvoiceProps) => {
         console.log('stripepromise: ', stripePromise);
     }, [stripePromise]);
 
-    React.useEffect(() => {
-        if (!invoice || !invoice.id || !invoice.amount) return;
 
-        const fetchClientSecret = async () => {
-            try {
-                const response = await fetch(`https://${import.meta.env.VITE_API_URL}/api/invoice/create-payment-intent`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ invoiceId: invoice.id, amount: invoice.amount }),
-                });
+    const fetchClientSecret = async () => {
+        if (!invoice || !invoice.id || !editableAmount) return;
 
-                const json = await response.json();
-                console.log('PaymentIntent response:', json);
+        try {
+            const response = await fetch(`https://${import.meta.env.VITE_API_URL}/api/invoice/create-payment-intent`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ invoiceId: invoice.id, amount: editableAmount * 100 }), // amount in cents
+            });
 
-                setClientSecret(json.clientSecret);
-                setStripeOptions({
-                    clientSecret: json.clientSecret,
-                    appearance: { theme: 'stripe' },
-                });
-            } catch (err) {
-                setError('Failed to initialize payment.');
-            }
-        };
+            const json = await response.json();
+            console.log('PaymentIntent response:', json);
 
-        fetchClientSecret();
-    }, [invoice]);
+            setClientSecret(json.clientSecret);
+            setStripeOptions({
+                clientSecret: json.clientSecret,
+                appearance: { theme: 'stripe' },
+            });
+        } catch (err) {
+            setError('Failed to initialize payment.');
+        }
+    };
 
     const fetchInvoice = async (id: string) => {
         return await fetch(`https://${import.meta.env.VITE_API_URL}/api/invoice/${id}`)
@@ -119,8 +122,18 @@ const Invoice: React.FC<IInvoiceProps> = (props: IInvoiceProps) => {
                     <Typography variant="body1" sx={{ mb: 1 }}>${invoice.amount.toFixed(2)}</Typography>
                 </Box>
                 <Box sx={{ mb: 2 }}>
-                    <Typography variant="subtitle2" color="text.secondary">Notes</Typography>
-                    <Typography variant="body1" sx={{ mb: 1 }}>{invoice.notes}</Typography>
+                    <Typography variant="subtitle2" color="text.secondary">Amount</Typography>
+                    <TextField
+                        type="number"
+                        variant="outlined"
+                        size="small"
+                        value={editableAmount}
+                        onChange={(e) => setEditableAmount(Number(e.target.value))}
+                        inputProps={{ min: 0, step: 0.01 }}
+                        error={!isAmountValid}
+                        helperText={!isAmountValid ? `Amount must be between $0.01 and $${invoice.amount.toFixed(2)}` : ''}
+                        sx={{ mt: 1 }}
+                    />
                 </Box>
                 <Box>
                     <Typography variant="subtitle2" color="text.secondary">Contact</Typography>
@@ -128,13 +141,28 @@ const Invoice: React.FC<IInvoiceProps> = (props: IInvoiceProps) => {
                 </Box>
                 <Divider sx={{ my: 3 }} />
 
+                <Button
+                    variant="contained" 
+                    className="main-button"
+                    onClick={fetchClientSecret}
+                    disabled={!isAmountValid}
+                    sx={{ mt: 2 }}
+                >
+                    Confirm Amount & Proceed to Payment
+                </Button>
+                <br />
+                <br />
                 {/* PAYMENT FORM */}
-                {clientSecret && stripeOptions ? (
-                    <Elements stripe={stripePromise} options={stripeOptions}>
-                        <PaymentForm />
-                    </Elements>
-                ) : (
-                    <CircularProgress />
+                {clientSecret && (
+                    <>
+                        {clientSecret && stripeOptions ? (
+                            <Elements stripe={stripePromise} options={stripeOptions}>
+                                <PaymentForm />
+                            </Elements>
+                        ) : (
+                            <CircularProgress />
+                        )}
+                    </>
                 )}
 
                 {/* END PAYMENT FORM */}
