@@ -28,7 +28,8 @@ const ContactForm: React.FC = () => {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
-  const [message, SetMessage] = useState('');
+  const [isError, setIsError] = useState(false);
+  const [message, setMessage] = useState('');
 
   React.useEffect(() => {
     console.log(import.meta.env.VITE_API_URL);
@@ -54,10 +55,14 @@ const ContactForm: React.FC = () => {
   }
 
   const handleSubmit = (e: any) => {
+    console.log('Submitting contact form...');
+    setIsError(false);
+    setMessage('');
     e.preventDefault();
 
-    if (!formData.name || !formData.email || !formData.message) {
-      SetMessage('Please fill in all required fields.');
+    if (!formData.name || !formData.email || !formData.company || !formData.message) {
+      setIsError(true);
+      setMessage('Please fill in all required fields.');
       return;
     }
     
@@ -87,11 +92,14 @@ const ContactForm: React.FC = () => {
         setIsSubmitted(true);
       })
       .catch(error => {
+        setIsError(true);
+        setMessage('There was an error submitting the form. Please try again.');
         console.error('Error:', error);
       })
       .finally(() => {
         setIsSubmitting(false);
-        SetMessage(successMessage);
+        setIsError(false);
+        setMessage(successMessage);
       });
   };
 
@@ -178,11 +186,9 @@ const ContactForm: React.FC = () => {
                   'Submit'
                 )}
               </Button>
-            {isSubmitted && (
-              <Typography variant="body1" color="success.main" align="center" sx={{ mt: 2 }}>
+              <Typography variant="body1" color={isError ? "error" : "success.main"} align="center" sx={{ mt: 2 }}>
                 {message}
               </Typography>
-            )}
           </Grid>
         </form>
       </Box>
