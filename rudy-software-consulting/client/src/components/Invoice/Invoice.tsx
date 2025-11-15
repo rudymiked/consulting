@@ -39,7 +39,7 @@ const Invoice: React.FC<IInvoiceProps> = (props: IInvoiceProps) => {
 
     React.useEffect(() => {
         console.log('VITE_STRIPE_PUBLISHABLE_KEY', import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
-        console.log(stripePromise);
+        console.log('stripepromise: ', stripePromise);
     }, [stripePromise]);
 
     React.useEffect(() => {
