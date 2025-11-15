@@ -118,18 +118,17 @@ const Invoice: React.FC<IInvoiceProps> = (props: IInvoiceProps) => {
                     <Typography variant="body1" sx={{ mb: 1 }}>{invoice.name}</Typography>
                 </Box>
                 <Box sx={{ mb: 2 }}>
-                    <Typography variant="subtitle2" color="text.secondary">Amount</Typography>
+                    <Typography variant="subtitle2" color="text.secondary">Full Amount</Typography>
                     <Typography variant="body1" sx={{ mb: 1 }}>${invoice.amount.toFixed(2)}</Typography>
                 </Box>
                 <Box sx={{ mb: 2 }}>
-                    <Typography variant="subtitle2" color="text.secondary">Amount</Typography>
+                    <Typography variant="subtitle2" color="text.secondary">Amount To Pay Today</Typography>
                     <TextField
-                        type="number"
+                        type="text"
                         variant="outlined"
                         size="small"
                         value={editableAmount}
                         onChange={(e) => setEditableAmount(Number(e.target.value))}
-                        inputProps={{ min: 0, step: 0.01 }}
                         error={!isAmountValid}
                         helperText={!isAmountValid ? `Amount must be between $0.01 and $${invoice.amount.toFixed(2)}` : ''}
                         sx={{ mt: 1 }}
