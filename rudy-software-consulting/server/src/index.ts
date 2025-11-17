@@ -173,12 +173,19 @@ app.post('/api/invoice/pay', async (req, res) => {
     return res.status(400).json({ error: 'Missing required fields.' });
   }
 
-  const result: IInvoiceResult = await payInvoice(invoiceId, amount, paymentMethodId);
+  try {
+    const result: IInvoiceResult = await payInvoice(invoiceId, amount, paymentMethodId);
 
-  if (result.Success) {
-    res.status(200).json({ success: true, message: result.Message });
-  } else {
-    res.status(500).json({ error: result.Message });
+    if (result.Success) {
+      return res.status(200).json({ success: true, message: result.Message });
+    } else {
+      // Distinguish between client vs server errors
+      const statusCode = result.Message.includes('Invalid') ? 400 : 500;
+      return res.status(statusCode).json({ error: result.Message });
+    }
+  } catch (err: any) {
+    console.error('Unexpected error:', err);
+    return res.status(500).json({ error: 'Unexpected server error.' });
   }
 });
 
@@ -189,6 +196,37 @@ app.get('/api/invoices', async (_, res) => {
   } catch (error: any) {
     console.error('Error fetching invoices:', error.message);
     res.status(500).json({ error: 'Failed to fetch invoices.' });
+  }
+});
+
+app.get('/api/invoice/:id/payment-status', async (req, res) => {
+  const invoiceId = req.params.id;
+
+  try {
+    const invoice = await getInvoiceDetails(invoiceId);
+    if (!invoice || !invoice.paymentIntentId) {
+      return res.status(404).json({ error: 'Invoice or payment not found.' });
+    }
+
+    // Retrieve PaymentIntent from Stripe
+    const paymentIntent = await stripe.paymentIntents.retrieve(invoice.paymentIntentId);
+
+    // statuses: 
+    // requires_payment_method
+    // requires_confirmation
+    // requires_action
+    // processing
+    // requires_capture
+    // canceled
+    // succeeded
+
+    return res.json({
+      status: paymentIntent.status, // see: https://stripe.com/docs/payments/intents#intent-statuses
+      invoiceId,
+    });
+  } catch (err: any) {
+    console.error('Error fetching payment status:', err.message);
+    return res.status(500).json({ error: 'Failed to fetch payment status.' });
   }
 });
 

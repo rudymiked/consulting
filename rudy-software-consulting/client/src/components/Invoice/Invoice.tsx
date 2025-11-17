@@ -43,12 +43,6 @@ const Invoice: React.FC<IInvoiceProps> = (props: IInvoiceProps) => {
             });
     }, [invoiceId]);
 
-    React.useEffect(() => {
-        console.log('VITE_STRIPE_PUBLISHABLE_KEY', import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
-        console.log('stripepromise: ', stripePromise);
-    }, [stripePromise]);
-
-
     const fetchClientSecret = async () => {
         if (!invoice || !invoice.id || !editableAmount) return;
 
@@ -156,7 +150,7 @@ const Invoice: React.FC<IInvoiceProps> = (props: IInvoiceProps) => {
                     <>
                         {clientSecret && stripeOptions ? (
                             <Elements stripe={stripePromise} options={stripeOptions}>
-                                <PaymentForm />
+                                <PaymentForm invoiceId={invoiceId} />
                             </Elements>
                         ) : (
                             <CircularProgress />

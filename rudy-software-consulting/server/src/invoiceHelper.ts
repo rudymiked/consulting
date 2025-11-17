@@ -3,6 +3,16 @@ import { trackEvent, trackDependency, trackException, trackTrace } from './telem
 import { insertEntity, queryEntities, updateEntity } from './tableClientHelper';
 import Stripe from 'stripe';
 
+/*
+
+/api/invoice/pay → creates a PaymentIntent and returns client_secret.
+
+/api/invoice/:id/payment-status → retrieves PaymentIntent from Stripe and returns its status.
+
+Frontend → uses client_secret with PaymentElement to confirm payment, and polls /payment-status to show progress.
+
+*/
+
 export const getInvoices = async (filter?: string | undefined): Promise<IInvoice[]> => {
     const tableName = "invoices";
     trackEvent('GetInvoices_Attempt');
@@ -14,6 +24,7 @@ export const getInvoices = async (filter?: string | undefined): Promise<IInvoice
         amount: entity.amount,
         notes: entity.notes,
         contact: entity.contact,
+        paymentIntentId: entity.paymentIntentId,
         createdDate: new Date(entity.createdDate),
         updatedDate: new Date(entity.updatedDate),
         status: entity.status,
@@ -39,6 +50,7 @@ export const getInvoiceDetails = async (invoiceId: string): Promise<IInvoice> =>
             amount: entity.amount,
             notes: entity.notes,
             contact: entity.contact,
+            paymentIntentId: entity.paymentIntentId,
             createdDate: new Date(entity.createdDate),
             updatedDate: new Date(entity.updatedDate),
             status: entity.status,
@@ -158,8 +170,11 @@ export const updateInvoice = async (invoiceData: IInvoiceRequest) => {
     }
 }
 
-export const payInvoice = async (invoiceId: string, amount: number, paymentMethodId: string): Promise<IInvoiceResult> => {
-    // Initialize Stripe
+export const payInvoice = async (
+    invoiceId: string,
+    amount: number, // amount in cents
+    paymentMethodId?: string // optional, since PaymentElement handles method
+): Promise<IInvoiceResult & { ClientSecret?: string }> => {
     const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, {
         apiVersion: '2025-08-27.basil',
     });
@@ -174,115 +189,53 @@ export const payInvoice = async (invoiceId: string, amount: number, paymentMetho
             return { Success: false, Message: message, InvoiceId: invoiceId };
         }
 
-        let invoiceStatus: IInvoiceStatus = invoiceDetails.status;
-        let paymentNode: string;
-
-        switch (invoiceDetails.status) {
-            case IInvoiceStatus.CANCELLED: {
-                const message = `Cannot pay a cancelled invoice ${invoiceId}`;
-                trackTrace(message, undefined, { invoiceId });
-                return { Success: false, Message: message, InvoiceId: invoiceId };
-            }
-            case IInvoiceStatus.PAID: {
-                const message = `Invoice ${invoiceId} is already paid`;
-                trackTrace(message, undefined, { invoiceId });
-                return { Success: false, Message: message, InvoiceId: invoiceId };
-            }
+        // Ensure invoice is payable
+        if (invoiceDetails.status === IInvoiceStatus.CANCELLED) {
+            return { Success: false, Message: `Cannot pay a cancelled invoice ${invoiceId}`, InvoiceId: invoiceId };
+        }
+        if (invoiceDetails.status === IInvoiceStatus.PAID) {
+            return { Success: false, Message: `Invoice ${invoiceId} is already paid`, InvoiceId: invoiceId };
         }
 
-        // Normalize invoice amount to cents for comparison
-        const invoiceAmountCents = invoiceDetails.amount * 100;
-
-        switch (true) {
-            case amount === invoiceAmountCents: {
-                invoiceStatus = IInvoiceStatus.PAID;
-                paymentNode = '\n\nPayment received in full';
-                break;
-            }
-            case amount > 0 && amount < invoiceAmountCents: {
-                invoiceStatus = IInvoiceStatus.PARTIAL_PAYMENT;
-                paymentNode = `\n\nPartial payment received of amount $${(amount / 100).toFixed(2)}`;
-                break;
-            }
-            case amount > invoiceAmountCents: {
-                const message = `Invalid payment amount for invoice ${invoiceId}. Payment exceeds invoice amount.`;
-                trackTrace(message, undefined, { invoiceId, amount });
-                return { Success: false, Message: message, InvoiceId: invoiceId };
-            }
-            default: {
-                const message = `Invalid payment amount for invoice ${invoiceId}. Payment cannot be $0`;
-                trackTrace(message, undefined, { invoiceId, amount });
-                return { Success: false, Message: message, InvoiceId: invoiceId };
-            }
+        // Validate amount
+        const invoiceAmountCents = invoiceDetails.amount; // assume stored in cents
+        if (amount <= 0) {
+            return { Success: false, Message: `Invalid payment amount for invoice ${invoiceId}.`, InvoiceId: invoiceId };
+        }
+        if (amount > invoiceAmountCents) {
+            return { Success: false, Message: `Payment exceeds invoice amount.`, InvoiceId: invoiceId };
         }
 
-        trackEvent('Mock_Use_Stripe_Payment', { invoiceId, amount, paymentMethodId });
-        // MOCK PAYMENT PROCESSING - REMOVE THIS BLOCK WHEN READY TO PROCESS REAL PAYMENTS
-        await new Promise(resolve => setTimeout(resolve, 1000)); // simulate delay
+        // Create PaymentIntent (do NOT confirm here)
+        const start = Date.now();
+        const paymentIntent = await stripe.paymentIntents.create({
+            amount,
+            currency: 'usd',
+            metadata: {
+                invoiceId,
+                invoiceNumber: invoiceDetails.id,
+                customerName: invoiceDetails.name,
+            },
+            automatic_payment_methods: { enabled: true }, // works with PaymentElement
+        });
 
-        // const start = Date.now();
+        trackDependency({
+            target: 'Stripe',
+            name: 'PaymentIntent:create',
+            data: `invoice/${invoiceId}`,
+            durationMs: Date.now() - start,
+            resultCode: paymentIntent.status,
+            success: true,
+            dependencyTypeName: 'Stripe',
+        });
 
-        // const paymentIntent = await stripe.paymentIntents.create({
-        //     amount: amount * 100, // amount in cents
-        //     currency: 'usd',
-        //     payment_method: paymentMethodId,
-        //     confirmation_method: 'manual',
-        //     confirm: true,
-        //     metadata: {
-        //         paymentId: invoiceId,
-        //         invoiceNumber: invoiceDetails.id,
-        //         customerName: invoiceDetails.name,
-        //     },
-        // });
-
-        // trackDependency({
-        //     target: 'Stripe',
-        //     name: 'PaymentIntent:create',
-        //     data: `invoice/${invoiceId}`,
-        //     durationMs: Date.now() - start,
-        //     resultCode: paymentIntent.status,
-        //     success: paymentIntent.status === 'succeeded',
-        //     dependencyTypeName: 'Stripe'
-        // });
-
-        // if (paymentIntent.status === 'requires_action') {
-        //     trackEvent('PayInvoice_RequiresAction via Stripe', { invoiceId });
-        //     return {
-        //         Success: false,
-        //         Message: 'Stripe: Payment requires additional action',
-        //         InvoiceId: invoiceId,
-        //     };
-        // }
-
-        try {
-            // update invoice in DB
-            const updateInvoiceResult = await updateInvoice({
-                id: invoiceId,
-                status: invoiceStatus,
-                name: invoiceDetails.name,
-                amount: invoiceDetails.amount,
-                notes: invoiceDetails.notes,
-                contact: invoiceDetails.contact,
-                dueDate: invoiceDetails.dueDate
-            });
-
-            console.log('Invoice updated successfully after payment:', updateInvoiceResult);
-
-            trackEvent('PayInvoice_Success', { invoiceId });
-
-            return {
-                Success: true,
-                Message: 'Payment processed and invoice updated',
-                InvoiceId: invoiceId
-            };
-        } catch (error) {
-            trackException(error, { invoiceId });
-            return {
-                Success: false,
-                Message: 'Payment processed but failed to update invoice: ' + error.message,
-                InvoiceId: invoiceId
-            };
-        }
+        // Return client_secret to frontend
+        return {
+            Success: true,
+            Message: 'PaymentIntent created',
+            InvoiceId: invoiceId,
+            ClientSecret: paymentIntent.client_secret, // frontend uses this
+        };
     } catch (error: any) {
         console.error('Stripe error:', error.message);
         trackException(error, { invoiceId });
@@ -292,4 +245,4 @@ export const payInvoice = async (invoiceId: string, amount: number, paymentMetho
             InvoiceId: invoiceId,
         };
     }
-}
+};
