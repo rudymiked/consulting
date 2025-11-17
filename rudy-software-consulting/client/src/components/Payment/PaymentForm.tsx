@@ -15,7 +15,7 @@ const PaymentForm: React.FC<Props> = ({ invoiceId }) => {
   useEffect(() => {
     const checkStatus = async () => {
       try {
-        const res = await fetch(`/api/invoice/${invoiceId}/payment-status`);
+        const res = await fetch(`https://${import.meta.env.VITE_API_URL}/api/invoice/${invoiceId}/payment-status`);
         const json = await res.json();
         const status = json.status;
 
