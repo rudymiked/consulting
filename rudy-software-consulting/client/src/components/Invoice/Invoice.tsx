@@ -6,6 +6,8 @@ import { Elements } from '@stripe/react-stripe-js';
 import { IInvoice } from '../../pages/InvoicesPage';
 import { StripeElementsOptions } from '@stripe/stripe-js';
 import { stripePromise } from '../../shared/stripe';
+import { useAuth } from '../Auth/AuthContext';
+import HttpClient from '../../services/Http/HttpClient';
 
 export interface IInvoiceProps {
     invoiceId: string;
@@ -17,31 +19,36 @@ const Invoice: React.FC<IInvoiceProps> = (props: IInvoiceProps) => {
     const [editableAmount, setEditableAmount] = useState<number | undefined>(undefined);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | undefined>(undefined);
+    const [invoices, setInvoices] = useState<IInvoice[]>([]);
     const [clientSecret, setClientSecret] = React.useState<string | undefined>(undefined);
     const [stripeOptions, setStripeOptions] = React.useState<StripeElementsOptions | undefined>(undefined);
+    const { token } = useAuth();
+    const httpClient = new HttpClient();
 
     const isAmountValid = editableAmount !== undefined &&
         editableAmount > 0 &&
         editableAmount <= invoice!.amount;
 
     React.useEffect(() => {
-        if (!invoiceId) {
-            setError('No invoice ID provided.');
-            setLoading(false);
-            return;
-        }
+        const fetchInvoices = async () => {
+            if (!token) return;
 
-        fetchInvoice(invoiceId)
-            .then(data => {
-                setInvoice(data);
-                setEditableAmount(data.amount); // initialize editable amount
+            try {
+                const data = await httpClient.get<IInvoice[]>({
+                    url: '/api/invoices',
+                    token,
+                    params: {},
+                });
+                setInvoices(data);
+            } catch (err) {
+                console.error('Failed to fetch invoices:', err);
+            } finally {
                 setLoading(false);
-            })
-            .catch(() => {
-                setError('Failed to load invoice.');
-                setLoading(false);
-            });
-    }, [invoiceId]);
+            }
+        };
+
+        fetchInvoices();
+    }, [token]);
 
     const fetchClientSecret = async () => {
         if (!invoice || !invoice.id || !editableAmount) return;
@@ -135,7 +142,7 @@ const Invoice: React.FC<IInvoiceProps> = (props: IInvoiceProps) => {
                 <Divider sx={{ my: 3 }} />
 
                 <Button
-                    variant="contained" 
+                    variant="contained"
                     className="main-button"
                     onClick={fetchClientSecret}
                     disabled={!isAmountValid}
