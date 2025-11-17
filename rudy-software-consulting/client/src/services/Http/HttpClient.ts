@@ -1,4 +1,4 @@
-import axios, { AxiosRequestConfig, AxiosRequestHeaders } from "axios";
+import axios, { AxiosRequestConfig } from "axios";
 
 export interface IHttpGETProps {
     url: string;
@@ -21,7 +21,7 @@ export interface IHttpClient {
     postWithParams<T>(parameters: IHttpPOSTProps): Promise<T>;
 }
 
-const API_BASE_URL = "https://nbaunderdogleagueapi.azurewebsites.net";
+const API_BASE_URL = import.meta.env.VITE_API_URL || "rudyardapi-f3bydsa9avgneva5.canadacentral-01.azurewebsites.net";
 const LOCAL_BASE_URL = "https://localhost:7161";
 
 export default class HttpClient implements IHttpClient {
