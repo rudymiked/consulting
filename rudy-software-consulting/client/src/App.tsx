@@ -22,14 +22,16 @@ import ProtectedRoute from './components/Auth/ProtectedRoute';
 import RegistrationPage from './pages/RegistrationPage';
 import InvoicesPage from './pages/InvoicesPage';
 import HttpClient from './services/Http/HttpClient';
+import { useAuth } from './components/Auth/AuthContext';
 
 const App: React.FC = () => {
   const httpClient = new HttpClient();
+  const auth = useAuth();
 
   React.useEffect(() => {
     httpClient.get<void>({
       url: '/api/',
-      token: '',
+      token: auth.token || '',
     })
       .then(() => {
         console.log('API is reachable');

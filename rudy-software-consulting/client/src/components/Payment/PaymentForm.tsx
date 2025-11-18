@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useStripe, useElements, PaymentElement } from '@stripe/react-stripe-js';
 import HttpClient from '../../services/Http/HttpClient';
+import { useAuth } from '../Auth/AuthContext';
 
 interface Props {
   invoiceId: string;
@@ -12,7 +13,7 @@ const PaymentForm: React.FC<Props> = ({ invoiceId }) => {
   const [message, setMessage] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [statusChecked, setStatusChecked] = useState(false);
-
+  const auth = useAuth();
   const httpClient = new HttpClient();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -25,7 +26,7 @@ const PaymentForm: React.FC<Props> = ({ invoiceId }) => {
     // Fetch client_secret from backend
     const res = await httpClient.post<{ ClientSecret: string; error?: string }>({
       url: '/api/invoice/pay',
-      token: '', // Add authentication token if required
+      token: auth.token || '',
       data: { invoiceId, amount: 5000 }, // cents
     });
 

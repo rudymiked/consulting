@@ -9,6 +9,7 @@ import {
   CircularProgress
 } from '@mui/material';
 import HttpClient from '../../services/Http/HttpClient';
+import { useAuth } from '../Auth/AuthContext';
 
 const RegistrationForm: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -18,6 +19,7 @@ const RegistrationForm: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [loginLink, setLoginLink] = useState<JSX.Element | null>(null);
   const httpClient = new HttpClient();
+  const auth = useAuth();
 
   React.useEffect(() => {
     setLoginLink(
@@ -36,7 +38,7 @@ const RegistrationForm: React.FC = () => {
     try {
       const res = await httpClient.post<{ success: boolean }>({
         url: '/api/register',
-        token: '',
+        token: auth.token || '',
         data: { email, password }
       });
 
