@@ -191,6 +191,35 @@ app.post('/api/invoice/pay', async (req, res) => {
     const result: IInvoiceResult = await payInvoice(invoiceId, amount, paymentMethodId);
 
     if (result.Success) {
+      // send email to client confirming payment
+      try {
+        const invoice = await getInvoiceDetails(invoiceId);
+        if (!invoice) {
+          throw new Error(`Invoice ${invoiceId} not found for email notification`);
+        }
+        if (!invoice.contact) {
+          throw new Error(`Invoice ${invoiceId} has no contact email for notification`);
+        }
+
+        const to = invoice.contact;
+        const subject = `Payment Received for Invoice ${invoiceId}`;
+        let text = `${invoice.name},\n\nWe have received your payment for Invoice ${invoiceId} amounting to $${amount / 100}.\n\nThank you for your business!\n\nBest regards,\nRudyard Software Consulting`;
+        let html = `<p>${invoice.name},</p><p>We have received your payment for Invoice <strong>${invoiceId}</strong> amounting to <strong>$${amount / 100}</strong>.</p><p>Thank you for your business!</p><p>Best regards,<br/>Rudyard Software Consulting</p>`;
+
+        if (invoice.amount !== amount / 100) {
+          trackEvent('PartialPayment_Received', { invoiceId, paidAmount: amount, totalAmount: invoice.amount * 100 });
+
+          text = `${invoice.name},\n\nWe have received your partial payment of $${amount / 100} for Invoice ${invoiceId} (Total Amount: $${invoice.amount}).\n\nThank you for your business!\n\nBest regards,\nRudyard Software Consulting`;
+          html = `<p>${invoice.name},</p><p>We have received your partial payment of <strong>$${amount / 100}</strong> for Invoice <strong>${invoiceId}</strong> (Total Amount: <strong>$${invoice.amount}</strong>).</p><p>Thank you for your business!</p><p>Best regards,<br/>Rudyard Software Consulting</p>`;
+        }
+
+        await sendEmail({ to, subject, text, html });
+        res.status(200).json({ message: 'Email sent successfully' });
+      } catch (error: any) {
+        console.error('Email error:', error);
+        res.status(500).json({ error: 'Failed to send email: ' + error.message });
+      }
+
       return res.status(200).json({ success: true, message: result.Message });
     } else {
       // Distinguish between client vs server errors
