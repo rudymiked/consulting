@@ -55,7 +55,6 @@ const ContactForm: React.FC = () => {
   }
 
   const handleSubmit = (e: any) => {
-    console.log('Submitting contact form...');
     setIsError(false);
     setMessage('');
     e.preventDefault();

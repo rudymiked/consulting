@@ -31,7 +31,7 @@ const Invoices: React.FC = () => {
                     url: '/api/invoices',
                     token: token || '',
                 });
-                console.log(response);
+                
                 setInvoices(response);
             } catch (error) {
                 console.error('Failed to fetch invoices:', error);

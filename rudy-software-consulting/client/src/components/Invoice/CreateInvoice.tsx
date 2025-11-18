@@ -60,7 +60,6 @@ const CreateInvoice: React.FC = () => {
       });
 
       if (res.success) {
-        console.log(`${res.message} (Invoice ID: ${res.invoiceId})`);
         setSuccess(true);
         setForm({ name: '', amount: '', notes: '', contact: '' });
       } else {

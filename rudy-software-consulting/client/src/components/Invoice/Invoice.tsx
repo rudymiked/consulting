@@ -46,8 +46,6 @@ const Invoice: React.FC<IInvoiceProps> = (props: IInvoiceProps) => {
                     token: token!,
                 });
 
-                console.log(res);
-                // const json = await res.json();
                 const status: PaymentStatus = res.status;
 
                 setPaymentStatus(status);
@@ -125,8 +123,6 @@ const Invoice: React.FC<IInvoiceProps> = (props: IInvoiceProps) => {
                     amount: editableAmount * 100, // amount in cents
                 },
             });
-
-            console.log('PaymentIntent response:', res);
 
             setClientSecret(res.clientSecret);
             setStripeOptions({

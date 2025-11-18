@@ -37,8 +37,6 @@ export default class HttpClient implements IHttpClient {
         const base = isExternal ? "" : isLocal ? LOCAL_BASE_URL : API_BASE_URL;
         const fullUrl = isExternal ? url : base + url;
 
-        console.log(`HTTP ${method.toUpperCase()} Request to: ${fullUrl}`);
-
         const headers: Record<string, string> = {
             Authorization: `Bearer ${token}`,
         };

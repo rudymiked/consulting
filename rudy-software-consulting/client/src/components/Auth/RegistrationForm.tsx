@@ -43,7 +43,6 @@ const RegistrationForm: React.FC = () => {
       });
 
       const { success } = res;
-      console.log(success);
 
       if (success) {
         setSuccess('Registration successful. You can now log in.');
