@@ -17,9 +17,9 @@ export const getInvoices = async (filter?: string | undefined): Promise<IInvoice
     const tableName = "invoices";
     trackEvent('GetInvoices_Attempt');
 
-    const entities = await queryEntities(tableName, filter);
+    const entities: IInvoice[] = await queryEntities(tableName, filter);
     const invoices: IInvoice[] = entities.map(entity => ({
-        id: entity.rowKey,
+        id: entity.id,
         name: entity.name,
         amount: entity.amount,
         notes: entity.notes,
@@ -40,12 +40,12 @@ export const getInvoiceDetails = async (invoiceId: string): Promise<IInvoice> =>
 
     trackEvent('GetInvoice_Attempt', { invoiceId });
     const filter = `RowKey eq '${invoiceId}'`;
-    const entities = await queryEntities(tableName, filter);
+    const entities: IInvoice[] = await queryEntities(tableName, filter);
 
     if (entities.length > 0) {
         const entity = entities[0];
         const invoice: IInvoice = {
-            id: entity.rowKey,
+            id: entity.id,
             name: entity.name,
             amount: entity.amount,
             notes: entity.notes,

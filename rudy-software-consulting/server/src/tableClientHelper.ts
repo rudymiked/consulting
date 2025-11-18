@@ -1,81 +1,131 @@
-import { ManagedIdentityCredential, DefaultAzureCredential } from "@azure/identity";
-import { TableClient } from "@azure/data-tables";
+import {
+  ManagedIdentityCredential,
+  DefaultAzureCredential,
+  TokenCredential
+} from "@azure/identity";
+import { TableClient, TableEntity } from "@azure/data-tables";
 
 // Helper to create a client for any table.
-// Behavior:
-// - If AZURE_STORAGE_CONNECTION_STRING is set, use TableClient.fromConnectionString (local/dev convenience).
-// - Otherwise, prefer DefaultAzureCredential (supports system-assigned MI, user-assigned MI via env, Azure CLI, VS Code).
-// - If RUDYARD_MANAGED_IDENTITY_CLIENT_ID is set, construct a ManagedIdentityCredential for that client id.
 export function getTableClient(tableName: string): TableClient {
   const connectionString = process.env.AZURE_STORAGE_CONNECTION_STRING;
-  // Only allow a connection string in non-production (local dev). In production prefer managed identity / DefaultAzureCredential.
-  if (connectionString && process.env.NODE_ENV !== 'production') {
-    // log a short masked hint for debugging (do not print full secret)
-    const hint = connectionString.length > 12 ? connectionString.slice(0, 8) + '...' : 'present';
-    
+  const env = process.env.NODE_ENV || "development";
+
+  if (connectionString && env !== "production") {
+    const hint = connectionString.length > 12 ? connectionString.slice(0, 8) + "..." : "present";
+    console.log(`[TableClient] Using connection string (hint: ${hint})`);
     return TableClient.fromConnectionString(connectionString, tableName);
   }
-  if (connectionString && process.env.NODE_ENV === 'production') {
-    console.warn('AZURE_STORAGE_CONNECTION_STRING is set but NODE_ENV=production — ignoring the connection string and using managed identity for security.');
+
+  if (connectionString && env === "production") {
+    console.warn(
+      "[TableClient] AZURE_STORAGE_CONNECTION_STRING is set but ignored in production for security."
+    );
   }
 
   const account = process.env.RUDYARD_STORAGE_ACCOUNT_NAME;
   if (!account) {
-    throw new Error('RUDYARD_STORAGE_ACCOUNT_NAME must be set when not using AZURE_STORAGE_CONNECTION_STRING');
+    throw new Error(
+      "[TableClient] RUDYARD_STORAGE_ACCOUNT_NAME must be set when not using a connection string."
+    );
   }
 
   const managedClientId = process.env.RUDYARD_MANAGED_IDENTITY_CLIENT_ID;
-  const credential = managedClientId
-    ? new ManagedIdentityCredential(managedClientId)
-    : new DefaultAzureCredential();
+  let credential: TokenCredential;
+
+  try {
+    credential = managedClientId
+      ? new ManagedIdentityCredential(managedClientId)
+      : new DefaultAzureCredential();
+    console.log(
+      `[TableClient] Using ${managedClientId ? "ManagedIdentityCredential" : "DefaultAzureCredential"}`
+    );
+  } catch (err) {
+    console.error("[TableClient] Failed to initialize credential:", err);
+    throw err;
+  }
 
   const endpoint = `https://${account}.table.core.windows.net`;
   return new TableClient(endpoint, tableName, credential);
 }
 
-export async function insertEntity(tableName: string, entity: any): Promise<void> {
-  const client = getTableClient(tableName);
+type RequiredTableEntity = { partitionKey: string; rowKey: string };
+
+export const insertEntity = async <T extends RequiredTableEntity>(
+  tableName: string,
+  entity: T
+): Promise<void> => {
   try {
+    const client = getTableClient(tableName);
     await client.createEntity(entity);
-    console.log(`Entity inserted into ${tableName}:`, entity);
-  } catch (error) {
-    console.error(`Error inserting entity into ${tableName}:`, error);
+    console.log(`[Insert] Entity inserted into ${tableName}`, redact(entity));
+  } catch (error: any) {
+    console.error(`[Insert] Error inserting entity into ${tableName}:`, error.message || error);
     throw error;
   }
 }
 
-export async function queryEntities(tableName: string, filter: string): Promise<any[]> {
+// Query entities
+export const queryEntities = async <T extends object>(
+  tableName: string,
+  filter: string,
+  partitionKey?: string
+): Promise<T[]> => {
   const client = getTableClient(tableName);
+  const queryOptions = partitionKey
+    ? { filter: `${filter} and PartitionKey eq '${partitionKey}'` }
+    : { filter };
+
   try {
-    const entities = [];
-    for await (const entity of client.listEntities({ queryOptions: { filter } })) {
-      entities.push(entity);
+    const entities: T[] = [];
+    for await (const entity of client.listEntities({ queryOptions })) {
+      entities.push(entity as T);
     }
     return entities;
-  } catch (error) {
-    console.error(`Error querying entities from ${tableName}:`, error);
+  } catch (error: any) {
+    console.error(`[Query] Error querying ${tableName}:`, error.message || error);
     throw error;
   }
 }
 
-export async function deleteEntity(tableName: string, partitionKey: string, rowKey: string): Promise<void> {
+// Delete entity
+export const deleteEntity = async (
+  tableName: string,
+  partitionKey: string,
+  rowKey: string
+): Promise<void> => {
   const client = getTableClient(tableName);
   try {
     await client.deleteEntity(partitionKey, rowKey);
-    console.log(`Entity with PartitionKey: ${partitionKey}, RowKey: ${rowKey} deleted from ${tableName}.`);
-  } catch (error) {
-    console.error(`Error deleting entity from ${tableName}:`, error);
+    console.log(`[Delete] Entity deleted from ${tableName}: PK=${partitionKey}, RK=${rowKey}`);
+  } catch (error: any) {
+    console.error(`[Delete] Error deleting entity from ${tableName}:`, error.message || error);
     throw error;
   }
 }
 
-export async function updateEntity(tableName: string, entity: any): Promise<void> {
-  const client = getTableClient(tableName);
+// Update entity
+export const updateEntity = async <T extends RequiredTableEntity>(
+  tableName: string,
+  entity: T,
+  merge: boolean = true
+): Promise<void> => {
   try {
-    await client.updateEntity(entity, "Merge");
-    console.log(`Entity updated in ${tableName}:`, entity);
-  } catch (error) {
-    console.error(`Error updating entity in ${tableName}:`, error);
+    const client = getTableClient(tableName);
+    await client.updateEntity(entity, merge ? "Merge" : "Replace");
+    console.log(`[Update] Entity updated in ${tableName}`, redact(entity));
+  } catch (error: any) {
+    console.error(`[Update] Error updating entity in ${tableName}:`, error.message || error);
     throw error;
   }
+}
+
+// Optional redaction helper
+const redact = (entity: any): any => {
+  const clone = { ...entity };
+  for (const key of Object.keys(clone)) {
+    if (/password|token|secret/i.test(key)) {
+      clone[key] = "***";
+    }
+  }
+  return clone;
 }

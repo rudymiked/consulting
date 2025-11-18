@@ -146,7 +146,7 @@ app.get('/api', (_, res) => {
 
 app.post('/api/contact', async (req, res) => {
   const { to, subject, text, html } = req.body;
-  const options: IEmailOptions = { to, subject, text, html };
+  const options: IEmailOptions = { to, subject, text, html, sent: false };
 
   try {
     await insertIntoContactLogs(options);
@@ -163,7 +163,7 @@ app.post('/api/sendEmail', jwtCheck, async (req, res) => {
   const { to, subject, text, html } = req.body;
 
   try {
-    await sendEmail({ to, subject, text, html });
+    await sendEmail({ to, subject, text, html, sent: true });
     res.status(200).json({ message: 'Email sent successfully' });
   } catch (error: any) {
     console.error('Email error:', error);
@@ -213,7 +213,7 @@ app.post('/api/invoice/pay', async (req, res) => {
           html = `<p>${invoice.name},</p><p>We have received your partial payment of <strong>$${amount / 100}</strong> for Invoice <strong>${invoiceId}</strong> (Total Amount: <strong>$${invoice.amount}</strong>).</p><p>Thank you for your business!</p><p>Best regards,<br/>Rudyard Software Consulting</p>`;
         }
 
-        await sendEmail({ to, subject, text, html });
+        await sendEmail({ to, subject, text, html, sent: true });
         res.status(200).json({ message: 'Email sent successfully' });
       } catch (error: any) {
         console.error('Email error:', error);

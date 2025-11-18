@@ -7,6 +7,13 @@ export interface IEmailOptions {
   subject: string;
   text?: string;
   html?: string;
+  sent: boolean;
+}
+
+export interface IContactLog extends IEmailOptions {
+  partitionKey: string;
+  rowKey: string;
+  timestamp: string;
 }
 
 export async function sendEmail(options: IEmailOptions): Promise<void> {
@@ -19,7 +26,7 @@ export async function sendEmail(options: IEmailOptions): Promise<void> {
   console.log('Host used:', process.env.EMAIL_HOST);
 
   if (useGmail) {
-      transporter = nodemailer.createTransport({
+    transporter = nodemailer.createTransport({
       service: process.env.EMAIL_SERVICE || 'gmail',
       auth: {
         user: process.env.GMAIL_USERNAME,
@@ -63,6 +70,13 @@ export async function sendEmail(options: IEmailOptions): Promise<void> {
     await transporter.sendMail(mailOptions);
     console.log(`Email sent to ${mailOptions.to} from ${mailOptions.from}`);
     trackEvent('SendEmail_Success', { to: mailOptions.to, subject: mailOptions.subject });
+
+    //update contact log as sent
+    try {
+      await insertIntoContactLogs({ ...options, sent: true });
+    } catch (error) {
+      console.error('Error inserting sent email into ContactLogs:', error);
+    }
   } catch (error) {
     trackException(error, { to: mailOptions.to, subject: mailOptions.subject });
     console.error('Error sending email:', error);
@@ -73,7 +87,7 @@ export async function sendEmail(options: IEmailOptions): Promise<void> {
 export async function insertIntoContactLogs(options: IEmailOptions): Promise<void> {
   const { to, subject, text, html } = options;
   // Azure Table Storage requires PartitionKey and RowKey and disallows undefined values.
-  const entity: any = {
+  const entity: IContactLog = {
     partitionKey: to || 'unknown',
     rowKey: `contact-${Date.now()}-${Math.floor(Math.random() * 100000)}`,
     to,
@@ -101,7 +115,7 @@ export async function insertIntoContactLogs(options: IEmailOptions): Promise<voi
 
 export async function sendEmailsFromLog(): Promise<void> {
   try {
-    const contactLogs = await queryEntities('ContactLogs', "sent eq false");
+    const contactLogs: IContactLog[] = await queryEntities('ContactLogs', "sent eq false");
 
     for (const log of contactLogs) {
       const emailOptions: IEmailOptions = {
@@ -109,6 +123,7 @@ export async function sendEmailsFromLog(): Promise<void> {
         subject: log.subject,
         text: log.text,
         html: log.html,
+        sent: true
       };
 
       await sendEmail(emailOptions);
@@ -117,7 +132,7 @@ export async function sendEmailsFromLog(): Promise<void> {
       log.sent = true; // Mark as sent
       log.timestamp = new Date().toISOString(); // Update timestamp
       console.log('Updating log entry:', log);
-      
+
       await updateEntity('ContactLogs', log); // Update the log entry
       trackEvent('UpdateContactLog_Sent', { to: log.to, subject: log.subject });
     }
