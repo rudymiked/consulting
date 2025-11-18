@@ -21,7 +21,7 @@ export interface IHttpClient {
     postWithParams<T>(parameters: IHttpPOSTProps): Promise<T>;
 }
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || "rudyardapi-f3bydsa9avgneva5.canadacentral-01.azurewebsites.net";
+const API_BASE_URL = import.meta.env.VITE_API_URL || "https://rudyardapi-f3bydsa9avgneva5.canadacentral-01.azurewebsites.net";
 const LOCAL_BASE_URL = "https://localhost:7161";
 
 export default class HttpClient implements IHttpClient {
@@ -36,6 +36,8 @@ export default class HttpClient implements IHttpClient {
     ): Promise<T> {
         const base = isExternal ? "" : isLocal ? LOCAL_BASE_URL : API_BASE_URL;
         const fullUrl = isExternal ? url : base + url;
+
+        console.log(`HTTP ${method.toUpperCase()} Request to: ${fullUrl}`);
 
         const headers: Record<string, string> = {
             Authorization: `Bearer ${token}`,

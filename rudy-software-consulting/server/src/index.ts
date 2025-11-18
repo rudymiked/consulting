@@ -139,9 +139,14 @@ app.post('/api/contact', async (req, res) => {
   const { to, subject, text, html } = req.body;
   const options: IEmailOptions = { to, subject, text, html };
 
-  await insertIntoContactLogs(options);
-  res.status(200).json({ message: 'Contacted successfully' });
-  trackEvent('InsertContactLog_API', { to, subject });
+  try {
+    await insertIntoContactLogs(options);
+    trackEvent('InsertContactLog_API', { to, subject });
+    res.status(200).json({ message: 'Contacted successfully' });
+  } catch (error: any) {
+    console.error('Error inserting contact log:', error);
+    res.status(500).json({ error: 'Failed to process contact request' });
+  }
 });
 
 // Protected route example

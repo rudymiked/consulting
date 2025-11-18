@@ -8,6 +8,7 @@ import {
   Alert,
   CircularProgress
 } from '@mui/material';
+import HttpClient from '../../services/Http/HttpClient';
 
 const RegistrationForm: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -16,6 +17,7 @@ const RegistrationForm: React.FC = () => {
   const [success, setSuccess] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [loginLink, setLoginLink] = useState<JSX.Element | null>(null);
+  const httpClient = new HttpClient();
 
   React.useEffect(() => {
     setLoginLink(
@@ -32,22 +34,22 @@ const RegistrationForm: React.FC = () => {
     setLoading(true);
 
     try {
-      const res = await fetch(`https://${import.meta.env.VITE_API_URL}/api/register`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ email, password })
+      const res = await httpClient.post<{ success: boolean }>({
+        url: '/api/register',
+        token: '',
+        data: { email, password }
       });
 
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || 'Registration failed');
-      }
+      const { success } = res;
+      console.log(success);
 
-      setSuccess('Registration successful. You can now log in.');
-      setEmail('');
-      setPassword('');
+      if (success) {
+        setSuccess('Registration successful. You can now log in.');
+        setEmail('');
+        setPassword('');
+      } else {
+        throw new Error('Registration failed. Please try again.');
+      }
     } catch (err: any) {
       setError(err.message);
     } finally {

@@ -21,59 +21,63 @@ import { AuthProvider } from './components/Auth/AuthContext';
 import ProtectedRoute from './components/Auth/ProtectedRoute';
 import RegistrationPage from './pages/RegistrationPage';
 import InvoicesPage from './pages/InvoicesPage';
+import HttpClient from './services/Http/HttpClient';
 
 const App: React.FC = () => {
+  const httpClient = new HttpClient();
+
   React.useEffect(() => {
-    fetch(`https://${import.meta.env.VITE_API_URL}/api/`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+    httpClient.get<void>({
+      url: '/api/',
+      token: '',
+    })
+      .then(() => {
+        console.log('API is reachable');
       })
-      .then(response => response.text())
-      .then(data => console.log('API response:', data))
-      .catch(error => console.error('Error fetching API:', error));
+      .catch(() => {
+        console.error('Error reaching API');
+      });
   }, []);
 
   return (
     <AuthProvider>
       <Router>
-          <CssBaseline />
-          <Header />
-          <Box sx={{ paddingTop: 8, padding: 2 }}>
-            <Routes>
-              <Route path="/" element={<HomePage />} />
-              <Route path="/software" element={<SoftwarePage />} />
-              <Route path="/consulting" element={<ConsultingPage />} />
-              <Route path="/security" element={<SecurityAndCompliancePage />} />
-              <Route path="/contact" element={<ContactPage />} />
-              <Route path="/about" element={<AboutPage />} />
-              <Route path="/privacy" element={<PrivacyPage />} />
-              <Route path="/terms" element={<TermsOfServicePage />} />
-              <Route 
-                path="/createinvoice" 
-                element={
-                  <ProtectedRoute>
-                    <CreateInvoicePage />
-                  </ProtectedRoute>
-                } 
-              />
-              <Route path="/invoices/" element={<InvoicesPage />} />
-              <Route path="/invoice/:invoiceId" element={<InvoicePage />} />
-              <Route path="/admin/login" element={<LoginPage />} />
-              <Route path="/register" element={<RegistrationPage />} />
-              <Route 
-                path="/admin"
-                element={
-                  <ProtectedRoute>
-                    <AdminPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route path="*" element={<div>404 Not Found</div>} />
-            </Routes>
-          </Box>
-          <Footer />
+        <CssBaseline />
+        <Header />
+        <Box sx={{ paddingTop: 8, padding: 2 }}>
+          <Routes>
+            <Route path="/" element={<HomePage />} />
+            <Route path="/software" element={<SoftwarePage />} />
+            <Route path="/consulting" element={<ConsultingPage />} />
+            <Route path="/security" element={<SecurityAndCompliancePage />} />
+            <Route path="/contact" element={<ContactPage />} />
+            <Route path="/about" element={<AboutPage />} />
+            <Route path="/privacy" element={<PrivacyPage />} />
+            <Route path="/terms" element={<TermsOfServicePage />} />
+            <Route
+              path="/createinvoice"
+              element={
+                <ProtectedRoute>
+                  <CreateInvoicePage />
+                </ProtectedRoute>
+              }
+            />
+            <Route path="/invoices/" element={<InvoicesPage />} />
+            <Route path="/invoice/:invoiceId" element={<InvoicePage />} />
+            <Route path="/admin/login" element={<LoginPage />} />
+            <Route path="/register" element={<RegistrationPage />} />
+            <Route
+              path="/admin"
+              element={
+                <ProtectedRoute>
+                  <AdminPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route path="*" element={<div>404 Not Found</div>} />
+          </Routes>
+        </Box>
+        <Footer />
       </Router>
     </AuthProvider>
   );

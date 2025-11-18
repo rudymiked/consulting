@@ -9,6 +9,8 @@ import {
 } from '@mui/material';
 import '../../styles/main.css';
 import { CircularProgress } from '@mui/material';
+import HttpClient from '../../services/Http/HttpClient';
+import { useAuth } from '../Auth/AuthContext';
 
 export interface IFormData {
   name: string;
@@ -30,10 +32,8 @@ const ContactForm: React.FC = () => {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isError, setIsError] = useState(false);
   const [message, setMessage] = useState('');
-
-  React.useEffect(() => {
-    console.log(import.meta.env.VITE_API_URL);
-  }, []);
+  const httpClient = new HttpClient();
+  const auth = useAuth(); 
 
   const handleChange = (e: any) => {
     setFormData(prev => ({
@@ -68,21 +68,18 @@ const ContactForm: React.FC = () => {
 
     setIsSubmitting(true);
 
-    fetch(`https://${import.meta.env.VITE_API_URL}/api/contact`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(buildEmail(formData)),
+    httpClient.post<{ message: string; error?: string }>({
+      url: '/api/contact',
+      token: auth.token || '',
+      data: buildEmail(formData)
     })
-      .then(response => {
-        if (!response.ok) {
-          throw new Error('Network response was not ok');
+      .then(res => {
+        const { message, error } = res;
+
+        if (error) {
+          throw new Error(error);
         }
-        return response.json();
-      })
-      .then(data => {
-        console.log('Success:', data);
+
         setFormData({
           name: '',
           email: '',
@@ -90,8 +87,8 @@ const ContactForm: React.FC = () => {
           message: '',
         });
         setIsSubmitted(true);
-      })
-      .catch(error => {
+      }
+      ).catch(error => {
         setIsError(true);
         setMessage('There was an error submitting the form. Please try again.');
         console.error('Error:', error);

@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import HttpClient from '../../services/Http/HttpClient';
 
 interface IAuthContextType {
     isAuthenticated: boolean;
@@ -20,6 +21,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [token, setToken] = useState<string | null>(null);
     const [isAuthenticated, setIsAuthenticated] = useState(false);
 
+    const httpClient = new HttpClient();
+
     useEffect(() => {
         const storedToken = localStorage.getItem('admin_token');
 
@@ -33,24 +36,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const login = async (email: string, password: string) => {
         try {
-            const res = await fetch(`https://${import.meta.env.VITE_API_URL}/api/login`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, password }),
+            const res = await httpClient.post<{ token: string; error?: string }>({
+                url: '/api/login',
+                token: '',
+                data: { email, password },
             });
 
-            if (!res.ok) {
-                const errorBody = await res.json();
-                throw new Error(errorBody.error || 'Login failed');
+            const { token, error } = res;
+            if (error) {
+                throw new Error(error);
             }
-
-            const { token } = await res.json();
             if (!token) throw new Error('No token received');
-
             localStorage.setItem('admin_token', token);
             setToken(token);
             setIsAuthenticated(true);
-        } catch (error: any) {
+        }
+        catch (error: any) {
             throw new Error(error.message || 'Login failed');
         }
     };

@@ -13,17 +13,79 @@ export interface IInvoiceProps {
     invoiceId: string;
 }
 
+enum PaymentStatus {
+    RequiresPaymentMethod = 'requires_payment_method',
+    RequiresConfirmation = 'requires_confirmation',
+    RequiresAction = 'requires_action',
+    Processing = 'processing',
+    RequiresCapture = 'requires_capture',
+    Canceled = 'canceled',
+    Succeeded = 'succeeded',
+}
+
 const Invoice: React.FC<IInvoiceProps> = (props: IInvoiceProps) => {
     const invoiceId = props.invoiceId;
     const [invoice, setInvoice] = useState<IInvoice | undefined>(undefined);
     const [editableAmount, setEditableAmount] = useState<number | undefined>(undefined);
     const [loading, setLoading] = useState(true);
+    const [message, setMessage] = useState<string | null>(null);
+    const [paymentStatus, setPaymentStatus] = useState<string | null>(null);
+    const [statusChecked, setStatusChecked] = useState(false);
     const [error, setError] = useState<string | undefined>(undefined);
     const [clientSecret, setClientSecret] = React.useState<string | undefined>(undefined);
     const [stripeOptions, setStripeOptions] = React.useState<StripeElementsOptions | undefined>(undefined);
     const { token } = useAuth();
-    
+
     const httpClient = new HttpClient();
+
+    React.useEffect(() => {
+        const checkStatus = async () => {
+            try {
+                const res = await httpClient.get<{ status: PaymentStatus }>({
+                    url: `/api/invoice/${invoiceId}/payment-status`,
+                    token: token!,
+                });
+
+                console.log(res);
+                // const json = await res.json();
+                const status: PaymentStatus = res.status;
+
+                setPaymentStatus(status);
+
+                switch (status) {
+                    case PaymentStatus.RequiresPaymentMethod:
+                        setMessage(null); // allow user to pay
+                        break;
+                    case PaymentStatus.RequiresConfirmation:
+                        setMessage('Payment requires confirmation. Please try again.');
+                        break;
+                    case PaymentStatus.RequiresAction:
+                        setMessage('Additional authentication required. Please complete the payment.');
+                        break;
+                    case PaymentStatus.Processing:
+                        setMessage('Payment is processing.');
+                        break;
+                    case PaymentStatus.RequiresCapture:
+                        setMessage('Payment authorized but not yet captured.');
+                        break;
+                    case PaymentStatus.Canceled:
+                        setMessage('Payment was canceled.');
+                        break;
+                    case PaymentStatus.Succeeded:
+                        setMessage('Invoice already paid.');
+                        break;
+                    default:
+                        setMessage(`Unknown payment status: ${status}`);
+                }
+            } catch (err) {
+                setMessage('Error checking payment status.');
+            } finally {
+                setStatusChecked(true);
+            }
+        };
+
+        checkStatus();
+    }, [invoiceId]);
 
     const isAmountValid = editableAmount !== undefined &&
         editableAmount > 0 &&
@@ -39,7 +101,7 @@ const Invoice: React.FC<IInvoiceProps> = (props: IInvoiceProps) => {
         fetchInvoice(invoiceId)
             .then(data => {
                 setInvoice(data);
-                setEditableAmount(data.amount); // initialize editable amount
+                setEditableAmount(data.amount);
                 setLoading(false);
             })
             .catch(() => {
@@ -48,22 +110,27 @@ const Invoice: React.FC<IInvoiceProps> = (props: IInvoiceProps) => {
             });
     }, [token]);
 
+
     const fetchClientSecret = async () => {
         if (!invoice || !invoice.id || !editableAmount) return;
 
         try {
-            const response = await fetch(`https://${import.meta.env.VITE_API_URL}/api/invoice/create-payment-intent`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ invoiceId: invoice.id, amount: editableAmount * 100 }), // amount in cents
+            const res = await httpClient.post<{
+                clientSecret: string;
+            }>({
+                url: '/api/invoice/create-payment-intent',
+                token: token!,
+                data: {
+                    invoiceId: invoice.id,
+                    amount: editableAmount * 100, // amount in cents
+                },
             });
 
-            const json = await response.json();
-            console.log('PaymentIntent response:', json);
+            console.log('PaymentIntent response:', res);
 
-            setClientSecret(json.clientSecret);
+            setClientSecret(res.clientSecret);
             setStripeOptions({
-                clientSecret: json.clientSecret,
+                clientSecret: res.clientSecret,
                 appearance: { theme: 'stripe' },
             });
         } catch (err) {
@@ -71,15 +138,13 @@ const Invoice: React.FC<IInvoiceProps> = (props: IInvoiceProps) => {
         }
     };
 
-    const fetchInvoice = async (id: string) => {
-        return await fetch(`https://${import.meta.env.VITE_API_URL}/api/invoice/${id}`)
-            .then(res => {
-                if (!res.ok) throw new Error('Invoice not found');
-                return res.json();
-            }).catch((error) => {
-                throw error;
-            });
-    }
+
+    const fetchInvoice = async (id: string): Promise<IInvoice> => {
+        return await httpClient.get<IInvoice>({
+            url: `/api/invoice/${id}`,
+            token: token!,
+        });
+    };
 
     if (loading) {
         return (
@@ -131,6 +196,7 @@ const Invoice: React.FC<IInvoiceProps> = (props: IInvoiceProps) => {
                         error={!isAmountValid}
                         helperText={!isAmountValid ? `Amount must be between $0.01 and $${invoice.amount.toFixed(2)}` : ''}
                         sx={{ mt: 1 }}
+                        disabled={paymentStatus === PaymentStatus.Succeeded}
                     />
                 </Box>
                 <Box>
@@ -139,18 +205,27 @@ const Invoice: React.FC<IInvoiceProps> = (props: IInvoiceProps) => {
                 </Box>
                 <Divider sx={{ my: 3 }} />
 
-                <Button
-                    variant="contained"
-                    className="main-button"
-                    onClick={fetchClientSecret}
-                    disabled={!isAmountValid}
-                    sx={{ mt: 2 }}
-                >
-                    Confirm Amount & Proceed to Payment
-                </Button>
+                {statusChecked && message && (
+                    <>
+                        <Alert severity={message.includes('paid') ? 'success' : 'info'} sx={{ mb: 2 }}>
+                            {message}
+                        </Alert>
+
+                        {paymentStatus != PaymentStatus.Succeeded && (
+                            <Button
+                                variant="contained"
+                                className="main-button"
+                                onClick={fetchClientSecret}
+                                disabled={!isAmountValid}
+                                sx={{ mt: 2 }}
+                            >
+                                Confirm Amount & Proceed to Payment
+                            </Button>
+                        )}
+                    </>
+                )}
                 <br />
                 <br />
-                {/* PAYMENT FORM */}
                 {clientSecret && (
                     <>
                         {clientSecret && stripeOptions ? (
@@ -162,9 +237,6 @@ const Invoice: React.FC<IInvoiceProps> = (props: IInvoiceProps) => {
                         )}
                     </>
                 )}
-
-                {/* END PAYMENT FORM */}
-
             </Paper>
             <Box sx={{ mt: 2, textAlign: 'center' }}>
                 <Link to="/admin">

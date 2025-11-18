@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useStripe, useElements, PaymentElement } from '@stripe/react-stripe-js';
+import HttpClient from '../../services/Http/HttpClient';
 
 interface Props {
   invoiceId: string;
@@ -12,47 +13,7 @@ const PaymentForm: React.FC<Props> = ({ invoiceId }) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [statusChecked, setStatusChecked] = useState(false);
 
-  useEffect(() => {
-    const checkStatus = async () => {
-      try {
-        const res = await fetch(`https://${import.meta.env.VITE_API_URL}/api/invoice/${invoiceId}/payment-status`);
-        const json = await res.json();
-        const status = json.status;
-
-        switch (status) {
-          case 'requires_payment_method':
-            setMessage(null); // allow user to pay
-            break;
-          case 'requires_confirmation':
-            setMessage('Payment requires confirmation. Please try again.');
-            break;
-          case 'requires_action':
-            setMessage('Additional authentication required. Please complete the payment.');
-            break;
-          case 'processing':
-            setMessage('Payment is processing.');
-            break;
-          case 'requires_capture':
-            setMessage('Payment authorized but not yet captured.');
-            break;
-          case 'canceled':
-            setMessage('Payment was canceled.');
-            break;
-          case 'succeeded':
-            setMessage('Invoice already paid.');
-            break;
-          default:
-            setMessage(`Unknown payment status: ${status}`);
-        }
-      } catch (err) {
-        setMessage('Error checking payment status.');
-      } finally {
-        setStatusChecked(true);
-      }
-    };
-
-    checkStatus();
-  }, [invoiceId]);
+  const httpClient = new HttpClient();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -62,12 +23,13 @@ const PaymentForm: React.FC<Props> = ({ invoiceId }) => {
     setMessage(null);
 
     // Fetch client_secret from backend
-    const res = await fetch('/api/invoice/pay', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ invoiceId, amount: 5000 }), // cents
+    const res = await httpClient.post<{ ClientSecret: string; error?: string }>({
+      url: '/api/invoice/pay',
+      token: '', // Add authentication token if required
+      data: { invoiceId, amount: 5000 }, // cents
     });
-    const { ClientSecret, error } = await res.json();
+
+    const { ClientSecret, error } = res;
 
     if (error) {
       setMessage(error);

@@ -15,17 +15,23 @@ import {
 } from '@mui/material';
 import { Link } from 'react-router-dom';
 import { IInvoice } from '../../pages/InvoicesPage';
+import HttpClient from '../../services/Http/HttpClient';
+import { useAuth } from '../Auth/AuthContext';
 
 const Invoices: React.FC = () => {
     const [invoices, setInvoices] = useState<IInvoice[]>([]);
     const [loading, setLoading] = useState(true);
+    const { token } = useAuth();
+    const httpClient = new HttpClient();
 
     useEffect(() => {
         const fetchInvoices = async () => {
             try {
-                const response = await fetch(`https://${import.meta.env.VITE_API_URL}/api/invoices`);
-                const data = await response.json();
-                setInvoices(data);
+                const response = await httpClient.get<IInvoice[]>({
+                    url: '/api/invoices',
+                    token: token || '',
+                });
+                setInvoices(response);
             } catch (error) {
                 console.error('Failed to fetch invoices:', error);
             } finally {
