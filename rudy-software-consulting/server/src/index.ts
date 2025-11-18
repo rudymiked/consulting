@@ -10,6 +10,7 @@ import { trackEvent, trackException } from './telemetry';
 import { approveUser, loginUser, registerUser, verifyToken } from './authHelper';
 import { IInvoice, IInvoiceResult, IInvoiceStatus } from './models';
 import Stripe from 'stripe';
+import rateLimit from 'express-rate-limit';
 
 dotenv.config();
 
@@ -94,6 +95,14 @@ app.use((req, res, next) => {
 });
 
 app.use(express.json());
+
+const apiLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000, // 1 minute
+  max: 30, // limit each IP to 30 requests per minute
+  message: { error: 'Too many requests, please try again later.' },
+});
+
+app.use('/api/', apiLimiter);
 
 // 🔑 JWT Validation Setup
 const client = jwksClient({
