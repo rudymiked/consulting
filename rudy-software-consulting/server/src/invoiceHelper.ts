@@ -69,19 +69,53 @@ export const getInvoiceDetails = async (invoiceId: string): Promise<IInvoice> =>
 
 export const createInvoice = async (invoiceData: IInvoiceRequest) => {
     const tableName = "invoices";
+    const now = new Date();
+
+    if (!invoiceData.id) {
+        invoiceData.id = `inv-${Date.now()}`; // Simple unique ID generation
+    }
+
+    if (!invoiceData.name) {
+        invoiceData.name = "<Unnamed>";
+    }
+
+    if (!invoiceData.contact) {
+        invoiceData.contact = "default";
+    }
+
+    if (!invoiceData.paymentIntentId) {
+        invoiceData.paymentIntentId = "";
+    }
+
+    if (!invoiceData.status) {
+        invoiceData.status = IInvoiceStatus.NEW;
+    }
+
+    const invoice: IInvoice = {
+        id: invoiceData.id,
+        name: invoiceData.name,
+        amount: invoiceData.amount,
+        notes: invoiceData.notes,
+        contact: invoiceData.contact,
+        paymentIntentId: invoiceData.paymentIntentId,
+        status: invoiceData.status,
+        dueDate: invoiceData.dueDate ? new Date(invoiceData.dueDate) : undefined,
+        createdDate: now,
+        updatedDate: now
+    };
 
     const entity = {
-        partitionKey: invoiceData.contact || "default",
+        partitionKey: invoiceData.contact,
         rowKey: invoiceData.id,
-        ...invoiceData,
+        ...invoice,
     };
 
     trackEvent('CreateInvoice_Attempt', { invoiceId: invoiceData.id, client: invoiceData.contact });
-    const start = Date.now();
+
     try {
         await insertEntity(tableName, entity);
 
-        const duration = Date.now() - start;
+        const duration = Date.now() - now.getTime();
 
         trackDependency({
             target: process.env.RUDYARD_STORAGE_ACCOUNT_NAME,
@@ -103,7 +137,7 @@ export const createInvoice = async (invoiceData: IInvoiceRequest) => {
             invoiceId: invoiceData.id,
         } as const;
     } catch (error: any) {
-        const duration = Date.now() - start;
+        const duration = Date.now() - now.getTime();
         trackDependency({
             target: process.env.RUDYARD_STORAGE_ACCOUNT_NAME,
             name: 'Table:createEntity',

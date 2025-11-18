@@ -247,8 +247,16 @@ app.get('/api/invoice/:id/payment-status', async (req, res) => {
 
   try {
     const invoice = await getInvoiceDetails(invoiceId);
-    if (!invoice || !invoice.paymentIntentId) {
+    if (!invoice) {
       return res.status(404).json({ error: 'Invoice or payment not found.' });
+    }
+
+    // If no PaymentIntent ID, payment method is required
+    if (!invoice.paymentIntentId) {
+      return res.json({
+        status: 'requires_payment_method',
+        invoiceId,
+      });
     }
 
     // Retrieve PaymentIntent from Stripe
