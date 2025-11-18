@@ -8,7 +8,7 @@ import { expressjwt } from 'express-jwt';
 import { createInvoice, getInvoiceDetails, getInvoices, payInvoice } from './invoiceHelper';
 import { trackEvent, trackException } from './telemetry';
 import { approveUser, loginUser, registerUser, verifyToken } from './authHelper';
-import { IInvoiceResult, IInvoiceStatus } from './models';
+import { IInvoice, IInvoiceResult, IInvoiceStatus } from './models';
 import Stripe from 'stripe';
 
 dotenv.config();
@@ -196,7 +196,7 @@ app.post('/api/invoice/pay', async (req, res) => {
 
 app.get('/api/invoices', async (_, res) => {
   try {
-    const entities = await getInvoices();
+    const entities: IInvoice[] = await getInvoices();
     res.json(entities);
   } catch (error: any) {
     console.error('Error fetching invoices:', error.message);

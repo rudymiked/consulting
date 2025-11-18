@@ -31,6 +31,7 @@ const Invoices: React.FC = () => {
                     url: '/api/invoices',
                     token: token || '',
                 });
+                console.log(response);
                 setInvoices(response);
             } catch (error) {
                 console.error('Failed to fetch invoices:', error);
@@ -40,7 +41,7 @@ const Invoices: React.FC = () => {
         };
 
         fetchInvoices();
-    }, []);
+    }, [token]);
 
     return (
         <Box sx={{ pt: 9, pb: 7, backgroundColor: '#f0f4f8' }}>

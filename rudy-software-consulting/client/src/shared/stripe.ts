@@ -5,4 +5,6 @@ export const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_
 
 stripePromise.then(stripe => {
   console.log('Stripe instance:', stripe);
+}).catch(error => {
+  console.error('Error loading Stripe:', error);
 });

@@ -25,8 +25,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     useEffect(() => {
         const storedToken = localStorage.getItem('admin_token');
-
-        console.log('AuthProvider mounted.' + (storedToken ? ' Found stored admin_token.' : ' No admin_token found.'));
+        console.log('AuthProvider mounted.' + (storedToken != null ? ' Found stored admin_token.' : ' No admin_token found.'));
 
         if (storedToken) {
             setToken(storedToken);
