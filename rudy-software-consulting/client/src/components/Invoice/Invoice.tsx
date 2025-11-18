@@ -19,10 +19,10 @@ const Invoice: React.FC<IInvoiceProps> = (props: IInvoiceProps) => {
     const [editableAmount, setEditableAmount] = useState<number | undefined>(undefined);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | undefined>(undefined);
-    const [invoices, setInvoices] = useState<IInvoice[]>([]);
     const [clientSecret, setClientSecret] = React.useState<string | undefined>(undefined);
     const [stripeOptions, setStripeOptions] = React.useState<StripeElementsOptions | undefined>(undefined);
     const { token } = useAuth();
+    
     const httpClient = new HttpClient();
 
     const isAmountValid = editableAmount !== undefined &&
@@ -30,24 +30,22 @@ const Invoice: React.FC<IInvoiceProps> = (props: IInvoiceProps) => {
         editableAmount <= invoice!.amount;
 
     React.useEffect(() => {
-        const fetchInvoices = async () => {
-            if (!token) return;
+        if (!invoiceId) {
+            setError('No invoice ID provided.');
+            setLoading(false);
+            return;
+        }
 
-            try {
-                const data = await httpClient.get<IInvoice[]>({
-                    url: '/api/invoices',
-                    token,
-                    params: {},
-                });
-                setInvoices(data);
-            } catch (err) {
-                console.error('Failed to fetch invoices:', err);
-            } finally {
+        fetchInvoice(invoiceId)
+            .then(data => {
+                setInvoice(data);
+                setEditableAmount(data.amount); // initialize editable amount
                 setLoading(false);
-            }
-        };
-
-        fetchInvoices();
+            })
+            .catch(() => {
+                setError('Failed to load invoice.');
+                setLoading(false);
+            });
     }, [token]);
 
     const fetchClientSecret = async () => {
