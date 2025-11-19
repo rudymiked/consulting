@@ -23,7 +23,7 @@
     "@azure/identity": "^4.10.2",
     "@hcaptcha/react-hcaptcha": "^1.12.0",
     "@react-email/components": "^0.3.1",
-    "applicationinsights": "^3.9.0",
+    "applicationinsights": "^3.12.0",
     "concurrently": "^9.2.0",
     "cors": "^2.8.5",
     "dotenv": "^17.2.1",

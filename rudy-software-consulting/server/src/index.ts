@@ -22,7 +22,7 @@ dotenv.config();
     console.log('Application Insights not configured (no connection string or instrumentation key).');
     return;
   } else {
-    console.log('App Insights configured:', !!process.env.APPINSIGHTS_CONNECTION_STRING);
+    console.log('App Insights configured: ' + process.env.APPINSIGHTS_CONNECTION_STRING, !!process.env.APPINSIGHTS_CONNECTION_STRING);
   }
 
   try {
@@ -49,6 +49,18 @@ dotenv.config();
 const app = express();
 
 app.set('trust proxy', 1); // or true
+
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  keyGenerator: (req) => {
+    const forwarded = req.headers['x-forwarded-for'];
+    const ip = Array.isArray(forwarded) ? forwarded[0] : (forwarded || req.socket.remoteAddress);
+    return typeof ip === 'string' ? ip.split(',')[0].split(':')[0] : 'unknown';
+  },
+});
+
+app.use(limiter);
 
 const PORT = process.env.PORT || 4001;
 
