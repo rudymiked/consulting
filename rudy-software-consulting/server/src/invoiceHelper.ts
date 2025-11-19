@@ -236,6 +236,12 @@ export const payInvoice = async (
 
         // Validate amount
         const invoiceAmountCents = invoiceDetails.amount; // assume stored in cents
+
+        console.log(invoiceDetails);
+        trackEvent("invoiceDetails", { "invoiceDetails": invoiceDetails});
+        console.log(`invoice id: ${invoiceId}. Amount to be paid: ${amount}. Stored amount (invoiceAmountCents) ${invoiceAmountCents}`);
+        trackEvent(`invoice id: ${invoiceId}. Amount to be paid: ${amount}. Stored amount (invoiceAmountCents) ${invoiceAmountCents}`);
+
         if (amount <= 0) {
             return { Success: false, Message: `Invalid payment amount for invoice ${invoiceId}.`, InvoiceId: invoiceId };
         }

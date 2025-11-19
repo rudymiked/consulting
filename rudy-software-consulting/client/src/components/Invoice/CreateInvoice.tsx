@@ -53,7 +53,7 @@ const CreateInvoice: React.FC = () => {
         token: auth.token || '',
         data: {
           name,
-          amount: parseFloat(amount),
+          amount: parseFloat(amount)*100,
           notes,
           contact,
         },
