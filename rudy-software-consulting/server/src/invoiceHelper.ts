@@ -19,6 +19,8 @@ export const getInvoices = async (filter?: string | undefined): Promise<IInvoice
 
     const entities: IInvoice[] = await queryEntities(tableName, filter);
     const invoices: IInvoice[] = entities.map(entity => ({
+        partitionKey: entity.partitionKey,
+        rowKey: entity.rowKey,
         id: entity.id,
         name: entity.name,
         amount: entity.amount,
@@ -29,6 +31,7 @@ export const getInvoices = async (filter?: string | undefined): Promise<IInvoice
         updatedDate: new Date(entity.updatedDate),
         status: entity.status,
         dueDate: entity.dueDate ? new Date(entity.dueDate) : undefined,
+        timestamp: entity.timestamp
     }));
 
     trackEvent('GetInvoices_Success', { count: invoices.length });
@@ -45,6 +48,8 @@ export const getInvoiceDetails = async (invoiceId: string): Promise<IInvoice> =>
     if (entities.length > 0) {
         const entity = entities[0];
         const invoice: IInvoice = {
+            partitionKey: entity.partitionKey,
+            rowKey: entity.rowKey,
             id: entity.id,
             name: entity.name,
             amount: entity.amount,
@@ -55,6 +60,7 @@ export const getInvoiceDetails = async (invoiceId: string): Promise<IInvoice> =>
             updatedDate: new Date(entity.updatedDate),
             status: entity.status,
             dueDate: entity.dueDate ? new Date(entity.dueDate) : undefined,
+            timestamp: entity.timestamp
         };
 
         trackEvent('GetInvoice_Success', { invoiceId });
@@ -92,6 +98,8 @@ export const createInvoice = async (invoiceData: IInvoiceRequest) => {
     }
 
     const invoice: IInvoice = {
+        partitionKey: invoiceData.contact,
+        rowKey: invoiceData.id,
         id: invoiceData.id,
         name: invoiceData.name,
         amount: invoiceData.amount,
@@ -101,19 +109,14 @@ export const createInvoice = async (invoiceData: IInvoiceRequest) => {
         status: invoiceData.status,
         dueDate: invoiceData.dueDate ? new Date(invoiceData.dueDate) : undefined,
         createdDate: now,
-        updatedDate: now
-    };
-
-    const entity = {
-        partitionKey: invoiceData.contact,
-        rowKey: invoiceData.id,
-        ...invoice,
+        updatedDate: now,
+        timestamp: now
     };
 
     trackEvent('CreateInvoice_Attempt', { invoiceId: invoiceData.id, client: invoiceData.contact });
 
     try {
-        await insertEntity(tableName, entity);
+        await insertEntity(tableName, invoice);
 
         const duration = Date.now() - now.getTime();
 
@@ -130,7 +133,7 @@ export const createInvoice = async (invoiceData: IInvoiceRequest) => {
         trackEvent('CreateInvoice_Success', { invoiceId: invoiceData.id });
         trackTrace(`Invoice ${invoiceData.id} created`, undefined, { amount: invoiceData.amount });
 
-        console.log("Invoice created successfully:", entity);
+        console.log("Invoice created successfully:", invoice);
         return {
             success: true,
             message: "Invoice created successfully",

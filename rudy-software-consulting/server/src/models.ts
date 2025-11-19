@@ -23,7 +23,7 @@ export interface IInvoiceResult {
     ClientSecret?: string;
 }
 
-export interface IInvoice {
+export interface IInvoice extends ITableEntity {
     id: string; // Unique identifier for the invoice
     name: string; // Name of the client or entity being invoiced
     amount: number; // Amount in cents (e.g., $50.00 is stored
@@ -34,4 +34,13 @@ export interface IInvoice {
     status: IInvoiceStatus; // Status of the invoice
     paymentIntentId?: string; // Optional Stripe Payment Intent ID
     dueDate?: Date; // Optional due date for the invoice
+}
+
+export interface ITableEntity {
+    partitionKey: string;
+    rowKey: string;
+    timestamp: Date;
+}
+
+export interface IWarmerEntity extends ITableEntity {
 }

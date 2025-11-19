@@ -8,9 +8,10 @@ import { expressjwt } from 'express-jwt';
 import { createInvoice, getInvoiceDetails, getInvoices, payInvoice } from './invoiceHelper';
 import { trackEvent, trackException } from './telemetry';
 import { approveUser, loginUser, registerUser, verifyToken } from './authHelper';
-import { IInvoice, IInvoiceResult, IInvoiceStatus } from './models';
+import { IInvoice, IInvoiceResult, IInvoiceStatus, IWarmerEntity } from './models';
 import Stripe from 'stripe';
 import rateLimit from 'express-rate-limit';
+import { queryEntities, updateEntity } from './tableClientHelper';
 
 dotenv.config();
 
@@ -233,8 +234,11 @@ app.post('/api/invoice/pay', async (req, res) => {
 });
 
 app.get('/api/invoices', async (_, res) => {
+  const start = Date.now();
   try {
     const entities: IInvoice[] = await getInvoices();
+    const duration = Date.now() - start;
+    console.log(`Fetched invoices in ${duration}ms`);
     res.json(entities);
   } catch (error: any) {
     console.error('Error fetching invoices:', error.message);
@@ -399,6 +403,40 @@ app.post('/api/invoice/create-payment-intent', async (req, res) => {
     console.error('Stripe error:', err);
     trackException(err, { invoiceId, amount });
     res.status(500).json({ error: 'Failed to create payment intent' + err.message });
+  }
+});
+
+app.post('/api/table-warmer', async (req, res) => {
+  const tableName = "Warmer";
+  const start = Date.now();
+
+  try {
+    const entities: IWarmerEntity[] = await queryEntities(tableName, null);
+
+    if (!entities || entities.length === 0) {
+      console.warn('Table warmer: no entities found');
+      return res.status(404).json({ error: "No warmer entity found." });
+    }
+
+    const warmerEntity = entities[0];
+
+    // Optional: update timestamp or ping field to simulate activity
+    const updatedEntity: IWarmerEntity = {
+      ...warmerEntity
+    };
+
+    await updateEntity(tableName, updatedEntity);
+
+    const duration = Date.now() - start;
+    console.log(`Table warmer updated in ${duration}ms`);
+    trackEvent('TableWarmer_Success', { duration });
+
+    res.json({ message: "Table warmer pinged successfully", duration });
+  } catch (error: any) {
+    console.error('Table warmer failed:', error.message);
+    trackEvent('TableWarmer_Failure', { error: error.message });
+
+    res.status(500).json({ error: "Table warmer failed." });
   }
 });
 

@@ -34,6 +34,15 @@ const App: React.FC = () => {
       token: auth.token || '',
     })
       .then(() => {
+        httpClient.post<{ message?: string; error?: string }>({
+          url: '/api/table-warmer',
+          token: auth.token || ''
+        }).then((res) => {
+          console.log(res);
+        }).catch((err) => {
+          console.error(err);
+        });
+
         console.log('API is reachable');
       })
       .catch(() => {
