@@ -21,6 +21,8 @@ dotenv.config();
   if (!conn) {
     console.log('Application Insights not configured (no connection string or instrumentation key).');
     return;
+  } else {
+    console.log('App Insights configured:', !!process.env.APPINSIGHTS_CONNECTION_STRING);
   }
 
   try {
@@ -45,6 +47,9 @@ dotenv.config();
 })();
 
 const app = express();
+
+app.set('trust proxy', 1); // or true
+
 const PORT = process.env.PORT || 4001;
 
 const required = [
