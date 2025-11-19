@@ -228,7 +228,7 @@ const Invoice: React.FC<IInvoiceProps> = (props: IInvoiceProps) => {
                     <>
                         {clientSecret && stripeOptions ? (
                             <Elements stripe={stripePromise} options={stripeOptions}>
-                                <PaymentForm invoiceId={invoiceId} />
+                                <PaymentForm invoice={invoice} statusChecked={statusChecked} />
                             </Elements>
                         ) : (
                             <CircularProgress />

@@ -2,17 +2,18 @@ import React, { useState } from 'react';
 import { useStripe, useElements, PaymentElement } from '@stripe/react-stripe-js';
 import HttpClient from '../../services/Http/HttpClient';
 import { useAuth } from '../Auth/AuthContext';
+import { IInvoice } from '../../pages/InvoicesPage';
 
-interface Props {
-  invoiceId: string;
+interface IPaymentFormProps {
+  invoice: IInvoice;
+  statusChecked: boolean;
 }
 
-const PaymentForm: React.FC<Props> = ({ invoiceId }) => {
+const PaymentForm: React.FC<IPaymentFormProps> = (props: IPaymentFormProps) => {
   const stripe = useStripe();
   const elements = useElements();
   const [message, setMessage] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [statusChecked, setStatusChecked] = useState(false);
   const auth = useAuth();
   const httpClient = new HttpClient();
 
@@ -27,7 +28,7 @@ const PaymentForm: React.FC<Props> = ({ invoiceId }) => {
     const res = await httpClient.post<{ ClientSecret: string; error?: string }>({
       url: '/api/invoice/pay',
       token: auth.token || '',
-      data: { invoiceId, amount: 5000 }, // cents
+      data: { invoiceId: props.invoice.id, amount: props.invoice.amount }, // cents
     });
 
     const { ClientSecret, error } = res;
@@ -56,7 +57,7 @@ const PaymentForm: React.FC<Props> = ({ invoiceId }) => {
 
   return (
     <form onSubmit={handleSubmit}>
-      {!statusChecked ? (
+      {!props.statusChecked ? (
         <div>Checking payment status...</div>
       ) : message === null ? (
         <>
@@ -66,7 +67,7 @@ const PaymentForm: React.FC<Props> = ({ invoiceId }) => {
           </button>
         </>
       ) : (
-        <div style={{ marginTop: '1rem', color: message.includes('✅') ? 'green' : 'red' }}>
+        <div style={{ marginTop: '1rem', color: message.includes('error') ? 'red' : 'green' }}>
           {message}
         </div>
       )}
