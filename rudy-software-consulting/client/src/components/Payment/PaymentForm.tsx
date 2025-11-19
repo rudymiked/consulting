@@ -28,7 +28,7 @@ const PaymentForm: React.FC<IPaymentFormProps> = (props: IPaymentFormProps) => {
     const res = await httpClient.post<{ ClientSecret: string; error?: string }>({
       url: '/api/invoice/pay',
       token: auth.token || '',
-      data: { invoiceId: props.invoice.id, amount: props.invoice.amount }, // cents
+      data: { invoiceId: props.invoice.id, amount: props.invoice.amount * 100 }, // amount in cents
     });
 
     const { ClientSecret, error } = res;
