@@ -184,7 +184,7 @@ app.get('/api/email', (_, res) => {
 app.post('/api/invoice/pay', async (req, res) => {
   const { paymentMethodId, invoiceId, amount } = req.body;
 
-  if (!paymentMethodId || !invoiceId || !amount) {
+  if (!invoiceId || !amount) {
     return res.status(400).json({ error: 'Missing required fields.' });
   }
 
