@@ -201,11 +201,13 @@ const Invoice: React.FC<IInvoiceProps> = (props: IInvoiceProps) => {
                 </Box>
                 <Divider sx={{ my: 3 }} />
 
-                {statusChecked && message && (
+                {statusChecked && (
                     <>
-                        <Alert severity={message.includes('paid') ? 'success' : 'info'} sx={{ mb: 2 }}>
-                            {message}
-                        </Alert>
+                        {message && (
+                            <Alert severity={message.includes('paid') ? 'success' : 'info'} sx={{ mb: 2 }}>
+                                {message}
+                            </Alert>
+                        )}
 
                         {paymentStatus != PaymentStatus.Succeeded && (
                             <Button
