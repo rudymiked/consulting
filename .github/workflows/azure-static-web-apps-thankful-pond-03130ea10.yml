@@ -23,7 +23,6 @@ on:
         required: true
         default: 'Production'
 
-
 jobs:
   build_and_deploy_job:
     environment: production
@@ -34,23 +33,17 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v3
-        with:
-          submodules: true
-          lfs: false
 
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: 'latest'
+          node-version: '22'
 
       - name: Install Dependencies and Build
         run: |
           cd rudy-software-consulting/client
-          npm install
+          npm ci
           npm run build
-
-      - name: Install OIDC Client from Core Package
-        run: npm install @actions/core@1.6.0 @actions/http-client
 
       - name: Copy staticwebapp.config.json to dist
         run: cp rudy-software-consulting/client/staticwebapp.config.json rudy-software-consulting/client/dist/staticwebapp.config.json
@@ -60,8 +53,8 @@ jobs:
         id: idtoken
         with:
           script: |
-            const coredemo = require('@actions/core')
-            return await coredemo.getIDToken()
+            const core = require('@actions/core')
+            return await core.getIDToken()
           result-encoding: string
 
       - name: Build And Deploy
