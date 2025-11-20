@@ -98,8 +98,10 @@ const Invoice: React.FC<IInvoiceProps> = (props: IInvoiceProps) => {
 
         fetchInvoice(invoiceId)
             .then(data => {
-                setInvoice(data);
-                setEditableAmount(data.amount);
+                // convert cents → dollars
+                const amountInDollars = data.amount / 100;
+                setInvoice({ ...data, amount: amountInDollars });
+                setEditableAmount(amountInDollars);
                 setLoading(false);
             })
             .catch(() => {
