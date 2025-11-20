@@ -209,7 +209,7 @@ export const updateInvoice = async (invoiceData: IInvoiceRequest) => {
 
 export const payInvoice = async (
     invoiceId: string,
-    amount: number, // amount in cents
+    amount: number, // expected in cents
     paymentMethodId?: string // optional, since PaymentElement handles method
 ): Promise<IInvoiceResult & { ClientSecret?: string }> => {
     const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, {
@@ -234,22 +234,33 @@ export const payInvoice = async (
             return { Success: false, Message: `Invoice ${invoiceId} is already paid`, InvoiceId: invoiceId };
         }
 
-        // Validate amount
-        const invoiceAmountCents = invoiceDetails.amount; // assume stored in cents
+        // Stored amount is always in cents
+        const invoiceAmountCents = invoiceDetails.amount;
 
-        console.log(invoiceDetails);
-        trackEvent("invoiceDetails", { "invoiceDetails": invoiceDetails});
-        console.log(`invoice id: ${invoiceId}. Amount to be paid: ${amount}. Stored amount (invoiceAmountCents) ${invoiceAmountCents}`);
-        trackEvent(`invoice id: ${invoiceId}. Amount to be paid: ${amount}. Stored amount (invoiceAmountCents) ${invoiceAmountCents}`);
+        console.log(`Invoice ${invoiceId}: stored=${invoiceAmountCents} cents, requested=${amount} cents`);
+        trackEvent("InvoiceDetails", { invoiceDetails });
 
+        // Validation checks
         if (amount <= 0) {
             return { Success: false, Message: `Invalid payment amount for invoice ${invoiceId}.`, InvoiceId: invoiceId };
         }
+
+        // Prevent overpayment
         if (amount > invoiceAmountCents) {
             return { Success: false, Message: `Payment exceeds invoice amount.`, InvoiceId: invoiceId };
         }
 
-        // Create PaymentIntent (do NOT confirm here)
+        // Detect likely dollar vs cents mismatch (e.g. $500 sent as 500 instead of 50000)
+        if (amount < invoiceAmountCents / 100) {
+            return { Success: false, Message: `Payment amount appears to be in dollars instead of cents.`, InvoiceId: invoiceId };
+        }
+
+        // Optional: enforce exact match if partial payments are not allowed
+        // if (amount !== invoiceAmountCents) {
+        //     return { Success: false, Message: `Payment must equal invoice amount.`, InvoiceId: invoiceId };
+        // }
+
+        // Create PaymentIntent
         const start = Date.now();
         const paymentIntent = await stripe.paymentIntents.create({
             amount,
@@ -272,7 +283,6 @@ export const payInvoice = async (
             dependencyTypeName: 'Stripe',
         });
 
-        // Return client_secret to frontend
         return {
             Success: true,
             Message: 'PaymentIntent created',
