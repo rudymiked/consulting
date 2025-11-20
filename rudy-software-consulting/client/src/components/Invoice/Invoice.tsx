@@ -115,14 +115,12 @@ const Invoice: React.FC<IInvoiceProps> = (props: IInvoiceProps) => {
         if (!invoice || !invoice.id || !editableAmount) return;
 
         try {
-            const res = await httpClient.post<{
-                clientSecret: string;
-            }>({
+            const res = await httpClient.post<{ clientSecret: string }>({
                 url: '/api/invoice/create-payment-intent',
                 token: token!,
                 data: {
                     invoiceId: invoice.id,
-                    amount: editableAmount * 100, // amount in cents
+                    amount: Math.round(editableAmount * 100), // dollars → cents
                 },
             });
 
