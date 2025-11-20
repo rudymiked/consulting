@@ -110,7 +110,6 @@ const Invoice: React.FC<IInvoiceProps> = (props: IInvoiceProps) => {
             });
     }, [token]);
 
-
     const fetchClientSecret = async () => {
         if (!invoice || !invoice.id || !editableAmount) return;
 
