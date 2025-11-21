@@ -37,6 +37,14 @@ dotenv.config();
     // Tag role for clarity in App Insights
     const client = appInsights.defaultClient;
 
+    client.trackEvent({
+      name: "TestEvent",
+      properties: { environment: "dev", user: "Mike" }
+    });
+
+    client.flush();
+    console.log("Sent TestEvent");
+
     if (client && client.context && client.context.tags) {
       const roleKey = client.context.keys.cloudRole as string;
       client.context.tags[roleKey] = process.env.APPINSIGHTS_ROLE_NAME || 'rudyard-api';
@@ -158,7 +166,7 @@ app.get('/', (_, res) => {
 });
 
 app.get('/api', (_, res) => {
-  console.log('API is running 🚀');
+  //console.log('API is running 🚀');
   res.send('API is running 🚀');
 });
 
