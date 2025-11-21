@@ -85,6 +85,44 @@ const Invoice: React.FC<IInvoiceProps> = (props: IInvoiceProps) => {
         checkStatus();
     }, [invoiceId]);
 
+    React.useEffect(() => {
+        if (statusChecked) return; // backend already confirmed status
+
+        const checkRedirectStatus = async () => {
+            const clientSecret = new URLSearchParams(window.location.search).get('payment_intent_client_secret');
+            if (!clientSecret) return;
+
+            const stripe = await stripePromise;
+
+            if (!stripe) {
+                return;
+            }
+
+            const { paymentIntent } = await stripe.retrievePaymentIntent(clientSecret);
+
+            if (!paymentIntent) return;
+
+            switch (paymentIntent.status) {
+                case 'succeeded':
+                    setMessage('Payment succeeded!');
+                    setPaymentStatus(PaymentStatus.Succeeded);
+                    break;
+                case 'processing':
+                    setMessage('Your payment is processing.');
+                    break;
+                case 'requires_payment_method':
+                    setMessage('Payment failed. Please try again.');
+                    break;
+                default:
+                    setMessage('Something went wrong.');
+            }
+
+            setStatusChecked(true);
+        };
+
+        checkRedirectStatus();
+    }, [statusChecked]);
+
     const isAmountValid = editableAmount !== undefined &&
         editableAmount > 0 &&
         editableAmount <= invoice!.amount;
