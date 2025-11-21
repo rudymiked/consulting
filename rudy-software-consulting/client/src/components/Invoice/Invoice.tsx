@@ -70,7 +70,7 @@ const Invoice: React.FC<IInvoiceProps> = (props: IInvoiceProps) => {
                         setMessage('Payment was canceled.');
                         break;
                     case PaymentStatus.Succeeded:
-                        setMessage('Invoice already paid.');
+                        setMessage('Invoice paid.');
                         break;
                     default:
                         setMessage(`Unknown payment status: ${status}`);
