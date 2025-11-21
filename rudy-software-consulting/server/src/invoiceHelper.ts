@@ -172,6 +172,7 @@ export const updateInvoice = async (invoiceData: IInvoiceRequest) => {
     try {
         // Update by merging properties; will throw if entity doesn't exist
         await updateEntity(tableName, entity);
+
         const duration = Date.now() - start;
         trackDependency({
             target: process.env.RUDYARD_STORAGE_ACCOUNT_NAME,
@@ -182,8 +183,10 @@ export const updateInvoice = async (invoiceData: IInvoiceRequest) => {
             success: true,
             dependencyTypeName: 'Azure Table'
         });
+
         trackEvent('UpdateInvoice_Success', { invoiceId: invoiceData.id });
         console.log("Invoice updated successfully:", entity);
+
         return {
             success: true,
             message: "Invoice updated successfully",
@@ -282,6 +285,14 @@ export const payInvoice = async (
             success: true,
             dependencyTypeName: 'Stripe',
         });
+
+        if (invoiceDetails.amount === amount) {
+            invoiceDetails.status = IInvoiceStatus.PAID;
+        } else {
+            invoiceDetails.status = IInvoiceStatus.PARTIAL_PAYMENT;
+        }
+        
+        await updateInvoice(invoiceDetails);
 
         return {
             Success: true,
