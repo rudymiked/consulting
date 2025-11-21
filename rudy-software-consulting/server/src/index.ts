@@ -206,7 +206,7 @@ app.post('/api/invoice/pay', async (req, res) => {
   }
 
   try {
-    const result: IInvoiceResult = await payInvoice(invoiceId, amount, paymentMethodId);
+    const result: IInvoiceResult & { ClientSecret?: string } = await payInvoice(invoiceId, amount, paymentMethodId);
 
     if (!result.Success) {
       const statusCode = result.Message.includes('Invalid') ? 400 : 500;
@@ -221,22 +221,25 @@ app.post('/api/invoice/pay', async (req, res) => {
 
       const to = invoice.contact;
       const subject = `Payment Received for Invoice ${invoiceId}`;
-      const paidDollars = amount;
-      const isPartial = invoice.amount > paidDollars;
-      const isOverPaid = invoice.amount < paidDollars;
+      const paidDollars = amount / 100;
+      const isPartial = invoice.amount > amount;
+      const isOverPaid = invoice.amount < amount;
 
       let text: string;
       let html: string;
 
+      const invoiceLink: string = `https://rudyardtechnologies.com/invoice/${invoiceId}`;
+      const invoiceLinkHTML: string = `<a href='${invoiceLink}'>${invoiceId}</a>`
+
       if (isPartial) {
         text = `${invoice.name},\n\nWe have received your partial payment of $${paidDollars} for Invoice ${invoiceId} (Total Amount: $${invoice.amount}).\n\nThank you for your business!\n\nBest regards,\nRudyard Software Consulting`;
-        html = `<p>${invoice.name},</p><p>We have received your partial payment of <strong>$${paidDollars}</strong> for Invoice <strong>${invoiceId}</strong> (Total Amount: <strong>$${invoice.amount}</strong>).</p><p>Thank you for your business!</p><p>Best regards,<br/>Rudyard Software Consulting</p>`;
+        html = `<p>${invoice.name},</p><p>We have received your partial payment of <strong>$${paidDollars}</strong> for Invoice <strong>${invoiceLinkHTML}</strong> (Total Amount: <strong>$${invoice.amount}</strong>).</p><p>Thank you for your business!</p><p>Best regards,<br/>Rudyard Software Consulting</p>`;
       } else if (isOverPaid) {
         text = `${invoice.name},\n\nWe have received your payment of $${paidDollars} for Invoice ${invoiceId}, which exceeds the total amount due ($${invoice.amount}).\n\nWe will contact you regarding the overpayment.\n\nThank you for your business!\n\nBest regards,\nRudyard Software Consulting`;
-        html = `<p>${invoice.name},</p><p>We have received your payment of <strong>$${paidDollars}</strong> for Invoice <strong>${invoiceId}</strong>, which exceeds the total amount due (<strong>$${invoice.amount}</strong>).</p><p>We will contact you regarding the overpayment.</p><p>Thank you for your business!</p><p>Best regards,<br/>Rudyard Software Consulting</p>`;
+        html = `<p>${invoice.name},</p><p>We have received your payment of <strong>$${paidDollars}</strong> for Invoice <strong>${invoiceLinkHTML}</strong>, which exceeds the total amount due (<strong>$${invoice.amount}</strong>).</p><p>We will contact you regarding the overpayment.</p><p>Thank you for your business!</p><p>Best regards,<br/>Rudyard Software Consulting</p>`;
       } else {
         text = `${invoice.name},\n\nWe have received your payment for Invoice ${invoiceId} amounting to $${paidDollars}.\n\nThank you for your business!\n\nBest regards,\nRudyard Software Consulting`;
-        html = `<p>${invoice.name},</p><p>We have received your payment for Invoice <strong>${invoiceId}</strong> amounting to <strong>$${paidDollars}</strong>.</p><p>Thank you for your business!</p><p>Best regards,<br/>Rudyard Software Consulting</p>`;
+        html = `<p>${invoice.name},</p><p>We have received your payment for Invoice <strong>${invoiceLinkHTML}</strong> amounting to <strong>$${paidDollars}</strong>.</p><p>Thank you for your business!</p><p>Best regards,<br/>Rudyard Software Consulting</p>`;
       }
 
       if (isPartial) {
@@ -262,6 +265,8 @@ app.post('/api/invoice/pay', async (req, res) => {
         success: true,
         message: result.Message,
         email: 'sent',
+        clientSecret: result.ClientSecret, // for frontend PaymentElement
+        paymentIntentId: invoice?.paymentIntentId, // for admin/debugging
       });
     } catch (emailError: any) {
       console.error('Email error:', emailError);
