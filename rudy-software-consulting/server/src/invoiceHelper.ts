@@ -291,6 +291,8 @@ export const payInvoice = async (
         } else {
             invoiceDetails.status = IInvoiceStatus.PARTIAL_PAYMENT;
         }
+
+        invoiceDetails.paymentIntentId = paymentIntent.id;
         
         await updateInvoice(invoiceDetails);
 
