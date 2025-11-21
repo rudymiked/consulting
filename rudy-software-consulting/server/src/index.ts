@@ -59,12 +59,32 @@ const app = express();
 app.set('trust proxy', 1); // or true
 
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
+  windowMs: 15 * 60 * 1000, // 15 minutes
   max: 100,
   keyGenerator: (req) => {
-    const forwarded = req.headers['x-forwarded-for'];
-    const ip = Array.isArray(forwarded) ? forwarded[0] : (forwarded || req.socket.remoteAddress);
-    return typeof ip === 'string' ? ip.split(',')[0].split(':')[0] : 'unknown';
+    // Prefer X-Forwarded-For if present
+    const forwarded = req.headers["x-forwarded-for"];
+    let ip: string | undefined;
+
+    if (typeof forwarded === "string") {
+      ip = forwarded.split(",")[0].trim();
+    } else if (Array.isArray(forwarded)) {
+      ip = forwarded[0];
+    } else {
+      ip = req.socket.remoteAddress || "";
+    }
+
+    // Normalize IPv6 ::ffff: prefix
+    if (ip.startsWith("::ffff:")) {
+      ip = ip.substring(7);
+    }
+
+    // Strip port if present
+    if (ip.includes(":") && /^[0-9.]+:[0-9]+$/.test(ip)) {
+      ip = ip.split(":")[0];
+    }
+
+    return ip || "unknown";
   },
 });
 
@@ -121,14 +141,6 @@ app.use((req, res, next) => {
 });
 
 app.use(express.json());
-
-const apiLimiter = rateLimit({
-  windowMs: 1 * 60 * 1000, // 1 minute
-  max: 30, // limit each IP to 30 requests per minute
-  message: { error: 'Too many requests, please try again later.' },
-});
-
-app.use('/api/', apiLimiter);
 
 // 🔑 JWT Validation Setup
 const client = jwksClient({
