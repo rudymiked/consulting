@@ -2,17 +2,16 @@ import crypto from 'crypto';
 import jwt, { JwtPayload } from 'jsonwebtoken';
 import { insertEntity, queryEntities } from './tableClientHelper';
 import { trackEvent } from './telemetry';
-
-const TABLE_NAME = 'Users';
+import { TableNames } from './models';
 
 export async function registerUser(email: string, password: string) {
-  const existing = await getEntity(TABLE_NAME, 'user', email).catch(() => null);
+  const existing = await getEntity(TableNames.Users, 'user', email).catch(() => null);
   if (existing) throw new Error('User already exists');
 
   const salt = crypto.randomBytes(16).toString('hex');
   const hash = crypto.pbkdf2Sync(password, salt, 1000, 64, 'sha512').toString('hex');
 
-  await insertEntity(TABLE_NAME,{
+  await insertEntity(TableNames.Users, {
     partitionKey: 'user',
     rowKey: email,
     salt,
@@ -26,23 +25,23 @@ export async function registerUser(email: string, password: string) {
 
 export async function approveUser(email: string, adminToken: string) {
   const adminPayload = verifyToken(adminToken);
-  
+
   if (!adminPayload || adminPayload.email !== process.env.ADMIN_EMAIL) {
     throw new Error('Unauthorized');
   }
 
-  const user = await getEntity(TABLE_NAME, 'user', email);
+  const user = await getEntity(TableNames.Users, 'user', email);
   if (!user) throw new Error('User not found');
   user.approved = true;
 
-  await insertEntity(TABLE_NAME, user);
+  await insertEntity(TableNames.Users, user);
 
   return { success: true };
 }
 
 export async function loginUser(email: string, password: string) {
   const normalizedEmail = email.trim().toLowerCase();
-  const user = await getEntity(TABLE_NAME, 'user', normalizedEmail).catch(() => null);
+  const user = await getEntity(TableNames.Users, 'user', normalizedEmail).catch(() => null);
 
   trackEvent('Login_Attempt', { email: normalizedEmail });
 
@@ -60,9 +59,9 @@ export async function loginUser(email: string, password: string) {
 }
 
 export async function getEntity(tableName: string, partitionKey: string, rowKey: string): Promise<any> {
-    const user = await queryEntities(tableName, `PartitionKey eq '${partitionKey}' and RowKey eq '${rowKey}'`);
-    
-    return user.length > 0 ? user[0] : null;
+  const user = await queryEntities(tableName, `PartitionKey eq '${partitionKey}' and RowKey eq '${rowKey}'`);
+
+  return user.length > 0 ? user[0] : null;
 }
 
 export function verifyToken(token: string): JwtPayload | null {

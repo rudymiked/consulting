@@ -1,3 +1,5 @@
+import { TableEntity } from "@azure/data-tables";
+
 export interface IInvoiceRequest {
     id: string;
     name: string;
@@ -23,7 +25,7 @@ export interface IInvoiceResult {
     ClientSecret?: string;
 }
 
-export interface IInvoice extends ITableEntity {
+export interface IInvoice extends TableEntity {
     id: string; // Unique identifier for the invoice
     name: string; // Name of the client or entity being invoiced
     amount: number; // Amount in cents (e.g., $50.00 is stored
@@ -36,11 +38,22 @@ export interface IInvoice extends ITableEntity {
     dueDate?: Date; // Optional due date for the invoice
 }
 
-export interface ITableEntity {
-    partitionKey: string;
-    rowKey: string;
-    timestamp: Date;
+export interface IWarmerEntity extends TableEntity { }
+
+export interface IEmailOptions {
+    to: string;
+    subject: string;
+    text?: string;
+    html?: string;
+    sent: boolean;
 }
 
-export interface IWarmerEntity extends ITableEntity {
+export interface IContactLog extends IEmailOptions, TableEntity { }
+
+export enum TableNames {
+    Invoices = 'Invoices',
+    Warmers = 'Warmers',
+    ContactLogs = 'ContactLogs',
+    Users = 'Users',
 }
+

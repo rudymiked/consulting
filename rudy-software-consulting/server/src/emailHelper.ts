@@ -1,20 +1,7 @@
 import nodemailer from 'nodemailer';
 import { insertEntity, queryEntities, updateEntity } from './tableClientHelper';
 import { trackEvent, trackException } from './telemetry';
-
-export interface IEmailOptions {
-  to: string;
-  subject: string;
-  text?: string;
-  html?: string;
-  sent: boolean;
-}
-
-export interface IContactLog extends IEmailOptions {
-  partitionKey: string;
-  rowKey: string;
-  timestamp: string;
-}
+import { IContactLog, IEmailOptions, TableNames } from './models';
 
 export async function sendEmail(options: IEmailOptions): Promise<void> {
   let transporter;
@@ -94,7 +81,6 @@ export async function insertIntoContactLogs(options: IEmailOptions): Promise<voi
     subject,
     text,
     html,
-    timestamp: new Date().toISOString(),
     sent: false,
   };
 
@@ -103,7 +89,7 @@ export async function insertIntoContactLogs(options: IEmailOptions): Promise<voi
     if (entity[k] === undefined) delete entity[k];
   });
 
-  insertEntity('ContactLogs', entity).then(() => {
+  insertEntity(TableNames.ContactLogs, entity).then(() => {
     console.log('Email data inserted into ContactLogs table:', entity);
     trackEvent('InsertContactLog_Success', { to, subject });
   }).catch(error => {
@@ -115,7 +101,7 @@ export async function insertIntoContactLogs(options: IEmailOptions): Promise<voi
 
 export async function sendEmailsFromLog(): Promise<void> {
   try {
-    const contactLogs: IContactLog[] = await queryEntities('ContactLogs', "sent eq false");
+    const contactLogs: IContactLog[] = await queryEntities(TableNames.ContactLogs, "sent eq false");
 
     for (const log of contactLogs) {
       const emailOptions: IEmailOptions = {
@@ -130,10 +116,9 @@ export async function sendEmailsFromLog(): Promise<void> {
       console.log(`Email sent from log: ${log.to} - ${log.subject}`);
 
       log.sent = true; // Mark as sent
-      log.timestamp = new Date().toISOString(); // Update timestamp
       console.log('Updating log entry:', log);
 
-      await updateEntity('ContactLogs', log); // Update the log entry
+      await updateEntity(TableNames.ContactLogs, log); // Update the log entry
       trackEvent('UpdateContactLog_Sent', { to: log.to, subject: log.subject });
     }
   } catch (error) {

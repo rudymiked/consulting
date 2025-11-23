@@ -3,7 +3,7 @@ import {
   DefaultAzureCredential,
   TokenCredential
 } from "@azure/identity";
-import { TableClient, TableEntity } from "@azure/data-tables";
+import { TableClient } from "@azure/data-tables";
 
 // Helper to create a client for any table.
 export function getTableClient(tableName: string): TableClient {

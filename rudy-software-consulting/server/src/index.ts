@@ -2,13 +2,13 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import * as appInsights from 'applicationinsights';
-import { IEmailOptions, insertIntoContactLogs, sendEmail } from './emailHelper';
+import { insertIntoContactLogs, sendEmail } from './emailHelper';
 import jwksClient from 'jwks-rsa';
 import { expressjwt } from 'express-jwt';
 import { createInvoice, getInvoiceDetails, getInvoices, payInvoice } from './invoiceHelper';
 import { trackEvent, trackException } from './telemetry';
 import { approveUser, loginUser, registerUser, verifyToken } from './authHelper';
-import { IInvoice, IInvoiceResult, IInvoiceStatus, IWarmerEntity } from './models';
+import { IEmailOptions, IInvoice, IInvoiceResult, IInvoiceStatus, IWarmerEntity, TableNames } from './models';
 import Stripe from 'stripe';
 import rateLimit from 'express-rate-limit';
 import { queryEntities, updateEntity } from './tableClientHelper';
@@ -472,11 +472,10 @@ app.post('/api/invoice/create-payment-intent', async (req, res) => {
 });
 
 app.post('/api/table-warmer', async (req, res) => {
-  const tableName = "Warmer";
   const start = Date.now();
 
   try {
-    const entities: IWarmerEntity[] = await queryEntities(tableName, null);
+    const entities: IWarmerEntity[] = await queryEntities(TableNames.Warmers, null);
 
     if (!entities || entities.length === 0) {
       console.warn('Table warmer: no entities found');
@@ -490,7 +489,7 @@ app.post('/api/table-warmer', async (req, res) => {
       ...warmerEntity
     };
 
-    await updateEntity(tableName, updatedEntity);
+    await updateEntity(TableNames.Warmers, updatedEntity);
 
     const duration = Date.now() - start;
     console.log(`Table warmer updated in ${duration}ms`);
