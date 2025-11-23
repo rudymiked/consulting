@@ -482,9 +482,9 @@ app.post('/api/table-warmer', async (req, res) => {
       return res.status(404).json({ error: "No warmer entity found." });
     }
 
-    const warmerEntity = entities[0];
+    const warmerEntity: IWarmerEntity = entities[0];
 
-    if (!warmerEntity.PartitionKey || !warmerEntity.RowKey) {
+    if (!warmerEntity.partitionKey || !warmerEntity.rowKey) {
       throw new Error(`Invalid warmer entity: missing PartitionKey/RowKey`);
     }
 
