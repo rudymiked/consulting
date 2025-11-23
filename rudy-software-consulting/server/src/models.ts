@@ -38,7 +38,9 @@ export interface IInvoice extends TableEntity {
     dueDate?: Date; // Optional due date for the invoice
 }
 
-export interface IWarmerEntity extends TableEntity { }
+export interface IWarmerEntity extends TableEntity { 
+    lastPing: Date;
+}
 
 export interface IEmailOptions {
     to: string;

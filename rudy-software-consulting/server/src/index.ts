@@ -484,9 +484,13 @@ app.post('/api/table-warmer', async (req, res) => {
 
     const warmerEntity = entities[0];
 
-    // Optional: update timestamp or ping field to simulate activity
+    if (!warmerEntity.PartitionKey || !warmerEntity.RowKey) {
+      throw new Error(`Invalid warmer entity: missing PartitionKey/RowKey`);
+    }
+
     const updatedEntity: IWarmerEntity = {
-      ...warmerEntity
+      ...warmerEntity,
+      lastPing: new Date(), // add a field to simulate activity
     };
 
     await updateEntity(TableNames.Warmers, updatedEntity);
@@ -495,12 +499,12 @@ app.post('/api/table-warmer', async (req, res) => {
     console.log(`Table warmer updated in ${duration}ms`);
     trackEvent('TableWarmer_Success', { duration });
 
-    res.json({ message: "Table warmer pinged successfully", duration });
+    return res.json({ message: "Table warmer pinged successfully", duration });
   } catch (error: any) {
-    console.error('Table warmer failed:', error.message);
+    console.error('Table warmer failed:', error);
     trackEvent('TableWarmer_Failure', { error: error.message });
 
-    res.status(500).json({ error: "Table warmer failed." });
+    return res.status(500).json({ error: "Table warmer failed.", details: error.message });
   }
 });
 
