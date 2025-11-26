@@ -475,7 +475,7 @@ app.post('/api/table-warmer', async (req, res) => {
   const start = Date.now();
 
   try {
-    const entities: IWarmerEntity[] = await queryEntities(TableNames.Warmers, null);
+    const entities: IWarmerEntity[] = await queryEntities(TableNames.Warmer, null);
 
     if (!entities || entities.length === 0) {
       console.warn('Table warmer: no entities found');
@@ -493,7 +493,7 @@ app.post('/api/table-warmer', async (req, res) => {
       lastPing: new Date(), // add a field to simulate activity
     };
 
-    await updateEntity(TableNames.Warmers, updatedEntity);
+    await updateEntity(TableNames.Warmer, updatedEntity);
 
     const duration = Date.now() - start;
     console.log(`Table warmer updated in ${duration}ms`);

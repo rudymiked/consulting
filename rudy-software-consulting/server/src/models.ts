@@ -54,7 +54,7 @@ export interface IContactLog extends IEmailOptions, TableEntity { }
 
 export enum TableNames {
     Invoices = 'Invoices',
-    Warmers = 'Warmers',
+    Warmer = 'Warmer',
     ContactLogs = 'ContactLogs',
     Users = 'Users',
 }
