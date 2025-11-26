@@ -2,6 +2,7 @@ import { IInvoiceRequest, IInvoice, IInvoiceStatus, IInvoiceResult, TableNames }
 import { trackEvent, trackDependency, trackException, trackTrace } from './telemetry';
 import { insertEntity, queryEntities, updateEntity } from './tableClientHelper';
 import Stripe from 'stripe';
+import { sendEmail } from "./emailHelper";
 
 /*
 
@@ -326,4 +327,45 @@ export const payInvoice = async (
       InvoiceId: invoiceId,
     };
   }
+};
+
+// services/InvoiceService.ts
+export const finalizePayment = async (
+  invoiceId: string,
+  paymentIntentId: string
+): Promise<{ success: boolean; message: string }> => {
+  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, {
+    apiVersion: '2025-08-27.basil',
+  });
+
+  // Retrieve PaymentIntent from Stripe
+  const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+  if (paymentIntent.status !== 'succeeded') {
+    return { success: false, message: `PaymentIntent not succeeded (status: ${paymentIntent.status})` };
+  }
+
+  // Get invoice details
+  const invoice = await getInvoiceDetails(invoiceId);
+  if (!invoice) {
+    return { success: false, message: `Invoice ${invoiceId} not found` };
+  }
+
+  // Update invoice status
+  invoice.status =
+    paymentIntent.amount === invoice.amount
+      ? IInvoiceStatus.PAID
+      : IInvoiceStatus.PARTIAL_PAYMENT;
+
+  await updateInvoice(invoice);
+
+  // Send confirmation email
+  const paidDollars = paymentIntent.amount / 100;
+  const subject = `Payment Received for Invoice ${invoiceId}`;
+  const invoiceLink = `https://rudyardtechnologies.com/invoice/${invoiceId}`;
+  const text = `${invoice.name},\n\nWe have received your payment of $${paidDollars} for Invoice ${invoiceId}.\n\nThank you for your business!\n\nBest regards,\nRudyard Software Consulting`;
+  const html = `<p>${invoice.name},</p><p>We have received your payment for Invoice <a href='${invoiceLink}'>${invoiceId}</a> amounting to <strong>$${paidDollars}</strong>.</p><p>Thank you for your business!</p><p>Best regards,<br/>Rudyard Software Consulting</p>`;
+
+  await sendEmail({ to: invoice.contact, subject, text, html, sent: true });
+
+  return { success: true, message: 'Invoice finalized and email sent' };
 };

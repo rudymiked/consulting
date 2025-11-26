@@ -5,7 +5,7 @@ import * as appInsights from 'applicationinsights';
 import { insertIntoContactLogs, sendEmail } from './emailHelper';
 import jwksClient from 'jwks-rsa';
 import { expressjwt } from 'express-jwt';
-import { createInvoice, getInvoiceDetails, getInvoices, payInvoice } from './invoiceHelper';
+import { createInvoice, finalizePayment, getInvoiceDetails, getInvoices, payInvoice, updateInvoice } from './invoiceHelper';
 import { trackEvent, trackException } from './telemetry';
 import { approveUser, loginUser, registerUser, verifyToken } from './authHelper';
 import { IEmailOptions, IInvoice, IInvoiceResult, IInvoiceStatus, IWarmerEntity, TableNames } from './models';
@@ -209,6 +209,28 @@ app.get('/api/ping', (_, res) => {
 app.get('/api/email', (_, res) => {
   console.log('Email address:', process.env.RUDYARD_EMAIL_USERNAME);
   res.json({ message: `email address: ${process.env.RUDYARD_EMAIL_USERNAME}` });
+});
+
+// routes/invoice.ts
+app.post('/api/invoice/finalize-payment', async (req, res) => {
+  const { invoiceId, paymentIntentId } = req.body;
+
+  if (!invoiceId || !paymentIntentId) {
+    return res.status(400).json({ error: 'Missing required fields.' });
+  }
+
+  try {
+    const result = await finalizePayment(invoiceId, paymentIntentId);
+
+    if (!result.success) {
+      return res.status(400).json(result);
+    }
+
+    return res.status(200).json(result);
+  } catch (err: any) {
+    console.error('Finalize error:', err);
+    return res.status(500).json({ error: 'Unexpected server error.' });
+  }
 });
 
 app.post('/api/invoice/pay', async (req, res) => {
