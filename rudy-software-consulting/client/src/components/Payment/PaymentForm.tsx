@@ -101,7 +101,8 @@ const PaymentForm: React.FC<IPaymentFormProps> = (props: IPaymentFormProps) => {
 
   return (
     <form onSubmit={handleSubmit}>
-      {message ? (
+      {/* Always show status message if present */}
+      {message && (
         <div
           style={{
             marginTop: '1rem',
@@ -109,13 +110,16 @@ const PaymentForm: React.FC<IPaymentFormProps> = (props: IPaymentFormProps) => {
               message.type === 'error'
                 ? 'red'
                 : message.type === 'success'
-                ? 'green'
-                : 'black',
+                  ? 'green'
+                  : 'black',
           }}
         >
           {message.text}
         </div>
-      ) : (
+      )}
+      <br />
+      {/* Show PaymentElement + button unless payment succeeded */}
+      {message?.type !== 'success' && (
         <>
           <PaymentElement />
           <button disabled={!stripe || isProcessing}>
