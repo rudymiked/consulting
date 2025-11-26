@@ -39,7 +39,7 @@ const PaymentForm: React.FC<IPaymentFormProps> = ({ invoice, statusChecked }) =>
           setMessage({ text: 'Payment is processing...', type: 'info' });
           break;
         case 'requires_payment_method':
-          setMessage({ text: 'Payment failed, please try again.', type: 'error' });
+          setMessage({ text: 'Payment required.', type: 'info' });
           break;
         default:
           setMessage({ text: 'Something went wrong.', type: 'error' });
