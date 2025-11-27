@@ -356,6 +356,9 @@ export const finalizePayment = async (
       ? IInvoiceStatus.PAID
       : IInvoiceStatus.PARTIAL_PAYMENT;
 
+  invoice.paymentIntentId = paymentIntent.id;
+  invoice.updatedDate = new Date();
+
   await updateInvoice(invoice);
 
   // Send confirmation email
