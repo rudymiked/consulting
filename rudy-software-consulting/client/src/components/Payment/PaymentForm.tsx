@@ -4,9 +4,10 @@ import { IInvoice } from '../../pages/InvoicesPage';
 import { useAuth } from '../Auth/AuthContext';
 import HttpClient from '../../services/Http/HttpClient';
 
-interface IPaymentFormProps {
+export interface IPaymentFormProps {
   invoice: IInvoice;
   clientSecret: string;
+  onPaymentSuccess?: () => void;
 }
 
 interface IMessage {
@@ -19,36 +20,10 @@ const PaymentForm: React.FC<IPaymentFormProps> = (props: IPaymentFormProps) => {
   const elements = useElements();
   const [message, setMessage] = useState<IMessage | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [invoice, setInvoice] = useState<IInvoice>(props.invoice); // local invoice state
 
   const auth = useAuth();
   const httpClient = new HttpClient();
-
-  // Check PaymentIntent status when mounted
-  useEffect(() => {
-    if (!stripe || !props.clientSecret) return;
-
-    const checkStatus = async () => {
-      const { paymentIntent } = await stripe.retrievePaymentIntent(props.clientSecret);
-      if (!paymentIntent) return;
-
-      switch (paymentIntent.status) {
-        case 'succeeded':
-          setMessage({ text: 'Payment succeeded!', type: 'success' });
-          break;
-        case 'processing':
-          setMessage({ text: 'Payment is processing...', type: 'info' });
-          break;
-        case 'requires_payment_method':
-          setMessage({ text: 'Payment required.', type: 'info' });
-          break;
-        default:
-          setMessage({ text: 'Something went wrong.', type: 'error' });
-          break;
-      }
-    };
-
-    checkStatus();
-  }, [stripe, props.clientSecret]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -57,11 +32,16 @@ const PaymentForm: React.FC<IPaymentFormProps> = (props: IPaymentFormProps) => {
     setIsProcessing(true);
     setMessage(null);
 
+    const { error: submitError } = await elements.submit();
+    if (submitError) {
+      setMessage({ text: submitError.message!, type: 'error' });
+      setIsProcessing(false);
+      return;
+    }
+
     const { paymentIntent, error } = await stripe.confirmPayment({
       elements,
-      confirmParams: {
-        return_url: window.location.href,
-      },
+      confirmParams: { return_url: window.location.href },
       clientSecret: props.clientSecret,
       redirect: 'if_required',
     });
@@ -75,24 +55,21 @@ const PaymentForm: React.FC<IPaymentFormProps> = (props: IPaymentFormProps) => {
     if (paymentIntent?.status === 'succeeded') {
       setMessage({ text: 'Payment succeeded!', type: 'success' });
 
-      // Only finalize invoice if payment actually succeeded
-      const payInvoiceResponse = await httpClient.post<{ success: boolean; message: string }>({
-        url: `/api/invoice/finalize-payment`, // <-- use a finalize endpoint
-        data: {
-          invoiceId: props.invoice.id,
-          paymentIntentId: paymentIntent.id,
-        },
+      const finalizeResponse = await httpClient.post<{ success: boolean; message: string }>({
+        url: `/api/invoice/finalize-payment`,
+        data: { invoiceId: props.invoice.id, paymentIntentId: paymentIntent.id },
         token: auth.token || '',
       });
 
-      if (!payInvoiceResponse.success) {
+      if (!finalizeResponse.success) {
         setMessage({
-          text: `Payment succeeded but failed to update invoice: ${payInvoiceResponse.message}`,
+          text: `Payment succeeded but failed to update invoice: ${finalizeResponse.message}`,
           type: 'error',
         });
+      } else {
+        props.onPaymentSuccess?.();
       }
     } else {
-      // Handle other statuses gracefully
       setMessage({ text: `Payment status: ${paymentIntent?.status}`, type: 'info' });
     }
 
@@ -101,7 +78,6 @@ const PaymentForm: React.FC<IPaymentFormProps> = (props: IPaymentFormProps) => {
 
   return (
     <form onSubmit={handleSubmit}>
-      {/* Always show status message if present */}
       {message && (
         <div
           style={{
@@ -117,8 +93,7 @@ const PaymentForm: React.FC<IPaymentFormProps> = (props: IPaymentFormProps) => {
           {message.text}
         </div>
       )}
-      <br />
-      {/* Show PaymentElement + button unless payment succeeded */}
+
       {message?.type !== 'success' && (
         <>
           <PaymentElement />
@@ -127,6 +102,11 @@ const PaymentForm: React.FC<IPaymentFormProps> = (props: IPaymentFormProps) => {
           </button>
         </>
       )}
+
+      {/* ✅ Show updated invoice status */}
+      <div style={{ marginTop: '1rem' }}>
+        <strong>Invoice Status:</strong> {invoice.status}
+      </div>
     </form>
   );
 };

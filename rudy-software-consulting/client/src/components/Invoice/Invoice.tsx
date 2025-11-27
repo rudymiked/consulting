@@ -3,7 +3,7 @@ import { Paper, Typography, Box, CircularProgress, Alert, Divider, Button, TextF
 import { Link } from 'react-router-dom';
 import PaymentForm from '../Payment/PaymentForm';
 import { Elements } from '@stripe/react-stripe-js';
-import { IInvoice } from '../../pages/InvoicesPage';
+import { IInvoice, IInvoiceStatus } from '../../pages/InvoicesPage';
 import { StripeElementsOptions } from '@stripe/stripe-js';
 import { stripePromise } from '../../shared/stripe';
 import { useAuth } from '../Auth/AuthContext';
@@ -85,44 +85,6 @@ const Invoice: React.FC<IInvoiceProps> = (props: IInvoiceProps) => {
         checkStatus();
     }, [invoiceId]);
 
-    // React.useEffect(() => {
-    //     if (statusChecked) return; // backend already confirmed status
-
-    //     const checkRedirectStatus = async () => {
-    //         const clientSecret = new URLSearchParams(window.location.search).get('payment_intent_client_secret');
-    //         if (!clientSecret) return;
-
-    //         const stripe = await stripePromise;
-
-    //         if (!stripe) {
-    //             return;
-    //         }
-
-    //         const { paymentIntent } = await stripe.retrievePaymentIntent(clientSecret);
-
-    //         if (!paymentIntent) return;
-
-    //         switch (paymentIntent.status) {
-    //             case 'succeeded':
-    //                 setMessage('Payment succeeded!');
-    //                 setPaymentStatus(PaymentStatus.Succeeded);
-    //                 break;
-    //             case 'processing':
-    //                 setMessage('Your payment is processing.');
-    //                 break;
-    //             case 'requires_payment_method':
-    //                 setMessage('Payment failed. Please try again.');
-    //                 break;
-    //             default:
-    //                 setMessage('Something went wrong.');
-    //         }
-
-    //         setStatusChecked(true);
-    //     };
-
-    //     checkRedirectStatus();
-    // }, [statusChecked]);
-
     const isAmountValid = editableAmount !== undefined &&
         editableAmount > 0 &&
         editableAmount <= invoice!.amount;
@@ -177,6 +139,19 @@ const Invoice: React.FC<IInvoiceProps> = (props: IInvoiceProps) => {
             url: `/api/invoice/${id}`,
             token: token!,
         });
+    };
+
+    const refreshInvoice = async () => {
+        try {
+            const updated = await fetchInvoice(invoiceId);
+            const amountInDollars = updated.amount / 100;
+            setInvoice({ ...updated, amount: amountInDollars });
+            setEditableAmount(amountInDollars);
+            setPaymentStatus(updated.status); // keep status in sync
+            setMessage(updated.status == IInvoiceStatus.PAID? 'Invoice paid.' : null);
+        } catch {
+            setError('Failed to refresh invoice after payment.');
+        }
     };
 
     if (loading) {
@@ -265,7 +240,7 @@ const Invoice: React.FC<IInvoiceProps> = (props: IInvoiceProps) => {
                     <>
                         {clientSecret && stripeOptions ? (
                             <Elements stripe={stripePromise} options={stripeOptions}>
-                                <PaymentForm invoice={invoice} clientSecret={clientSecret} />
+                                <PaymentForm invoice={invoice} clientSecret={clientSecret} onPaymentSuccess={refreshInvoice} />
                             </Elements>
                         ) : (
                             <CircularProgress />

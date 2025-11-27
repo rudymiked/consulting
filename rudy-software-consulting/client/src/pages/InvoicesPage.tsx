@@ -2,10 +2,11 @@ import { Box, Container } from '@mui/material';
 import React from 'react';
 import Invoices from '../components/Invoice/Invoices';
 
-export interface IInvoiceStatus {
-    NEW: 'new';
-    PAID: 'paid';
-    CANCELLED: 'cancelled';
+export enum IInvoiceStatus {
+    NEW = 'New',
+    PARTIALLY_PAID = 'Partially Paid',
+    PAID = 'Paid',
+    CANCELLED = 'Cancelled',
 }
 
 export interface IInvoice {

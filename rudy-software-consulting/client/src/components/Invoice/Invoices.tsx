@@ -77,7 +77,7 @@ const Invoices: React.FC = () => {
                                         <TableCell>{invoice.id}</TableCell>
                                         <TableCell>{invoice.contact}</TableCell>
                                         <TableCell>${(invoice.amount / 100).toFixed(2)}</TableCell>
-                                        <TableCell>{invoice.status.toString()}</TableCell>
+                                        <TableCell>{invoice.status}</TableCell>
                                         <TableCell>
                                             <Link to={`/invoice/${invoice.id}`}>
                                                 View
