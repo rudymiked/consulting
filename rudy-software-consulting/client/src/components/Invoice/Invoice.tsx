@@ -147,7 +147,13 @@ const Invoice: React.FC<IInvoiceProps> = (props: IInvoiceProps) => {
             const amountInDollars = updated.amount / 100;
             setInvoice({ ...updated, amount: amountInDollars });
             setEditableAmount(amountInDollars);
-            setPaymentStatus(updated.status); // keep status in sync
+
+            if (updated.status == IInvoiceStatus.PAID) {
+                setPaymentStatus(PaymentStatus.Succeeded);
+            } else {
+                setPaymentStatus(null);
+            }
+            
             setMessage(updated.status == IInvoiceStatus.PAID? 'Invoice paid.' : null);
         } catch {
             setError('Failed to refresh invoice after payment.');
