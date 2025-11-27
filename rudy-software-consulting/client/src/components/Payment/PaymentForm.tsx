@@ -103,10 +103,10 @@ const PaymentForm: React.FC<IPaymentFormProps> = (props: IPaymentFormProps) => {
         </>
       )}
 
-      {/* ✅ Show updated invoice status */}
-      <div style={{ marginTop: '1rem' }}>
+      {/* Show updated invoice status */}
+      {/* <div style={{ marginTop: '1rem' }}>
         <strong>Invoice Status:</strong> {invoice.status}
-      </div>
+      </div> */}
     </form>
   );
 };
