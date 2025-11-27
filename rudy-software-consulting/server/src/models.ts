@@ -12,10 +12,10 @@ export interface IInvoiceRequest {
 }
 
 export enum IInvoiceStatus {
-    NEW = 'new',
-    PAID = 'paid',
-    PARTIAL_PAYMENT = 'partial_payment',
-    CANCELLED = 'cancelled',
+    NEW = 'NEW',
+    PARTIALLY_PAID = 'PARTIALLY_PAID',
+    PAID = 'PAID',
+    CANCELLED = 'CANCELLED',
 }
 
 export interface IInvoiceResult {

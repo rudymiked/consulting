@@ -3,10 +3,10 @@ import React from 'react';
 import Invoices from '../components/Invoice/Invoices';
 
 export enum IInvoiceStatus {
-    NEW = 'New',
-    PARTIALLY_PAID = 'Partially Paid',
-    PAID = 'Paid',
-    CANCELLED = 'Cancelled',
+    NEW = 'NEW',
+    PARTIALLY_PAID = 'PARTIALLY_PAID',
+    PAID = 'PAID',
+    CANCELLED = 'CANCELLED',
 }
 
 export interface IInvoice {

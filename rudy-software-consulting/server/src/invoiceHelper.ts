@@ -223,10 +223,10 @@ export const payInvoice = async (
       return { Success: false, Message: message, InvoiceId: invoiceId };
     }
 
-    if (invoiceDetails.status === IInvoiceStatus.CANCELLED) {
+    if (invoiceDetails.status.toUpperCase() === IInvoiceStatus.CANCELLED.toUpperCase()) {
       return { Success: false, Message: `Cannot pay a cancelled invoice ${invoiceId}`, InvoiceId: invoiceId };
     }
-    if (invoiceDetails.status === IInvoiceStatus.PAID) {
+    if (invoiceDetails.status.toUpperCase() === IInvoiceStatus.PAID.toUpperCase()) {
       return { Success: false, Message: `Invoice ${invoiceId} is already paid`, InvoiceId: invoiceId };
     }
 
@@ -308,7 +308,7 @@ export const payInvoice = async (
     });
 
     invoiceDetails.status =
-      amount === invoiceAmountCents ? IInvoiceStatus.PAID : IInvoiceStatus.PARTIAL_PAYMENT;
+      amount === invoiceAmountCents ? IInvoiceStatus.PAID : IInvoiceStatus.PARTIALLY_PAID;
 
     await updateInvoice(invoiceDetails);
 
@@ -354,7 +354,7 @@ export const finalizePayment = async (
   invoice.status =
     paymentIntent.amount === invoice.amount
       ? IInvoiceStatus.PAID
-      : IInvoiceStatus.PARTIAL_PAYMENT;
+      : IInvoiceStatus.PARTIALLY_PAID;
 
   invoice.paymentIntentId = paymentIntent.id;
   invoice.updatedDate = new Date();
