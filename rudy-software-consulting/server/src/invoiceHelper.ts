@@ -361,7 +361,7 @@ export const finalizePayment = async (
 
   await updateInvoice(invoice);
 
-  // Send confirmation email
+  // Send confirmation email to client
   const paidDollars = paymentIntent.amount / 100;
   const subject = `Payment Received for Invoice ${invoiceId}`;
   const invoiceLink = `https://rudyardtechnologies.com/invoice/${invoiceId}`;
@@ -369,6 +369,14 @@ export const finalizePayment = async (
   const html = `<p>${invoice.name},</p><p>We have received your payment for Invoice <a href='${invoiceLink}'>${invoiceId}</a> amounting to <strong>$${paidDollars}</strong>.</p><p>Thank you for your business!</p><p>Best regards,<br/>Rudyard Software Consulting</p>`;
 
   await sendEmail({ to: invoice.contact, subject, text, html, sent: true });
+
+  // Send confirmation email to Rudyard
+  const rudyardEmail = process.env.EMAIL_USERNAME || 'info@rudyardtechonologies.com';
+  const rudyardSubject = `Invoice ${invoiceId} Paid`;
+  const rudyardText = `Invoice ${invoiceId} has been paid by ${invoice.name}.\n\nAmount: $${paidDollars}\nPaymentIntent ID: ${paymentIntent.id}`;
+  const rudyardHtml = `<p>Invoice <strong>${invoiceId}</strong> has been paid by ${invoice.name}.</p><p>Amount: <strong>$${paidDollars}</strong><br/>PaymentIntent ID: <strong>${paymentIntent.id}</strong></p>`;
+
+  await sendEmail({ to: rudyardEmail, subject: rudyardSubject, text: rudyardText, html: rudyardHtml, sent: true });
 
   return { success: true, message: 'Invoice finalized and email sent' };
 };
