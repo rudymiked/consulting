@@ -2,6 +2,14 @@ import * as appInsights from 'applicationinsights';
 
 const client = appInsights.defaultClient as any | undefined;
 
+appInsights.defaultClient.addTelemetryProcessor((envelope) => {
+  const msg = envelope.data.baseData?.message;
+  if (msg && msg.includes("azure:core-client:warning")) {
+    return false; // drop this telemetry item
+  }
+  return true;
+});
+
 export const trackEvent = (name: string, properties?: Record<string, unknown>) => {
   try {
     if (client) client.trackEvent({ name, properties });
