@@ -23,10 +23,12 @@ import RegistrationPage from './pages/RegistrationPage';
 import InvoicesPage from './pages/InvoicesPage';
 import HttpClient from './services/Http/HttpClient';
 import { useAuth } from './components/Auth/AuthContext';
+import { useAppInsights } from './services/Telemtry/AppInsightsProvider';
 
 const App: React.FC = () => {
   const httpClient = new HttpClient();
   const auth = useAuth();
+  const appInsights = useAppInsights();
 
   React.useEffect(() => {
     httpClient.get<void>({
@@ -56,6 +58,15 @@ const App: React.FC = () => {
         console.error('Error reaching API');
       });
   }, []);
+  
+  React.useEffect(() => {
+    appInsights.trackEvent({ name: 'Site_Visit' }, {
+      timestamp: new Date().toISOString(),
+      userAgent: navigator.userAgent,
+    });
+    appInsights.trackPageView({ name: 'Home', uri: window.location.pathname });
+  }, [appInsights]);
+
 
   return (
     <AuthProvider>
