@@ -16,7 +16,7 @@ import { queryEntities, updateEntity } from './tableClientHelper';
 dotenv.config();
 
 (() => {
-  const conn = process.env.APPLICATIONINSIGHTS_CONNECTION_STRING  || '';
+  const conn = process.env.APPLICATIONINSIGHTS_CONNECTION_STRING || '';
 
   if (!conn) {
     console.log("Application Insights not configured (no connection string).");

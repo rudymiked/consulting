@@ -59,7 +59,7 @@ const Header: React.FC = () => {
                 <List>
                   {navItems.map((item) => (
                     <ListItem key={item.label} component={Link} to={item.path}>
-                      <Tab key={item.label} component={Link} to={item.path} label={item.label} />
+                      <Tab label={item.label} />
                     </ListItem>
                   ))}
                 </List>
