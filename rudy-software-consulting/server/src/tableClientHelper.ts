@@ -12,7 +12,6 @@ export function getTableClient(tableName: string): TableClient {
 
   if (connectionString && env !== "production") {
     const hint = connectionString.length > 12 ? connectionString.slice(0, 8) + "..." : "present";
-    console.log(`[TableClient] Using connection string (hint: ${hint})`);
     return TableClient.fromConnectionString(connectionString, tableName);
   }
 
@@ -36,9 +35,6 @@ export function getTableClient(tableName: string): TableClient {
     credential = managedClientId
       ? new ManagedIdentityCredential(managedClientId)
       : new DefaultAzureCredential();
-    console.log(
-      `[TableClient] Using ${managedClientId ? "ManagedIdentityCredential" : "DefaultAzureCredential"}`
-    );
   } catch (err) {
     console.error("[TableClient] Failed to initialize credential:", err);
     throw err;
@@ -57,7 +53,6 @@ export const insertEntity = async <T extends RequiredTableEntity>(
   try {
     const client = getTableClient(tableName);
     await client.createEntity(entity);
-    console.log(`[Insert] Entity inserted into ${tableName}`, redact(entity));
   } catch (error: any) {
     console.error(`[Insert] Error inserting entity into ${tableName}:`, error.message || error);
     throw error;
@@ -112,7 +107,6 @@ export const updateEntity = async <T extends RequiredTableEntity>(
   try {
     const client = getTableClient(tableName);
     await client.updateEntity(entity, merge ? "Merge" : "Replace");
-    console.log(`[Update] Entity updated in ${tableName}`, redact(entity));
   } catch (error: any) {
     console.error(`[Update] Error updating entity in ${tableName}:`, error.message || error);
     throw error;
