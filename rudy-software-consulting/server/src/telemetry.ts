@@ -1,22 +1,28 @@
-import * as appInsights from 'applicationinsights';
+import appInsights from "applicationinsights";
 
-const client = appInsights.defaultClient as any | undefined;
+const client = appInsights.defaultClient;
 
-appInsights.defaultClient.addTelemetryProcessor((envelope) => {
-  const msg = envelope.data.baseData?.message;
-  if (msg && msg.includes("azure:core-client:warning")) {
-    return false; // drop this telemetry item
-  }
-  return true;
-});
+// Add a telemetry processor (after setup/start)
+if (client) {
+  client.addTelemetryProcessor((envelope) => {
+    const msg = envelope.data?.baseData?.message;
+    if (msg && msg.includes("azure:core-client:warning")) {
+      return false; // drop noisy telemetry
+    }
+    return true;
+  });
+}
+
+client.trackEvent({ name: "TestEvent", properties: { foo: "bar" } });
 
 export const trackEvent = (name: string, properties?: Record<string, unknown>) => {
   try {
-    if (client) client.trackEvent({ name, properties });
+    if (client) {
+      client.trackEvent({ name, properties });
+      client.flush(); // force send immediately (useful for local testing)
+    }
   } catch (e) {
-    // no-op - don't let telemetry break application logic
-    // eslint-disable-next-line no-console
-    console.error('trackEvent error', e);
+    console.error("trackEvent error", e);
   }
 };
 
@@ -24,7 +30,7 @@ export const trackTrace = (message: string, severity?: number | undefined, prope
   try {
     if (!client) return;
     const severityLevel = typeof severity === 'number' ? severity : 1;
-    client.trackTrace({ message, severity: severityLevel, properties });
+    client.trackTrace({ message, severity: severityLevel.toString(), properties });
   } catch (e) {
     // eslint-disable-next-line no-console
     console.error('trackTrace error', e);
@@ -76,7 +82,7 @@ export const flush = (callback?: () => void) => {
       if (callback) callback();
       return;
     }
-    client.flush({ callback });
+    client.flush();
   } catch (e) {
     // eslint-disable-next-line no-console
     console.error('flush error', e);

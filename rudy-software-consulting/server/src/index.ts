@@ -1,11 +1,11 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import * as appInsights from 'applicationinsights';
+import appInsights from "applicationinsights";
 import { insertIntoContactLogs, sendEmail } from './emailHelper';
 import jwksClient from 'jwks-rsa';
 import { expressjwt } from 'express-jwt';
-import { createInvoice, finalizePayment, getInvoiceDetails, getInvoices, payInvoice, updateInvoice } from './invoiceHelper';
+import { createInvoice, finalizePayment, getInvoiceDetails, getInvoices, payInvoice } from './invoiceHelper';
 import { trackEvent, trackException } from './telemetry';
 import { approveUser, loginUser, registerUser, verifyToken } from './authHelper';
 import { IEmailOptions, IInvoice, IInvoiceResult, IInvoiceStatus, IWarmerEntity, TableNames } from './models';
@@ -19,13 +19,12 @@ dotenv.config();
   const conn = process.env.APPINSIGHTS_CONNECTION_STRING;
 
   if (!conn) {
-    console.log('Application Insights not configured (no connection string or instrumentation key).');
+    console.log("Application Insights not configured (no connection string).");
     return;
-  } else {
-    console.log('App Insights configured: ' + process.env.APPINSIGHTS_CONNECTION_STRING, !!process.env.APPINSIGHTS_CONNECTION_STRING);
   }
 
   try {
+    // Initialize with connection string
     appInsights.setup(conn)
       .setAutoCollectRequests(true)
       .setAutoCollectDependencies(true)
@@ -34,16 +33,17 @@ dotenv.config();
       .setAutoDependencyCorrelation(true)
       .start();
 
-    // Tag role for clarity in App Insights
     const client = appInsights.defaultClient;
 
-    if (client && client.context && client.context.tags) {
-      const roleKey = client.context.keys.cloudRole as string;
-      client.context.tags[roleKey] = process.env.APPINSIGHTS_ROLE_NAME || 'rudyard-api';
+    // Tag role name for clarity in Azure
+    if (client?.context?.tags) {
+      const roleKey = client.context.keys.cloudRole;
+      client.context.tags[roleKey] = process.env.APPINSIGHTS_ROLE_NAME || "rudyard-api";
     }
 
+    console.log("Application Insights initialized");
   } catch (err: any) {
-    console.error('Failed to initialize Application Insights:', err?.message || err);
+    console.error("Failed to initialize Application Insights:", err?.message || err);
   }
 })();
 
