@@ -15,17 +15,13 @@ import { queryEntities, updateEntity } from './tableClientHelper';
 
 dotenv.config();
 
-(() => {
-  const conn = process.env.APPLICATIONINSIGHTS_CONNECTION_STRING || '';
+const conn = process.env.APPLICATIONINSIGHTS_CONNECTION_STRING || "";
 
-  if (!conn) {
-    console.log("Application Insights not configured (no connection string).");
-    return;
-  }
-
+if (!conn) {
+  console.log("Application Insights not configured (no connection string).");
+} else {
   try {
-    // Initialize with connection string
-    appInsights.setup(conn)
+    appInsights?.setup(conn)
       .setAutoCollectRequests(true)
       .setAutoCollectDependencies(true)
       .setAutoCollectConsole(true, true)
@@ -33,19 +29,19 @@ dotenv.config();
       .setAutoDependencyCorrelation(true)
       .start();
 
-    const client = appInsights.defaultClient;
-
-    // Tag role name for clarity in Azure
-    if (client?.context?.tags) {
-      const roleKey = client.context.keys.cloudRole;
-      client.context.tags[roleKey] = process.env.APPINSIGHTS_ROLE_NAME || "rudyard-api";
+    if (appInsights?.defaultClient?.context?.tags) {
+      const roleKey = appInsights.defaultClient.context.keys.cloudRole;
+      appInsights.defaultClient.context.tags[roleKey] =
+        process.env.APPINSIGHTS_ROLE_NAME || "rudyard-api";
     }
 
     console.log("Application Insights initialized");
   } catch (err: any) {
     console.error("Failed to initialize Application Insights:", err?.message || err);
   }
-})();
+}
+
+export const appInsightsClient = appInsights?.defaultClient;
 
 const app = express();
 

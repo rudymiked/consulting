@@ -1,25 +1,23 @@
-import appInsights from "applicationinsights";
+import { appInsightsClient } from ".";
 
-const client = appInsights.defaultClient;
-
-// Add a telemetry processor (after setup/start)
-if (client) {
-  client.addTelemetryProcessor((envelope) => {
+if (appInsightsClient) {
+  console.log("Telemetry client initialized");
+  appInsightsClient.addTelemetryProcessor((envelope) => {
     const msg = envelope.data?.baseData?.message;
     if (msg && msg.includes("azure:core-client:warning")) {
       return false; // drop noisy telemetry
     }
     return true;
   });
+} else {
+  console.warn("Telemetry client not initialized");
 }
-
-client.trackEvent({ name: "TestEvent", properties: { foo: "bar" } });
 
 export const trackEvent = (name: string, properties?: Record<string, unknown>) => {
   try {
-    if (client) {
-      client.trackEvent({ name, properties });
-      client.flush(); // force send immediately (useful for local testing)
+    if (appInsightsClient) {
+      appInsightsClient.trackEvent({ name, properties });
+      appInsightsClient.flush(); // force send immediately for local testing
     }
   } catch (e) {
     console.error("trackEvent error", e);
@@ -28,9 +26,9 @@ export const trackEvent = (name: string, properties?: Record<string, unknown>) =
 
 export const trackTrace = (message: string, severity?: number | undefined, properties?: Record<string, unknown>) => {
   try {
-    if (!client) return;
+    if (!appInsightsClient) return;
     const severityLevel = typeof severity === 'number' ? severity : 1;
-    client.trackTrace({ message, severity: severityLevel.toString(), properties });
+    appInsightsClient.trackTrace({ message, severity: severityLevel.toString(), properties });
   } catch (e) {
     // eslint-disable-next-line no-console
     console.error('trackTrace error', e);
@@ -39,9 +37,9 @@ export const trackTrace = (message: string, severity?: number | undefined, prope
 
 export const trackException = (error: unknown, properties?: Record<string, unknown>) => {
   try {
-    if (!client) return;
+    if (!appInsightsClient) return;
     const err = error instanceof Error ? error : new Error(String(error));
-    client.trackException({ exception: err, properties });
+    appInsightsClient.trackException({ exception: err, properties });
   } catch (e) {
     // eslint-disable-next-line no-console
     console.error('trackException error', e);
@@ -59,8 +57,8 @@ export const trackDependency = (opts: {
   properties?: Record<string, unknown>;
 }) => {
   try {
-    if (!client) return;
-    client.trackDependency({
+    if (!appInsightsClient) return;
+    appInsightsClient.trackDependency({
       target: opts.target,
       name: opts.name,
       data: opts.data,
@@ -78,11 +76,11 @@ export const trackDependency = (opts: {
 
 export const flush = (callback?: () => void) => {
   try {
-    if (!client) {
+    if (!appInsightsClient) {
       if (callback) callback();
       return;
     }
-    client.flush();
+    appInsightsClient.flush();
   } catch (e) {
     // eslint-disable-next-line no-console
     console.error('flush error', e);
