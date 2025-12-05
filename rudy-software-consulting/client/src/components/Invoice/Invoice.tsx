@@ -34,9 +34,13 @@ const Invoice: React.FC<IInvoiceProps> = (props: IInvoiceProps) => {
     const [error, setError] = useState<string | undefined>(undefined);
     const [clientSecret, setClientSecret] = React.useState<string | undefined>(undefined);
     const [stripeOptions, setStripeOptions] = React.useState<StripeElementsOptions | undefined>(undefined);
-    const { token } = useAuth();
+    const { isAuthenticated, token } = useAuth();
 
     const httpClient = new HttpClient();
+
+    React.useEffect(() => {
+        console.log("isAuth: " + isAuthenticated);
+    }, [isAuthenticated]);
 
     React.useEffect(() => {
         const checkStatus = async () => {
@@ -256,13 +260,15 @@ const Invoice: React.FC<IInvoiceProps> = (props: IInvoiceProps) => {
                     </>
                 )}
             </Paper>
-            <Box sx={{ mt: 2, textAlign: 'center' }}>
-                <Link to="/admin">
-                    <Button variant="contained" className="main-button">
-                        Admin Dashboard
-                    </Button>
-                </Link>
-            </Box>
+            {isAuthenticated && (
+                <Box sx={{ mt: 2, textAlign: 'center' }}>
+                    <Link to="/admin">
+                        <Button variant="contained" className="main-button">
+                            Admin Dashboard
+                        </Button>
+                    </Link>
+                </Box>
+            )}
         </>
     );
 };

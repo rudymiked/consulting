@@ -2,9 +2,21 @@ import React from 'react';
 import { Box, Typography, Paper, Button, Grid } from '@mui/material';
 import { useAuth } from '../Auth/AuthContext';
 import { Link } from 'react-router-dom';
+import LoginForm from '../Auth/LoginForm';
 
 const AdminDashboard: React.FC = () => {
-  const { logout } = useAuth();
+  const { login, logout, isAuthenticated } = useAuth();
+
+  if (!isAuthenticated) {
+    return (
+      <LoginForm onLogin={login} />
+    );
+  }
+
+  const handleLogout = () => {
+    logout();
+  };
+
 
   return (
     <Box sx={{ p: 3 }}>
@@ -12,7 +24,7 @@ const AdminDashboard: React.FC = () => {
         <Typography variant="h4" component="h1">
           Admin Dashboard
         </Typography>
-        <Button onClick={logout} variant="outlined" color="primary">
+        <Button onClick={handleLogout} variant="outlined" color="primary">
           Logout
         </Button>
       </Box>

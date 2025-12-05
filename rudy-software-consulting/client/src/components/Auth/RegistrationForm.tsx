@@ -19,7 +19,17 @@ const RegistrationForm: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [loginLink, setLoginLink] = useState<JSX.Element | null>(null);
   const httpClient = new HttpClient();
-  const auth = useAuth();
+  const {isAuthenticated, token} = useAuth();
+
+  if (!isAuthenticated) {
+    return (
+      <Box sx={{ p: 3 }}>
+        <Typography variant="h6">
+          You must be logged in to register a new account.
+        </Typography>
+      </Box>
+    );
+  }
 
   React.useEffect(() => {
     setLoginLink(
@@ -38,7 +48,7 @@ const RegistrationForm: React.FC = () => {
     try {
       const res = await httpClient.post<{ success: boolean }>({
         url: '/api/register',
-        token: auth.token || '',
+        token: token || '',
         data: { email, password }
       });
 
