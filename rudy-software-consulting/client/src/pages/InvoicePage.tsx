@@ -13,7 +13,7 @@ const InvoicePage: React.FC = () => {
           timestamp: new Date().toISOString(),
           userAgent: navigator.userAgent,
         });
-        appInsights.trackPageView({ name: 'Invoice', uri: window.location.pathname });
+        appInsights.trackPageView({ name: 'Invoice_' + invoiceId, uri: window.location.pathname });
       }, [appInsights]);
 
     return (
