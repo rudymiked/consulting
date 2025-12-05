@@ -8,13 +8,13 @@ const InvoicePage: React.FC = () => {
     const { invoiceId: invoiceId } = useParams<{ invoiceId: string }>();
     const appInsights = useAppInsights();
 
-      React.useEffect(() => {
+    React.useEffect(() => {
         appInsights.trackEvent({ name: 'Invoice_Visit_' + invoiceId }, {
-          timestamp: new Date().toISOString(),
-          userAgent: navigator.userAgent,
+            timestamp: new Date().toISOString(),
+            userAgent: navigator.userAgent,
         });
         appInsights.trackPageView({ name: 'Invoice_' + invoiceId, uri: window.location.pathname });
-      }, [appInsights]);
+    }, [appInsights]);
 
     return (
         <Box sx={{ pt: 9, pb: 7, backgroundColor: '#f0f4f8' }}>

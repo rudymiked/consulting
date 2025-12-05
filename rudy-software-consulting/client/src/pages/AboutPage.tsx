@@ -1,7 +1,19 @@
 import { Box, List, ListItem, ListItemText, Typography } from "@mui/material";
 import seattle from '../assets/seattle.jpg';
+import { useAppInsights } from "../services/Telemtry/AppInsightsProvider";
+import React from "react";
 
 const AboutPage: React.FC = () => {
+    const appInsights = useAppInsights();
+
+    React.useEffect(() => {
+        appInsights.trackEvent({ name: 'About_Visit' }, {
+            timestamp: new Date().toISOString(),
+            userAgent: navigator.userAgent,
+        });
+        appInsights.trackPageView({ name: 'About', uri: window.location.pathname });
+    }, [appInsights]);
+
     return (
         <Box sx={{ py: 0, background: '#f7f9fb', maxWidth: '800px', margin: 'auto', padding: 4 }}>
             <Typography variant="h4" align="center" gutterBottom sx={{ fontWeight: 700, py: 4 }}>
@@ -29,7 +41,7 @@ const AboutPage: React.FC = () => {
             </p>
 
             {/* <img src="src/assets/rudyard.png" alt="About Us" style={{ width: '50%', height: 'auto', borderRadius: 8, marginTop: 20 }} /> */}
-        </Box>  
+        </Box>
     );
 }
 

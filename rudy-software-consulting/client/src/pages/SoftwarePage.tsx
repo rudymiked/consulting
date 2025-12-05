@@ -4,62 +4,74 @@ import ServicesTemplate from "../components/ServicesTemplate";
 import CodeIcon from '@mui/icons-material/Code';
 import { CloudDone, CloudSync, Dashboard, ImportantDevices, IntegrationInstructions, QueryStats, ScreenSearchDesktop, SettingsSuggest } from '@mui/icons-material';
 import { Link } from "react-router-dom";
+import { useAppInsights } from "../services/Telemtry/AppInsightsProvider";
+import React from "react";
 
 const developmentServices = [
-  {
-    icon: <CodeIcon color="primary" sx={{ fontSize: 48, mb: 2 }} />,
-    title: 'Web and Application Development',
-    description: 'Build scalable, responsive web and mobile apps tailored to your business goals.',
-  },
-  {
-    icon: <SettingsSuggest color="primary" sx={{ fontSize: 48, mb: 2 }} />,
-    title: 'Automated Services',
-    description: 'Streamline operations with smart automation and seamless API integrations that work while you work.',
-  },
-  {
-    icon: <CloudSync color="primary" sx={{ fontSize: 48, mb: 2 }} />,
-    title: 'Cloud Development',
-    description: 'Design and deploy secure, cloud-native solutions with modern architectures.',
-  },
+    {
+        icon: <CodeIcon color="primary" sx={{ fontSize: 48, mb: 2 }} />,
+        title: 'Web and Application Development',
+        description: 'Build scalable, responsive web and mobile apps tailored to your business goals.',
+    },
+    {
+        icon: <SettingsSuggest color="primary" sx={{ fontSize: 48, mb: 2 }} />,
+        title: 'Automated Services',
+        description: 'Streamline operations with smart automation and seamless API integrations that work while you work.',
+    },
+    {
+        icon: <CloudSync color="primary" sx={{ fontSize: 48, mb: 2 }} />,
+        title: 'Cloud Development',
+        description: 'Design and deploy secure, cloud-native solutions with modern architectures.',
+    },
 ];
 
 const modenizationServices = [
-  {
-    icon: <ImportantDevices color="primary" sx={{ fontSize: 48, mb: 2 }} />,
-    title: 'Modernize Legacy Systems',
-    description: 'Transform outdated systems with modern technologies for improved performance and scalability. Upgrade your tech stack to stay competitive and compliant.',
-  },
-  {
-    icon: <CloudDone color="primary" sx={{ fontSize: 48, mb: 2 }} />,
-    title: 'Migrate to the cloud',
-    description: 'Seamlessly transition to cloud-based solutions for enhanced flexibility and cost-efficiency. Leverage cloud services to scale your operations and improve accessibility.',
-  },
-  {
-    icon: <QueryStats color="primary" sx={{ fontSize: 48, mb: 2 }} />,
-    title: 'Rearchitect and Optimize',
-    description: 'Reengineer your applications for better performance and maintainability. Optimize existing codebases to reduce technical debt and improve user experience.',
-  },
+    {
+        icon: <ImportantDevices color="primary" sx={{ fontSize: 48, mb: 2 }} />,
+        title: 'Modernize Legacy Systems',
+        description: 'Transform outdated systems with modern technologies for improved performance and scalability. Upgrade your tech stack to stay competitive and compliant.',
+    },
+    {
+        icon: <CloudDone color="primary" sx={{ fontSize: 48, mb: 2 }} />,
+        title: 'Migrate to the cloud',
+        description: 'Seamlessly transition to cloud-based solutions for enhanced flexibility and cost-efficiency. Leverage cloud services to scale your operations and improve accessibility.',
+    },
+    {
+        icon: <QueryStats color="primary" sx={{ fontSize: 48, mb: 2 }} />,
+        title: 'Rearchitect and Optimize',
+        description: 'Reengineer your applications for better performance and maintainability. Optimize existing codebases to reduce technical debt and improve user experience.',
+    },
 ];
 
 const advancedServices = [
-  {
-    icon: <IntegrationInstructions color="primary" sx={{ fontSize: 48, mb: 2 }} />,
-    title: 'API Integration',
-    description: 'Connect disparate systems and services with robust API solutions. Enhance interoperability and data flow across your applications.',
-  },
-  {
-    icon: <Dashboard color="primary" sx={{ fontSize: 48, mb: 2 }} />,
-    title: 'Custom Dashboards',
-    description: 'Create intuitive, data-driven dashboards for real-time insights and decision-making. Visualize your data effectively to drive business outcomes.',
-  },
-  {
-    icon: <ScreenSearchDesktop color="primary" sx={{ fontSize: 48, mb: 2 }} />,
-    title: 'SEO and Performance Optimization',
-    description: 'Enhance your web presence with SEO best practices and performance tuning. Improve search engine rankings and user engagement through optimized content and site speed.',
-  },
+    {
+        icon: <IntegrationInstructions color="primary" sx={{ fontSize: 48, mb: 2 }} />,
+        title: 'API Integration',
+        description: 'Connect disparate systems and services with robust API solutions. Enhance interoperability and data flow across your applications.',
+    },
+    {
+        icon: <Dashboard color="primary" sx={{ fontSize: 48, mb: 2 }} />,
+        title: 'Custom Dashboards',
+        description: 'Create intuitive, data-driven dashboards for real-time insights and decision-making. Visualize your data effectively to drive business outcomes.',
+    },
+    {
+        icon: <ScreenSearchDesktop color="primary" sx={{ fontSize: 48, mb: 2 }} />,
+        title: 'SEO and Performance Optimization',
+        description: 'Enhance your web presence with SEO best practices and performance tuning. Improve search engine rankings and user engagement through optimized content and site speed.',
+    },
 ];
 
 const SoftwarePage: React.FC = () => {
+    const appInsights = useAppInsights();
+    
+    React.useEffect(() => {
+        appInsights.trackEvent({ name: 'Software_Visit' }, {
+            timestamp: new Date().toISOString(),
+            userAgent: navigator.userAgent,
+        });
+        appInsights.trackPageView({ name: 'Software', uri: window.location.pathname });
+    }, [appInsights]);
+
     return (
         <div>
             <Grid container direction="column" alignItems="center" spacing={2} sx={{ mt: 4 }}>

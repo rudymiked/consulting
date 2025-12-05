@@ -2,28 +2,39 @@ import { Box, Button, Grid } from "@mui/material";
 import Experience from "../components/Experience";
 import ServicesTemplate from "../components/ServicesTemplate";
 import CodeIcon from '@mui/icons-material/Code';
-import { CloudSync, Lock} from '@mui/icons-material';
+import { CloudSync, Lock } from '@mui/icons-material';
 import { Link } from "react-router-dom";
+import React from "react";
+import { useAppInsights } from "../services/Telemtry/AppInsightsProvider";
 
 const services = [
-  {
-    icon: <CloudSync color="primary" sx={{ fontSize: 48, mb: 2 }} />,
-    title: 'Cloud Migration',
-    description: 'Migrate your services to cloud-native architectures for scalability, cost-efficiency, and remote access.',
-  },
-  {
-    icon: <Lock color="primary" sx={{ fontSize: 48, mb: 2 }} />,
-    title: 'Cybersecurity & Compliance',
-    description: 'With AI-powered threats and stricter data regulations, companies need airtight security. We help you build robust security frameworks and ensure compliance with industry standards.',
-  },
-  {
-    icon: <CodeIcon color="primary" sx={{ fontSize: 48, mb: 2 }} />,
-    title: 'AI Consulting',
-    description: 'Organizations are racing to integrate AI into operations, but need guidance to do it responsibly.',
-  },
+    {
+        icon: <CloudSync color="primary" sx={{ fontSize: 48, mb: 2 }} />,
+        title: 'Cloud Migration',
+        description: 'Migrate your services to cloud-native architectures for scalability, cost-efficiency, and remote access.',
+    },
+    {
+        icon: <Lock color="primary" sx={{ fontSize: 48, mb: 2 }} />,
+        title: 'Cybersecurity & Compliance',
+        description: 'With AI-powered threats and stricter data regulations, companies need airtight security. We help you build robust security frameworks and ensure compliance with industry standards.',
+    },
+    {
+        icon: <CodeIcon color="primary" sx={{ fontSize: 48, mb: 2 }} />,
+        title: 'AI Consulting',
+        description: 'Organizations are racing to integrate AI into operations, but need guidance to do it responsibly.',
+    },
 ];
 
 const ConsultingPage: React.FC = () => {
+    const appInsights = useAppInsights();
+    React.useEffect(() => {
+        appInsights.trackEvent({ name: 'Consulting_Visit' }, {
+            timestamp: new Date().toISOString(),
+            userAgent: navigator.userAgent,
+        });
+        appInsights.trackPageView({ name: 'Consulting', uri: window.location.pathname });
+    }, [appInsights]);
+
     return (
         <div>
             <Grid container direction="column" alignItems="center" spacing={2} sx={{ mt: 4 }}>

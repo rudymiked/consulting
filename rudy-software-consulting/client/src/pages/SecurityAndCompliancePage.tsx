@@ -5,6 +5,8 @@ import ShieldIcon from '@mui/icons-material/Security';
 import GavelIcon from '@mui/icons-material/Gavel';
 import VerifiedUserIcon from '@mui/icons-material/VerifiedUser';
 import { Link } from "react-router-dom";
+import { useAppInsights } from "../services/Telemtry/AppInsightsProvider";
+import React from "react";
 
 const services = [
   {
@@ -25,6 +27,15 @@ const services = [
 ];
 
 const SecurityAndCompliancePage: React.FC = () => {
+  const appInsights = useAppInsights();
+  React.useEffect(() => {
+    appInsights.trackEvent({ name: 'Security_Visit' }, {
+      timestamp: new Date().toISOString(),
+      userAgent: navigator.userAgent,
+    });
+    appInsights.trackPageView({ name: 'Security', uri: window.location.pathname });
+  }, [appInsights]);
+
   return (
     <div>
       <Grid container direction="column" alignItems="center" spacing={2} sx={{ mt: 4 }}>
