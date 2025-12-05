@@ -9,7 +9,7 @@ let appInsights: ApplicationInsights | null = null;
 if (key) {
   appInsights = new ApplicationInsights({
     config: {
-      instrumentationKey: key,
+      connectionString: key,
       enableAutoRouteTracking: true,
     },
   });

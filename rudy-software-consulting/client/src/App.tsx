@@ -67,7 +67,6 @@ const App: React.FC = () => {
     appInsights.trackPageView({ name: 'Home', uri: window.location.pathname });
   }, [appInsights]);
 
-
   return (
     <AuthProvider>
       <Router>
