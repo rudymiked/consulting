@@ -12,7 +12,6 @@ import ContactPage from './pages/ContactPage';
 import AboutPage from './pages/AboutPage';
 import PrivacyPage from './pages/PrivacyPage';
 import TermsOfServicePage from './pages/TermsOfServicePage';
-import SecurityAndCompliancePage from './pages/SecurityAndCompliancePage';
 import CreateInvoicePage from './pages/CreateInvoicePage';
 import InvoicePage from './pages/InvoicePage';
 import LoginPage from './pages/LoginPage';
@@ -24,6 +23,7 @@ import InvoicesPage from './pages/InvoicesPage';
 import HttpClient from './services/Http/HttpClient';
 import { useAuth } from './components/Auth/AuthContext';
 import { useAppInsights } from './services/Telemtry/AppInsightsProvider';
+import ManagedITPage from './pages/ManagedIT';
 
 const App: React.FC = () => {
   const httpClient = new HttpClient();
@@ -77,7 +77,7 @@ const App: React.FC = () => {
             <Route path="/" element={<HomePage />} />
             <Route path="/software" element={<SoftwarePage />} />
             <Route path="/consulting" element={<ConsultingPage />} />
-            <Route path="/security" element={<SecurityAndCompliancePage />} />
+            <Route path="/managedit" element={<ManagedITPage />} />
             <Route path="/contact" element={<ContactPage />} />
             <Route path="/about" element={<AboutPage />} />
             <Route path="/privacy" element={<PrivacyPage />} />

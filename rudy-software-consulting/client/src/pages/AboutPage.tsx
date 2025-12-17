@@ -22,7 +22,7 @@ const AboutPage: React.FC = () => {
             <img src={seattle} alt="Seattle Skyline" style={{ width: '100%', height: 'auto', borderRadius: 8, marginBottom: 20 }} />
             <p>Located in Seattle, Rudyard Technologies is dedicated to delivering innovative software solutions that empower businesses to grow and thrive.</p>
             <p>With a focus on quality, performance, and user experience, we help our clients achieve their goals through custom software development, consulting, and IT services.</p>
-            <p>We specialize in turning outdated infrastructure into secure, scalable platforms — integrating compliance frameworks like SOC 2, GDPR, and HIPAA from the ground up. Our services span custom software development, cloud transformation, and security audits, all designed to minimize risk and maximize operational efficiency.
+            <p>We specialize in turning outdated infrastructure into secure, scalable platforms from the ground up. Our services span custom software development, cloud transformation, and security audits, all designed to minimize risk and maximize operational efficiency.
                 Whether you're a small business looking to upgrade legacy systems or a consultancy scaling SaaS tools for broader impact, Rudyard Technologies provides:</p>
             <List>
                 <ListItem>

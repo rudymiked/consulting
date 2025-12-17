@@ -4,25 +4,26 @@ import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
 import Typography from '@mui/material/Typography';
 import CodeIcon from '@mui/icons-material/Code';
-import SupportAgentIcon from '@mui/icons-material/SupportAgent';
-import SecurityIcon from '@mui/icons-material/Security';
-import { Box } from '@mui/material';
+import { Box, Button } from '@mui/material';
+import StorageIcon from '@mui/icons-material/Storage';
+import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
+import { Link } from 'react-router-dom';
 
 const services = [
   {
-    icon: <CodeIcon color="primary" sx={{ fontSize: 48, mb: 2 }} />,
-    title: 'Custom Software Development',
-    description: 'Tailored solutions to fit your business needs, from web apps to enterprise systems. All in the cloud.',
+    icon: <CodeIcon sx={{ fontSize: 40, mb: 1, color: 'primary.main' }} />,
+    title: 'Software Development',
+    description: 'Custom applications built with modern technologies. From web apps to enterprise solutions, we bring your ideas to life.',
   },
   {
-    icon: <SupportAgentIcon color="primary" sx={{ fontSize: 48, mb: 2 }} />,
-    title: 'Consulting & Strategy',
-    description: 'Expert advice to help you plan, architect, and deliver successful software projects.',
+    icon: <StorageIcon sx={{ fontSize: 40, mb: 1, color: 'primary.main' }} />,
+    title: 'Managed IT Services',
+    description: 'Keep your business running smoothly with proactive monitoring, security management, and infrastructure support.',
   },
   {
-    icon: <SecurityIcon color="primary" sx={{ fontSize: 48, mb: 2 }} />,
-    title: 'Security & Compliance',
-    description: 'Ensure your applications are secure and meet industry standards and regulations.',
+    icon: <AutoAwesomeIcon sx={{ fontSize: 40, mb: 1, color: 'primary.main' }} />,
+    title: 'AI-Powered Solutions',
+    description: 'Stuck building an app with ChatGPT? We can help you turn AI concepts into production-ready applications that actually work.',
   },
 ];
 
@@ -65,6 +66,12 @@ const Services: React.FC = () => (
           </Card>
         </Box>
       ))}
+      <br />
+      <Link to="/contact">
+        <Button className="main-button" variant="contained" color="primary" sx={{ mt: 1 }}>
+          Get Started
+        </Button>
+      </Link>
     </Grid>
   </Box>
 );
