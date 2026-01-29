@@ -6,6 +6,7 @@ export interface IInvoiceRequest {
     amount: number; // in cents
     notes: string;
     contact: string;
+    clientId?: string; // Client/Company ID for partitioning
     paymentIntentId?: string; // Optional Stripe Payment Intent ID
     status: IInvoiceStatus; // Status of the invoice
     dueDate?: Date; // Optional due date for the invoice
@@ -31,6 +32,7 @@ export interface IInvoice extends TableEntity {
     amount: number; // Amount in cents (e.g., $50.00 is stored
     notes: string; // Additional notes or description for the invoice
     contact: string; // Contact information for the client
+    clientId?: string; // Client/Company ID for partitioning
     createdDate: Date; // Timestamp of when the invoice was created
     updatedDate: Date; // Timestamp of when the invoice was last updated
     status: IInvoiceStatus; // Status of the invoice
@@ -57,5 +59,23 @@ export enum TableNames {
     Warmer = 'Warmer',
     ContactLogs = 'ContactLogs',
     Users = 'Users',
+    Clients = 'Clients',
 }
 
+export interface IUser extends TableEntity {
+    email: string;
+    salt: string;
+    hash: string;
+    createdAt: string;
+    approved: boolean;
+    siteAdmin?: boolean;
+    clientId: string;
+}
+
+export interface IClient extends TableEntity {
+    id: string;
+    name: string;
+    contactEmail: string;
+    address: string;
+    phone: string;
+}

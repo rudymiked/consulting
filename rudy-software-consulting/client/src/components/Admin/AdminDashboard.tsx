@@ -5,7 +5,7 @@ import { Link } from 'react-router-dom';
 import LoginForm from '../Auth/LoginForm';
 
 const AdminDashboard: React.FC = () => {
-  const { login, logout, isAuthenticated } = useAuth();
+  const { login, logout, isAuthenticated, isAdmin } = useAuth();
 
   if (!isAuthenticated) {
     return (
@@ -44,12 +44,16 @@ const AdminDashboard: React.FC = () => {
             <Typography variant="h6" gutterBottom>
               Invoices
             </Typography>
-            <Link to="/createinvoice">
-              <Button variant="contained" className="main-button">
-                Create Invoice
-              </Button>
-            </Link>
-            <br />
+            {isAdmin && (
+              <>
+                <Link to="/createinvoice">
+                  <Button variant="contained" className="main-button">
+                    Create Invoice
+                  </Button>
+                </Link>
+                <br />
+              </>
+            )}
             <Link to="/invoices">
               <Button variant="contained" className="main-button">
                 Manage Invoices
@@ -58,7 +62,7 @@ const AdminDashboard: React.FC = () => {
           </Paper>
         </Box>
 
-        <Box>
+        {/* <Box>
           <Paper
             sx={{
               p: 3,
@@ -96,7 +100,7 @@ const AdminDashboard: React.FC = () => {
               View Reports
             </Button>
           </Paper>
-        </Box>
+        </Box> */}
       </Grid>
     </Box>
   );

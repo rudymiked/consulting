@@ -2,23 +2,34 @@ import crypto from 'crypto';
 import jwt, { JwtPayload } from 'jsonwebtoken';
 import { insertEntity, queryEntities } from './tableClientHelper';
 import { trackEvent } from './telemetry';
-import { TableNames } from './models';
+import { IUser, TableNames } from './models';
+import { Guid } from 'guid-ts';
 
-export async function registerUser(email: string, password: string) {
-  const existing = await getEntity(TableNames.Users, 'user', email).catch(() => null);
+export async function registerUser(email: string, password: string, clientId?: string) {
+  const normalizedEmail = email.trim().toLowerCase();
+  const existing = await getEntity(TableNames.Users, 'user', normalizedEmail).catch(() => null);
   if (existing) throw new Error('User already exists');
 
   const salt = crypto.randomBytes(16).toString('hex');
   const hash = crypto.pbkdf2Sync(password, salt, 1000, 64, 'sha512').toString('hex');
 
-  await insertEntity(TableNames.Users, {
-    partitionKey: 'user',
-    rowKey: email,
+  const emptyGuid: Guid = Guid.empty();
+
+  clientId = clientId || emptyGuid.toString();
+
+  const user: IUser = {
+    email: normalizedEmail,
     salt,
     hash,
     createdAt: new Date().toISOString(),
     approved: false,
-  });
+    clientId: clientId,
+    partitionKey: 'user',
+    rowKey: normalizedEmail,
+    siteAdmin: false,
+  };
+
+  await insertEntity(TableNames.Users, user);
 
   return { success: true };
 }
@@ -50,11 +61,19 @@ export async function loginUser(email: string, password: string) {
     throw new Error('Invalid credentials');
   }
 
+  if (!user.approved) {
+    throw new Error('Account not approved');
+  }
+
   const computedHash = crypto.pbkdf2Sync(password, user.salt, 1000, 64, 'sha512').toString('hex');
 
   if (computedHash !== user.hash) throw new Error('Invalid credentials');
 
-  const token = jwt.sign({ email: normalizedEmail }, process.env.JWT_SECRET, { expiresIn: '1h' });
+  const token = jwt.sign({ 
+    email: normalizedEmail, 
+    clientId: user.clientId,
+    siteAdmin: user.siteAdmin || false 
+  }, process.env.JWT_SECRET, { expiresIn: '1h' });
   return { token };
 }
 
@@ -64,11 +83,11 @@ export async function getEntity(tableName: string, partitionKey: string, rowKey:
   return user.length > 0 ? user[0] : null;
 }
 
-export function verifyToken(token: string): JwtPayload | null {
+export function verifyToken(token: string): { email: string; clientId: string; siteAdmin: boolean } | null {
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     if (typeof decoded === 'string') return null; // unexpected
-    return decoded;
+    return decoded as { email: string; clientId: string; siteAdmin: boolean };
   } catch {
     return null;
   }

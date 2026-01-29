@@ -1,4 +1,5 @@
 import { IInvoiceRequest, IInvoice, IInvoiceStatus, IInvoiceResult, TableNames } from "./models";
+import crypto from 'crypto';
 import { trackEvent, trackDependency, trackException, trackTrace } from './telemetry';
 import { insertEntity, queryEntities, updateEntity } from './tableClientHelper';
 import Stripe from 'stripe';
@@ -74,7 +75,7 @@ export const createInvoice = async (invoiceData: IInvoiceRequest) => {
   const now = new Date();
 
   if (!invoiceData.id) {
-    invoiceData.id = `inv-${Date.now()}`; // Simple unique ID generation
+    invoiceData.id = `inv-${crypto.randomUUID()}`; // Unpredictable unique ID
   }
 
   if (!invoiceData.name) {
@@ -93,14 +94,18 @@ export const createInvoice = async (invoiceData: IInvoiceRequest) => {
     invoiceData.status = IInvoiceStatus.NEW;
   }
 
+  // Use clientId for partitioning if provided, otherwise fall back to contact
+  const partitionKey = invoiceData.clientId || invoiceData.contact;
+
   const invoice: IInvoice = {
-    partitionKey: invoiceData.contact,
+    partitionKey: partitionKey,
     rowKey: invoiceData.id,
     id: invoiceData.id,
     name: invoiceData.name,
     amount: invoiceData.amount,
     notes: invoiceData.notes,
     contact: invoiceData.contact,
+    clientId: invoiceData.clientId,
     paymentIntentId: invoiceData.paymentIntentId,
     status: invoiceData.status,
     dueDate: invoiceData.dueDate ? new Date(invoiceData.dueDate) : undefined,
@@ -108,7 +113,7 @@ export const createInvoice = async (invoiceData: IInvoiceRequest) => {
     updatedDate: now
   };
 
-  trackEvent('CreateInvoice_Attempt', { invoiceId: invoiceData.id, client: invoiceData.contact });
+  trackEvent('CreateInvoice_Attempt', { invoiceId: invoiceData.id, clientId: partitionKey });
 
   try {
     await insertEntity(TableNames.Invoices, invoice);
@@ -253,6 +258,9 @@ export const payInvoice = async (
           existing.status === 'requires_payment_method' ||
           existing.status === 'requires_confirmation'
         ) {
+          if (!existing.metadata?.invoiceId || existing.metadata.invoiceId !== invoiceId) {
+            throw new Error('Existing PaymentIntent does not match invoice.');
+          }
           paymentIntent = existing;
         } else {
           // Existing intent is not reusable — create a new one
@@ -344,10 +352,22 @@ export const finalizePayment = async (
     return { success: false, message: `PaymentIntent not succeeded (status: ${paymentIntent.status})` };
   }
 
+  if (!paymentIntent.metadata?.invoiceId || paymentIntent.metadata.invoiceId !== invoiceId) {
+    return { success: false, message: 'PaymentIntent does not match invoice' };
+  }
+
   // Get invoice details
   const invoice = await getInvoiceDetails(invoiceId);
   if (!invoice) {
     return { success: false, message: `Invoice ${invoiceId} not found` };
+  }
+
+  if (paymentIntent.currency !== 'usd') {
+    return { success: false, message: 'Unsupported currency' };
+  }
+
+  if (paymentIntent.amount <= 0 || paymentIntent.amount > invoice.amount) {
+    return { success: false, message: 'Invalid payment amount' };
   }
 
   // Update invoice status

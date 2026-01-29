@@ -1,4 +1,5 @@
 import express from 'express';
+import crypto from 'crypto';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import appInsights from "applicationinsights";
@@ -12,6 +13,7 @@ import { IEmailOptions, IInvoice, IInvoiceResult, IInvoiceStatus, IWarmerEntity,
 import Stripe from 'stripe';
 import rateLimit from 'express-rate-limit';
 import { queryEntities, updateEntity } from './tableClientHelper';
+import { addClient, deleteClient, getAllClients, getClientByEmail, getClientById, getClientsByName, getInvoicesByClientId } from './clientHelper';
 
 dotenv.config();
 
@@ -94,27 +96,34 @@ if (missing.length) {
 }
 
 // Middleware
-// Allow CORS from localhost:3000 (dev) and other allowed origins. Also ensure preflight (OPTIONS) is handled.
+// Allow CORS only from known origins.
+const frontendOrigin = (process.env.FRONTEND_ORIGIN || '').trim();
+const allowedOrigins = [
+  'http://localhost:3000',
+  'http://localhost:3001',
+  'http://localhost:5173',
+];
+
+if (frontendOrigin) {
+  if (frontendOrigin.startsWith('http://') || frontendOrigin.startsWith('https://')) {
+    allowedOrigins.push(frontendOrigin);
+  } else {
+    allowedOrigins.push(`https://${frontendOrigin}`);
+    allowedOrigins.push(`https://www.${frontendOrigin}`);
+  }
+}
+
 const corsOptions = {
   origin: (origin: any, callback: any) => {
-    // allow requests with no origin (like mobile apps, curl) or from localhost during development
-    const allowedOrigins = [
-      'http://localhost:3000',
-      'http://localhost:3001',
-      'https://' + process.env.FRONTEND_ORIGIN, // optional, set in env for production
-      'https://www' + process.env.FRONTEND_ORIGIN
-    ].filter(Boolean) as string[];
-
     if (!origin || allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
     } else {
-      // For stricter security, replace the next line with: callback(new Error('Not allowed by CORS'))
-      callback(null, true);
+      callback(new Error('Not allowed by CORS'));
     }
   },
   methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-  credentials: true,
+  credentials: false,
   optionsSuccessStatus: 204,
 };
 
@@ -202,9 +211,8 @@ app.get('/api/ping', (_, res) => {
   res.json({ message: 'pong' });
 });
 
-app.get('/api/email', (_, res) => {
-  console.log('Email address:', process.env.RUDYARD_EMAIL_USERNAME);
-  res.json({ message: `email address: ${process.env.RUDYARD_EMAIL_USERNAME}` });
+app.get('/api/email', jwtCheck, (_, res) => {
+  res.json({ message: 'ok' });
 });
 
 // routes/invoice.ts
@@ -316,10 +324,26 @@ app.post('/api/invoice/pay', async (req, res) => {
   }
 });
 
-app.get('/api/invoices', async (_, res) => {
+app.get('/api/invoices', jwtCheck, async (req, res) => {
   const start = Date.now();
   try {
-    const entities: IInvoice[] = await getInvoices();
+    const token = req.headers.authorization?.split(' ')[1];
+    const user = verifyToken(token || '');
+    
+    if (!user) {
+      return res.status(403).json({ error: 'Unauthorized' });
+    }
+
+    let entities: IInvoice[];
+    
+    // Site admins can see all invoices
+    if (user.siteAdmin) {
+      entities = await getInvoices();
+    } else {
+      // Regular users only see their client's invoices
+      entities = await getInvoicesByClientId(user.clientId);
+    }
+    
     const duration = Date.now() - start;
     console.log(`Fetched invoices in ${duration}ms`);
     res.json(entities);
@@ -348,6 +372,13 @@ app.get('/api/invoice/:id/payment-status', async (req, res) => {
 
     // Retrieve PaymentIntent from Stripe
     const paymentIntent = await stripe.paymentIntents.retrieve(invoice.paymentIntentId);
+
+    if (paymentIntent.metadata?.invoiceId && paymentIntent.metadata.invoiceId !== invoiceId) {
+      return res.json({
+        status: 'requires_payment_method',
+        invoiceId,
+      });
+    }
 
     // statuses: 
     // requires_payment_method
@@ -380,29 +411,27 @@ app.get('/api/invoice/:invoiceId', async (req, res) => {
   res.json(invoiceDetails);
 });
 
-app.post('/api/invoice', async (req, res) => {
-  // Log incoming request for debugging differences between direct API calls and UI calls.
-  try {
-    const safeHeaders = { ...req.headers } as any;
-    if (safeHeaders.authorization) safeHeaders.authorization = 'REDACTED';
-    console.log('/api/invoice request headers:', safeHeaders);
-    console.log('/api/invoice request body:', req.body);
-  } catch (e) {
-    console.error('Failed to log request debug info:', e);
-  }
+app.post('/api/invoice', jwtCheck, async (req, res) => {
+  const { name, amount, notes, contact, clientId } = req.body;
 
-  const { name, amount, notes, contact } = req.body;
-
-  const id = `inv-${Date.now()}`; // Simple unique ID generation
-
-  if (!id || !name || !amount || !contact) {
+  if (!name || !amount || !contact) {
     return res.status(400).json({ error: 'Missing required fields.' });
   }
 
   try {
-    const result = await createInvoice({ id, name, amount, notes, contact, status: IInvoiceStatus.NEW });
+    // Use clientId from request, or default to contact for backwards compatibility
+    const partitionKey = clientId || contact;
+    const result = await createInvoice({ 
+      id: `inv-${crypto.randomUUID()}`, 
+      name, 
+      amount, 
+      notes, 
+      contact,
+      clientId: partitionKey,
+      status: IInvoiceStatus.NEW 
+    });
 
-    trackEvent('CreateInvoice_API_Success', { invoiceId: result.invoiceId });
+    trackEvent('CreateInvoice_API_Success', { invoiceId: result.invoiceId, clientId: partitionKey });
     console.log(result);
 
     res.status(201).json(result);
@@ -423,15 +452,13 @@ app.post('/api/register', async (req, res) => {
   }
 });
 
-app.post('api/approveUser', jwtCheck, async (req, res) => {
+app.post('/api/approveUser', async (req, res) => {
   try {
     const { email } = req.body;
     // Only allow if the requester is an admin
     const token = req.headers.authorization?.split(' ')[1];
 
-    console.log(token);
     trackEvent('ApproveUser_API_Attempt', { email });
-    trackEvent(token || 'no token');
 
     const result = await approveUser(email, token);
     res.json(result);
@@ -473,16 +500,32 @@ app.post('/api/invoice/create-payment-intent', async (req, res) => {
     return res.status(400).json({ error: 'Missing invoiceId or amount' });
   }
 
-  const paymentIntent = await stripe.paymentIntents.create({
-    amount,
-    currency: 'usd',
-    metadata: { invoiceId },
-    automatic_payment_methods: { enabled: true },
-  });
-
   try {
+    const invoice = await getInvoiceDetails(invoiceId);
+    if (!invoice) {
+      return res.status(404).json({ error: 'Invoice not found' });
+    }
+
+    if (invoice.status.toUpperCase() === IInvoiceStatus.CANCELLED.toUpperCase()) {
+      return res.status(400).json({ error: 'Invoice is cancelled' });
+    }
+    if (invoice.status.toUpperCase() === IInvoiceStatus.PAID.toUpperCase()) {
+      return res.status(400).json({ error: 'Invoice is already paid' });
+    }
+
+    if (typeof amount !== 'number' || amount <= 0 || amount > invoice.amount) {
+      return res.status(400).json({ error: 'Invalid payment amount' });
+    }
+
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount,
+      currency: 'usd',
+      metadata: { invoiceId },
+      automatic_payment_methods: { enabled: true },
+    });
+
     res.send({ clientSecret: paymentIntent.client_secret });
-  } catch (err) {
+  } catch (err: any) {
     console.error('Stripe error:', err);
     trackException(err, { invoiceId, amount });
     res.status(500).json({ error: 'Failed to create payment intent' + err.message });
@@ -523,6 +566,147 @@ app.post('/api/table-warmer', async (req, res) => {
     trackEvent('TableWarmer_Failure', { error: error.message });
 
     return res.status(500).json({ error: "Table warmer failed.", details: error.message });
+  }
+});
+
+// Client Management Routes
+app.post('/api/client', jwtCheck, async (req, res) => {
+  try {
+    const { clientId, clientName, contactEmail, address, phone } = req.body;
+
+    if (!clientId || !clientName || !contactEmail) {
+      return res.status(400).json({ error: 'Missing required fields: clientId, clientName, contactEmail' });
+    }
+
+    const client = await addClient(clientId, clientName, contactEmail, address || '', phone || '');
+    trackEvent('CreateClient_Success', { clientId });
+    res.status(201).json(client);
+  } catch (err: any) {
+    console.error('Error creating client:', err);
+    trackException(err, { clientId: req.body.clientId });
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/clients', jwtCheck, async (req, res) => {
+  try {
+    const token = req.headers.authorization?.split(' ')[1];
+    const user = verifyToken(token || '');
+    
+    if (!user) {
+      return res.status(403).json({ error: 'Unauthorized' });
+    }
+
+    // Site admins can see all clients
+    if (user.siteAdmin) {
+      const clients = await getAllClients();
+      res.json(clients);
+    } else {
+      // Regular users only see their own client
+      const client = await getClientById(user.clientId);
+      res.json(client ? [client] : []);
+    }
+  } catch (err: any) {
+    console.error('Error fetching clients:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/client/:clientId', jwtCheck, async (req, res) => {
+  try {
+    const { clientId } = req.params;
+    const token = req.headers.authorization?.split(' ')[1];
+    const user = verifyToken(token || '');
+    
+    if (!user) {
+      return res.status(403).json({ error: 'Unauthorized' });
+    }
+
+    // Users can only access their own client unless they're admin
+    if (!user.siteAdmin && user.clientId !== clientId) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    const client = await getClientById(clientId);
+    if (!client) {
+      return res.status(404).json({ error: 'Client not found' });
+    }
+    res.json(client);
+  } catch (err: any) {
+    console.error('Error fetching client:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/client/:clientId/invoices', jwtCheck, async (req, res) => {
+  try {
+    const { clientId } = req.params;
+    const token = req.headers.authorization?.split(' ')[1];
+    const user = verifyToken(token || '');
+    
+    if (!user) {
+      return res.status(403).json({ error: 'Unauthorized' });
+    }
+
+    // Users can only access their own client's invoices unless they're admin
+    if (!user.siteAdmin && user.clientId !== clientId) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    const invoices = await getInvoicesByClientId(clientId);
+    res.json(invoices);
+  } catch (err: any) {
+    console.error('Error fetching client invoices:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/api/client/:clientId/:contactEmail', jwtCheck, async (req, res) => {
+  try {
+    const { clientId, contactEmail } = req.params;
+    const token = req.headers.authorization?.split(' ')[1];
+    const user = verifyToken(token || '');
+    
+    if (!user) {
+      return res.status(403).json({ error: 'Unauthorized' });
+    }
+
+    // Only site admins can delete clients
+    if (!user.siteAdmin) {
+      return res.status(403).json({ error: 'Access denied: Admin only' });
+    }
+
+    await deleteClient(clientId, contactEmail);
+    trackEvent('DeleteClient_Success', { clientId });
+    res.json({ success: true });
+  } catch (err: any) {
+    console.error('Error deleting client:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/users', jwtCheck, async (req, res) => {
+  try {
+    const token = req.headers.authorization?.split(' ')[1];
+    const user = verifyToken(token || '');
+    
+    if (!user) {
+      return res.status(403).json({ error: 'Unauthorized' });
+    }
+
+    // Only site admins can view all users
+    if (!user.siteAdmin) {
+      return res.status(403).json({ error: 'Access denied: Admin only' });
+    }
+
+    const users = await queryEntities(TableNames.Users, null);
+    const safeUsers = users.map((u: any) => {
+      const { hash, salt, ...rest } = u || {};
+      return rest;
+    });
+    res.json(safeUsers);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
   }
 });
 
