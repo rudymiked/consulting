@@ -7,7 +7,7 @@
 - ✅ Changed from "allow all" to explicit allowlist
 - ✅ Blocked unknown origins with error response
 - ✅ Removed `credentials: true` to prevent CSRF
-- ✅ Added `FRONTEND_ORIGIN` env var support
+- ✅ Added `VITE_FRONTEND_ORIGIN` env var support
 
 ### 2. Protected Admin Endpoints  
 **Files**: `server/src/index.ts`
@@ -77,7 +77,7 @@ Tests:
 ## ⚙️ Azure Configuration
 
 ### Required in Azure App Service Settings:
-- `FRONTEND_ORIGIN` = `rudyardtechnologies.com` (no https://)
+- `VITE_FRONTEND_ORIGIN` = `rudyardtechnologies.com` (no https://)
 - `AZURE_TENANT_ID` = (your tenant ID)
 - `RUDYARD_CLIENT_APP_REG_AZURE_CLIENT_ID` = (your app reg ID)
 - `JWT_SECRET` = (your secret for custom auth)
@@ -107,7 +107,7 @@ Tests:
 
 ## 🚀 Deployment Checklist
 
-- [ ] Update `FRONTEND_ORIGIN` in Azure App Service
+- [ ] Update `VITE_FRONTEND_ORIGIN` in Azure App Service
 - [ ] Clear/disable Azure CORS settings
 - [ ] Deploy server changes
 - [ ] Deploy client changes (if any)

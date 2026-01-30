@@ -97,7 +97,7 @@ if (missing.length) {
 
 // Middleware
 // Allow CORS only from known origins.
-const frontendOrigin = (process.env.FRONTEND_ORIGIN || '').trim();
+const frontendOrigin = (process.env.VITE_FRONTEND_ORIGIN || '').trim();
 const allowedOrigins = [
   'http://localhost:3000',
   'http://localhost:3001',
@@ -123,7 +123,7 @@ const corsOptions = {
   },
   methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-  credentials: false,
+  credentials: true,
   optionsSuccessStatus: 204,
 };
 
