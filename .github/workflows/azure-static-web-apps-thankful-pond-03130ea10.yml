@@ -71,6 +71,7 @@ jobs:
           VITE_EMAIL_USERNAME: ${{ secrets.VITE_EMAIL_USERNAME }}
           VITE_STRIPE_PUBLISHABLE_KEY: ${{ secrets.VITE_STRIPE_PUBLISHABLE_KEY }}
           VITE_APPINSIGHTS_CONNECTION_STRING: ${{ secrets.VITE_APPINSIGHTS_CONNECTION_STRING }}
+          VITE_FRONTEND_ORIGIN: ${{ secrets.VITE_FRONTEND_ORIGIN }}
 
   close_pull_request_job:
     if: github.event_name == 'pull_request' && github.event.action == 'closed'
