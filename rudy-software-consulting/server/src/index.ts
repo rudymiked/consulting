@@ -148,7 +148,11 @@ app.use(express.json());
 
 // JWT Validation Setup
 const client = jwksClient({
-  jwksUri: `https://login.microsoftonline.com/${process.env.AZURE_TENANT_ID}/discovery/v2.0/keys`
+  jwksUri: `https://login.microsoftonline.com/${process.env.AZURE_TENANT_ID}/discovery/v2.0/keys`,
+  cache: true,
+  cacheMaxAge: 600000, // 10 minutes
+  rateLimit: true,
+  jwksRequestsPerMinute: 10
 });
 
 async function getSigningKey(header: any): Promise<string> {
