@@ -210,10 +210,6 @@ app.post('/api/contact', async (req, res) => {
           subject: `New Contact Form Submission: ${subject}`,
           text: `New contact form submission:\n\nFrom: ${to}\nSubject: ${subject}\n\nMessage:\n${text}`,
           html: `<h2>New Contact Form Submission</h2>
-            <p><strong>From:</strong> ${to}</p>
-            <p><strong>Subject:</strong> ${subject}</p>
-            <hr>
-            <p><strong>Message:</strong></p>
             ${html || `<p>${text}</p>`}`,
           sent: true
         });
