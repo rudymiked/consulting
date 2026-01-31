@@ -200,8 +200,11 @@ app.post('/api/contact', async (req, res) => {
 
     // Send notification email to admin
     const adminEmail = process.env.ADMIN_EMAIL;
+    console.log('ADMIN_EMAIL configured:', adminEmail ? 'yes' : 'no');
+    
     if (adminEmail) {
       try {
+        console.log('Attempting to send notification to:', adminEmail);
         await sendEmail({
           to: adminEmail,
           subject: `New Contact Form Submission: ${subject}`,
@@ -214,11 +217,15 @@ app.post('/api/contact', async (req, res) => {
             ${html || `<p>${text}</p>`}`,
           sent: true
         });
+        console.log('Notification email sent successfully to:', adminEmail);
         trackEvent('ContactNotification_Sent', { to: adminEmail });
       } catch (emailError: any) {
-        console.error('Failed to send admin notification:', emailError.message);
+        console.error('Failed to send admin notification:', emailError.message, emailError.stack);
+        trackException(emailError, { context: 'ContactNotification', adminEmail });
         // Don't fail the request if notification fails
       }
+    } else {
+      console.warn('ADMIN_EMAIL not configured - skipping notification');
     }
 
     res.status(200).json({ message: 'Contacted successfully' });
