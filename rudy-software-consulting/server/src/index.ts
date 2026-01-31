@@ -95,6 +95,11 @@ if (missing.length) {
   process.exit(1); // fail fast so App Service shows startup error
 }
 
+// Initialize Stripe
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+  apiVersion: '2025-08-27.basil',
+});
+
 // Middleware
 // Allow CORS only from known origins.
 console.log('Configuring CORS settings...');
@@ -165,7 +170,7 @@ app.use((req, res, next) => {
 });
 
 // JWT Validation Setup
-const client = jwksClient({
+const jwksClientInstance = jwksClient({
   jwksUri: `https://login.microsoftonline.com/${process.env.AZURE_TENANT_ID}/discovery/v2.0/keys`,
   cache: true,
   cacheMaxAge: 600000, // 10 minutes
@@ -174,11 +179,25 @@ const client = jwksClient({
 });
 
 async function getSigningKey(header: any): Promise<string> {
-  trackEvent('JWT_GetSigningKey', { kid: header?.kid || 'unknown' });
+  const kid = header?.kid;
+  const alg = header?.alg;
+  const typ = header?.typ;
+  
+  trackEvent('JWT_GetSigningKey', { kid: kid || 'none', alg: alg || 'unknown', typ: typ || 'unknown' });
+  console.log('JWT header:', JSON.stringify(header));
+  
+  // If no KID provided, this is likely a custom JWT (from /api/login), not an Azure AD token
+  if (!kid) {
+    console.error('ERROR: No KID in token header. This token appears to be a custom JWT, not an Azure AD token.');
+    console.error('Endpoints using jwtCheck require Azure AD tokens. Custom JWTs should use /api/protected endpoint.');
+    trackEvent('JWT_WrongTokenType', { alg, typ, message: 'Token missing KID - likely custom JWT sent to Azure AD protected endpoint' });
+    throw new Error('Invalid token: Azure AD token required. This appears to be a custom JWT token.');
+  }
+
   return new Promise((resolve, reject) => {
-    client.getSigningKey(header.kid, (err, key) => {
+    jwksClientInstance.getSigningKey(kid, (err, key) => {
       if (err) {
-        trackException(err, { context: 'getSigningKey', kid: header?.kid });
+        trackException(err, { context: 'getSigningKey', kid });
         reject(err);
       } else {
         const signingKey = key?.getPublicKey();
@@ -186,7 +205,7 @@ async function getSigningKey(header: any): Promise<string> {
           resolve(signingKey);
         } else {
           const error = new Error('Signing key is undefined');
-          trackException(error, { context: 'getSigningKey', kid: header?.kid });
+          trackException(error, { context: 'getSigningKey', kid });
           reject(error);
         }
       }
@@ -201,15 +220,57 @@ const jwtCheck = expressjwt({
   audience: `api://${process.env.RUDYARD_CLIENT_APP_REG_AZURE_CLIENT_ID}`
 });
 
+// Custom JWT middleware - verifies tokens created by /api/login
+const customJwtCheck = (req: any, res: any, next: any) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'No token provided' });
+  }
+
+  const token = authHeader.split(' ')[1];
+  const user = verifyToken(token);
+  
+  if (!user) {
+    trackEvent('CustomJWT_ValidationFailed', { path: req.path });
+    return res.status(401).json({ error: 'Invalid or expired token' });
+  }
+
+  // Attach user to request (similar to how jwtCheck attaches req.auth)
+  req.user = user;
+  next();
+};
+
+// Helper to get user from custom JWT token (attached by customJwtCheck)
+function getUserFromCustomToken(req: any): { email: string; clientId: string; siteAdmin: boolean } | null {
+  return req.user || null;
+}
+
 // JWT error handler - must be after routes that use jwtCheck
 const jwtErrorHandler = (err: any, req: any, res: any, next: any) => {
-  if (err.name === 'UnauthorizedError') {
+  if (err.name === 'UnauthorizedError' || err.name === 'SigningKeyNotFoundError') {
+    // Log token header for debugging (don't log the full token for security)
+    const authHeader = req.headers.authorization || '';
+    const token = authHeader.replace('Bearer ', '');
+    let tokenInfo = 'none';
+    if (token) {
+      try {
+        const parts = token.split('.');
+        if (parts.length >= 2) {
+          const header = JSON.parse(Buffer.from(parts[0], 'base64').toString());
+          tokenInfo = JSON.stringify(header);
+        }
+      } catch (e) {
+        tokenInfo = 'invalid format';
+      }
+    }
+    
     trackEvent('JWT_ValidationFailed', {
       path: req.path,
       errorMessage: err.message,
-      errorCode: err.code || 'unknown'
+      errorCode: err.code || 'unknown',
+      tokenHeader: tokenInfo
     });
-    console.error('JWT validation failed:', err.message);
+    console.error('JWT validation failed:', err.message, 'Token header:', tokenInfo);
     return res.status(401).json({ error: 'Invalid or expired token', details: err.message });
   }
   next(err);
@@ -245,7 +306,8 @@ async function getUserFromAzureToken(req: any): Promise<{ email: string; clientI
 
   try {
     console.log(`Looking up user in DB: ${email}`);
-    const dbUsers = await queryEntities(TableNames.Users, `RowKey eq '${email}'`);
+    const safeEmail = email.replace(/'/g, "''");
+    const dbUsers = await queryEntities(TableNames.Users, `RowKey eq '${safeEmail}'`);
     const duration = Date.now() - start;
     
     if (!dbUsers || dbUsers.length === 0) {
@@ -335,7 +397,7 @@ app.post('/api/contact', async (req, res) => {
 });
 
 // Protected route example
-app.post('/api/sendEmail', jwtCheck, async (req, res) => {
+app.post('/api/sendEmail', customJwtCheck, async (req, res) => {
   const { to, subject, text, html } = req.body;
 
   try {
@@ -351,7 +413,7 @@ app.get('/api/ping', (_, res) => {
   res.json({ message: 'pong' });
 });
 
-app.get('/api/email', jwtCheck, (_, res) => {
+app.get('/api/email', customJwtCheck, (_, res) => {
   res.json({ message: 'ok' });
 });
 
@@ -464,34 +526,19 @@ app.post('/api/invoice/pay', async (req, res) => {
   }
 });
 
-app.get('/api/invoices', jwtCheck, async (req: any, res) => {
+app.get('/api/invoices', customJwtCheck, async (req: any, res) => {
   const start = Date.now();
   try {
-    // jwtCheck already validated the Azure AD token and put it in req.auth
-    const azureUser = req.auth;
+    const user = getUserFromCustomToken(req);
     
-    if (!azureUser) {
-      console.error('Invoices: Unauthorized - no auth data from jwtCheck');
-      trackEvent('Invoices_Unauthorized', { reason: 'no_auth_data' });
+    if (!user) {
+      console.error('Invoices: Unauthorized - no user from token');
+      trackEvent('Invoices_Unauthorized', { reason: 'no_user' });
       return res.status(403).json({ error: 'Unauthorized' });
     }
 
-    // Get user email from Azure AD token claims
-    const email = azureUser.preferred_username || azureUser.email || azureUser.upn || '';
-    console.log('Invoices: Azure AD user:', { email, sub: azureUser.sub });
-
-    // Look up user in our database to get clientId and siteAdmin status
-    const dbUser = await queryEntities(TableNames.Users, `RowKey eq '${email.toLowerCase()}'`);
-    
-    if (!dbUser || dbUser.length === 0) {
-      console.log('Invoices: User not found in database, returning empty array');
-      trackEvent('Invoices_UserNotFound', { email });
-      return res.json([]);
-    }
-
-    const user = dbUser[0] as any;
-    console.log('Invoices: User from DB:', { email: user.email, siteAdmin: user.siteAdmin, clientId: user.clientId });
-    trackEvent('Invoices_Request', { email: user.email || email, siteAdmin: String(user.siteAdmin || false) });
+    console.log('Invoices: User:', { email: user.email, siteAdmin: user.siteAdmin, clientId: user.clientId });
+    trackEvent('Invoices_Request', { email: user.email, siteAdmin: String(user.siteAdmin) });
 
     let entities: IInvoice[];
     
@@ -503,7 +550,7 @@ app.get('/api/invoices', jwtCheck, async (req: any, res) => {
       // Regular users only see their client's invoices
       if (!user.clientId) {
         console.log('Invoices: No clientId for user, returning empty array');
-        trackEvent('Invoices_NoClientId', { email: user.email || email });
+        trackEvent('Invoices_NoClientId', { email: user.email });
         return res.json([]);
       }
       console.log('Invoices: Fetching invoices for clientId:', user.clientId);
@@ -572,6 +619,7 @@ app.get('/api/invoice/:id/payment-status', async (req, res) => {
     });
   } catch (err: any) {
     console.error('Error fetching payment status:', err.message);
+    trackException(err, { endpoint: '/api/invoice/:id/payment-status', invoiceId });
     return res.status(500).json({ error: 'Failed to fetch payment status.' });
   }
 });
@@ -579,16 +627,22 @@ app.get('/api/invoice/:id/payment-status', async (req, res) => {
 app.get('/api/invoice/:invoiceId', async (req, res) => {
   const { invoiceId } = req.params;
 
-  const invoiceDetails = await getInvoiceDetails(invoiceId);
+  try {
+    const invoiceDetails = await getInvoiceDetails(invoiceId);
 
-  if (!invoiceDetails) {
-    return res.status(404).json({ error: 'Invoice not found' });
+    if (!invoiceDetails) {
+      return res.status(404).json({ error: 'Invoice not found' });
+    }
+
+    res.json(invoiceDetails);
+  } catch (err: any) {
+    console.error('Error fetching invoice:', err.message);
+    trackException(err, { endpoint: '/api/invoice/:invoiceId', invoiceId });
+    res.status(500).json({ error: 'Failed to fetch invoice.' });
   }
-
-  res.json(invoiceDetails);
 });
 
-app.post('/api/invoice', jwtCheck, async (req, res) => {
+app.post('/api/invoice', customJwtCheck, async (req, res) => {
   const { name, amount, notes, contact, clientId } = req.body;
 
   if (!name || !amount || !contact) {
@@ -664,10 +718,6 @@ app.get('/api/protected', (req, res) => {
   if (!user) return res.status(403).json({ error: 'Unauthorized' });
 
   res.json({ message: `Welcome ${user.email}` });
-});
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2025-08-27.basil',
 });
 
 app.post('/api/invoice/create-payment-intent', async (req, res) => {
@@ -747,7 +797,7 @@ app.post('/api/table-warmer', async (req, res) => {
 });
 
 // Client Management Routes
-app.post('/api/client', jwtCheck, async (req, res) => {
+app.post('/api/client', customJwtCheck, async (req, res) => {
   try {
     const { clientId, clientName, contactEmail, address, phone } = req.body;
 
@@ -761,13 +811,13 @@ app.post('/api/client', jwtCheck, async (req, res) => {
   } catch (err: any) {
     console.error('Error creating client:', err);
     trackException(err, { clientId: req.body.clientId });
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Failed to create client.' });
   }
 });
 
-app.get('/api/clients', jwtCheck, async (req: any, res) => {
+app.get('/api/clients', customJwtCheck, async (req: any, res) => {
   try {
-    const user = await getUserFromAzureToken(req);
+    const user = getUserFromCustomToken(req);
     
     if (!user) {
       return res.status(403).json({ error: 'Unauthorized' });
@@ -785,14 +835,14 @@ app.get('/api/clients', jwtCheck, async (req: any, res) => {
   } catch (err: any) {
     console.error('Error fetching clients:', err);
     trackException(err, { endpoint: '/api/clients' });
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Failed to fetch clients.' });
   }
 });
 
-app.get('/api/client/:clientId', jwtCheck, async (req: any, res) => {
+app.get('/api/client/:clientId', customJwtCheck, async (req: any, res) => {
   try {
     const { clientId } = req.params;
-    const user = await getUserFromAzureToken(req);
+    const user = getUserFromCustomToken(req);
     
     if (!user) {
       return res.status(403).json({ error: 'Unauthorized' });
@@ -810,14 +860,15 @@ app.get('/api/client/:clientId', jwtCheck, async (req: any, res) => {
     res.json(client);
   } catch (err: any) {
     console.error('Error fetching client:', err);
-    res.status(500).json({ error: err.message });
+    trackException(err, { endpoint: '/api/client/:clientId', clientId: req.params.clientId });
+    res.status(500).json({ error: 'Failed to fetch client.' });
   }
 });
 
-app.get('/api/client/:clientId/invoices', jwtCheck, async (req: any, res) => {
+app.get('/api/client/:clientId/invoices', customJwtCheck, async (req: any, res) => {
   try {
     const { clientId } = req.params;
-    const user = await getUserFromAzureToken(req);
+    const user = getUserFromCustomToken(req);
     
     if (!user) {
       return res.status(403).json({ error: 'Unauthorized' });
@@ -833,14 +884,14 @@ app.get('/api/client/:clientId/invoices', jwtCheck, async (req: any, res) => {
   } catch (err: any) {
     console.error('Error fetching client invoices:', err);
     trackException(err, { endpoint: '/api/client/:clientId/invoices' });
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Failed to fetch client invoices.' });
   }
 });
 
-app.delete('/api/client/:clientId/:contactEmail', jwtCheck, async (req: any, res) => {
+app.delete('/api/client/:clientId/:contactEmail', customJwtCheck, async (req: any, res) => {
   try {
     const { clientId, contactEmail } = req.params;
-    const user = await getUserFromAzureToken(req);
+    const user = getUserFromCustomToken(req);
     
     if (!user) {
       return res.status(403).json({ error: 'Unauthorized' });
@@ -856,13 +907,14 @@ app.delete('/api/client/:clientId/:contactEmail', jwtCheck, async (req: any, res
     res.json({ success: true });
   } catch (err: any) {
     console.error('Error deleting client:', err);
-    res.status(500).json({ error: err.message });
+    trackException(err, { endpoint: '/api/client/:clientId/:contactEmail', clientId: req.params.clientId });
+    res.status(500).json({ error: 'Failed to delete client.' });
   }
 });
 
-app.get('/api/users', jwtCheck, async (req: any, res) => {
+app.get('/api/users', customJwtCheck, async (req: any, res) => {
   try {
-    const user = await getUserFromAzureToken(req);
+    const user = getUserFromCustomToken(req);
     
     if (!user) {
       return res.status(403).json({ error: 'Unauthorized' });
@@ -881,7 +933,7 @@ app.get('/api/users', jwtCheck, async (req: any, res) => {
     res.json(safeUsers);
   } catch (err: any) {
     trackException(err, { endpoint: '/api/users' });
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Failed to fetch users.' });
   }
 });
 
