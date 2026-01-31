@@ -62,17 +62,24 @@ export const insertEntity = async <T extends RequiredTableEntity>(
 // Query entities
 export const queryEntities = async <T extends object>(
   tableName: string,
-  filter: string,
+  filter?: string | null,
   partitionKey?: string
 ): Promise<T[]> => {
   const client = getTableClient(tableName);
-  const queryOptions = partitionKey
-    ? { filter: `${filter} and PartitionKey eq '${partitionKey}'` }
-    : { filter };
+  
+  // Build query options only if filter is provided
+  let queryOptions: { filter?: string } | undefined;
+  if (filter && partitionKey) {
+    queryOptions = { filter: `${filter} and PartitionKey eq '${partitionKey}'` };
+  } else if (filter) {
+    queryOptions = { filter };
+  } else if (partitionKey) {
+    queryOptions = { filter: `PartitionKey eq '${partitionKey}'` };
+  }
 
   try {
     const entities: T[] = [];
-    for await (const entity of client.listEntities({ queryOptions })) {
+    for await (const entity of client.listEntities(queryOptions ? { queryOptions } : undefined)) {
       entities.push(entity as T);
     }
     return entities;

@@ -337,24 +337,33 @@ app.get('/api/invoices', jwtCheck, async (req, res) => {
     const user = verifyToken(token || '');
     
     if (!user) {
+      console.error('Invoices: Unauthorized - token verification failed');
       return res.status(403).json({ error: 'Unauthorized' });
     }
+
+    console.log('Invoices: User verified:', { email: user.email, siteAdmin: user.siteAdmin, clientId: user.clientId });
 
     let entities: IInvoice[];
     
     // Site admins can see all invoices
     if (user.siteAdmin) {
+      console.log('Invoices: Fetching all invoices for admin');
       entities = await getInvoices();
     } else {
       // Regular users only see their client's invoices
+      if (!user.clientId) {
+        console.log('Invoices: No clientId for user, returning empty array');
+        return res.json([]);
+      }
+      console.log('Invoices: Fetching invoices for clientId:', user.clientId);
       entities = await getInvoicesByClientId(user.clientId);
     }
     
     const duration = Date.now() - start;
-    console.log(`Fetched invoices in ${duration}ms`);
+    console.log(`Fetched ${entities.length} invoices in ${duration}ms`);
     res.json(entities);
   } catch (error: any) {
-    console.error('Error fetching invoices:', error.message);
+    console.error('Error fetching invoices:', error.message, error.stack);
     res.status(500).json({ error: 'Failed to fetch invoices.' });
   }
 });
