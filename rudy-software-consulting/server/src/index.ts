@@ -193,6 +193,30 @@ app.post('/api/contact', async (req, res) => {
   try {
     await insertIntoContactLogs(options);
     trackEvent('InsertContactLog_API', { to, subject });
+
+    // Send notification email to admin
+    const adminEmail = process.env.ADMIN_EMAIL;
+    if (adminEmail) {
+      try {
+        await sendEmail({
+          to: adminEmail,
+          subject: `New Contact Form Submission: ${subject}`,
+          text: `New contact form submission:\n\nFrom: ${to}\nSubject: ${subject}\n\nMessage:\n${text}`,
+          html: `<h2>New Contact Form Submission</h2>
+            <p><strong>From:</strong> ${to}</p>
+            <p><strong>Subject:</strong> ${subject}</p>
+            <hr>
+            <p><strong>Message:</strong></p>
+            ${html || `<p>${text}</p>`}`,
+          sent: true
+        });
+        trackEvent('ContactNotification_Sent', { to: adminEmail });
+      } catch (emailError: any) {
+        console.error('Failed to send admin notification:', emailError.message);
+        // Don't fail the request if notification fails
+      }
+    }
+
     res.status(200).json({ message: 'Contacted successfully' });
   } catch (error: any) {
     console.error('Error inserting contact log:', error);
