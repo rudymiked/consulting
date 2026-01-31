@@ -343,8 +343,8 @@ const finalizePayment = async (invoiceId, paymentIntentId) => {
     const paidDollars = paymentIntent.amount / 100;
     const subject = `Payment Received for Invoice ${invoiceId}`;
     const invoiceLink = `https://rudyardtechnologies.com/invoice/${invoiceId}`;
-    const text = `${invoice.name},\n\nWe have received your payment of $${paidDollars} for Invoice ${invoiceId}.\n\nThank you for your business!\n\nBest regards,\nRudyard Software Consulting`;
-    const html = `<p>${invoice.name},</p><p>We have received your payment for Invoice <a href='${invoiceLink}'>${invoiceId}</a> amounting to <strong>$${paidDollars}</strong>.</p><p>Thank you for your business!</p><p>Best regards,<br/>Rudyard Software Consulting</p>`;
+    const text = `${invoice.name},\n\nWe have received your payment of $${paidDollars} for Invoice ${invoiceId}.\n\nThank you for your business!\n\nBest regards,\nRudyard Technologies`;
+    const html = `<p>${invoice.name},</p><p>We have received your payment for Invoice <a href='${invoiceLink}'>${invoiceId}</a> amounting to <strong>$${paidDollars}</strong>.</p><p>Thank you for your business!</p><p>Best regards,<br/>Rudyard Technologies</p>`;
     await (0, emailHelper_1.sendEmail)({ to: invoice.contact, subject, text, html, sent: true });
     // Send confirmation email to Rudyard
     const rudyardEmail = process.env.EMAIL_USERNAME || 'info@rudyardtechonologies.com';
