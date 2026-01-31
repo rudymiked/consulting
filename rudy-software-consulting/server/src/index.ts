@@ -146,6 +146,24 @@ app.use((req, res, next) => {
 
 app.use(express.json());
 
+// Request logging middleware
+app.use((req, res, next) => {
+  const start = Date.now();
+  res.on('finish', () => {
+    const duration = Date.now() - start;
+    if (req.path.startsWith('/api/')) {
+      trackEvent('API_Request', {
+        method: req.method,
+        path: req.path,
+        statusCode: String(res.statusCode),
+        durationMs: String(duration),
+        hasAuth: String(!!req.headers.authorization)
+      });
+    }
+  });
+  next();
+});
+
 // JWT Validation Setup
 const client = jwksClient({
   jwksUri: `https://login.microsoftonline.com/${process.env.AZURE_TENANT_ID}/discovery/v2.0/keys`,
@@ -156,16 +174,20 @@ const client = jwksClient({
 });
 
 async function getSigningKey(header: any): Promise<string> {
+  trackEvent('JWT_GetSigningKey', { kid: header?.kid || 'unknown' });
   return new Promise((resolve, reject) => {
     client.getSigningKey(header.kid, (err, key) => {
       if (err) {
+        trackException(err, { context: 'getSigningKey', kid: header?.kid });
         reject(err);
       } else {
         const signingKey = key?.getPublicKey();
         if (typeof signingKey === 'string') {
           resolve(signingKey);
         } else {
-          reject(new Error('Signing key is undefined'));
+          const error = new Error('Signing key is undefined');
+          trackException(error, { context: 'getSigningKey', kid: header?.kid });
+          reject(error);
         }
       }
     });
@@ -178,6 +200,86 @@ const jwtCheck = expressjwt({
   issuer: `https://login.microsoftonline.com/${process.env.AZURE_TENANT_ID}/v2.0`,
   audience: `api://${process.env.RUDYARD_CLIENT_APP_REG_AZURE_CLIENT_ID}`
 });
+
+// JWT error handler - must be after routes that use jwtCheck
+const jwtErrorHandler = (err: any, req: any, res: any, next: any) => {
+  if (err.name === 'UnauthorizedError') {
+    trackEvent('JWT_ValidationFailed', {
+      path: req.path,
+      errorMessage: err.message,
+      errorCode: err.code || 'unknown'
+    });
+    console.error('JWT validation failed:', err.message);
+    return res.status(401).json({ error: 'Invalid or expired token', details: err.message });
+  }
+  next(err);
+};
+
+// Helper to get user info from Azure AD token and look up in database
+async function getUserFromAzureToken(req: any): Promise<{ email: string; clientId: string; siteAdmin: boolean } | null> {
+  const start = Date.now();
+  trackEvent('GetUserFromToken_Start');
+  
+  const azureUser = req.auth;
+  if (!azureUser) {
+    trackEvent('GetUserFromToken_NoAuth', { reason: 'req.auth is null/undefined' });
+    console.log('getUserFromAzureToken: No auth data in request');
+    return null;
+  }
+
+  // Log all available claims for debugging
+  console.log('Azure AD token claims:', JSON.stringify(azureUser, null, 2));
+  trackEvent('GetUserFromToken_Claims', { 
+    hasPreferredUsername: String(!!azureUser.preferred_username),
+    hasEmail: String(!!azureUser.email),
+    hasUpn: String(!!azureUser.upn),
+    sub: azureUser.sub || 'none'
+  });
+
+  const email = (azureUser.preferred_username || azureUser.email || azureUser.upn || '').toLowerCase();
+  if (!email) {
+    trackEvent('GetUserFromToken_NoEmail', { claims: Object.keys(azureUser).join(',') });
+    console.log('getUserFromAzureToken: No email found in token');
+    return null;
+  }
+
+  try {
+    console.log(`Looking up user in DB: ${email}`);
+    const dbUsers = await queryEntities(TableNames.Users, `RowKey eq '${email}'`);
+    const duration = Date.now() - start;
+    
+    if (!dbUsers || dbUsers.length === 0) {
+      trackEvent('GetUserFromToken_UserNotInDB', { email, durationMs: String(duration) });
+      console.log(`User not found in DB: ${email}`);
+      return { email, clientId: '', siteAdmin: false };
+    }
+    
+    const user = dbUsers[0] as any;
+    trackEvent('GetUserFromToken_Success', { 
+      email, 
+      clientId: user.clientId || 'none',
+      siteAdmin: String(user.siteAdmin || false),
+      durationMs: String(duration)
+    });
+    console.log(`User found in DB: ${email}, siteAdmin: ${user.siteAdmin}, clientId: ${user.clientId}`);
+    
+    return {
+      email: user.email || email,
+      clientId: user.clientId || '',
+      siteAdmin: user.siteAdmin || false
+    };
+  } catch (err: any) {
+    const duration = Date.now() - start;
+    trackException(err, { 
+      context: 'getUserFromAzureToken', 
+      email, 
+      durationMs: String(duration),
+      errorMessage: err.message 
+    });
+    console.error('Error looking up user:', err);
+    return null;
+  }
+}
 
 // Routes
 
@@ -663,10 +765,9 @@ app.post('/api/client', jwtCheck, async (req, res) => {
   }
 });
 
-app.get('/api/clients', jwtCheck, async (req, res) => {
+app.get('/api/clients', jwtCheck, async (req: any, res) => {
   try {
-    const token = req.headers.authorization?.split(' ')[1];
-    const user = verifyToken(token || '');
+    const user = await getUserFromAzureToken(req);
     
     if (!user) {
       return res.status(403).json({ error: 'Unauthorized' });
@@ -683,15 +784,15 @@ app.get('/api/clients', jwtCheck, async (req, res) => {
     }
   } catch (err: any) {
     console.error('Error fetching clients:', err);
+    trackException(err, { endpoint: '/api/clients' });
     res.status(500).json({ error: err.message });
   }
 });
 
-app.get('/api/client/:clientId', jwtCheck, async (req, res) => {
+app.get('/api/client/:clientId', jwtCheck, async (req: any, res) => {
   try {
     const { clientId } = req.params;
-    const token = req.headers.authorization?.split(' ')[1];
-    const user = verifyToken(token || '');
+    const user = await getUserFromAzureToken(req);
     
     if (!user) {
       return res.status(403).json({ error: 'Unauthorized' });
@@ -713,11 +814,10 @@ app.get('/api/client/:clientId', jwtCheck, async (req, res) => {
   }
 });
 
-app.get('/api/client/:clientId/invoices', jwtCheck, async (req, res) => {
+app.get('/api/client/:clientId/invoices', jwtCheck, async (req: any, res) => {
   try {
     const { clientId } = req.params;
-    const token = req.headers.authorization?.split(' ')[1];
-    const user = verifyToken(token || '');
+    const user = await getUserFromAzureToken(req);
     
     if (!user) {
       return res.status(403).json({ error: 'Unauthorized' });
@@ -732,15 +832,15 @@ app.get('/api/client/:clientId/invoices', jwtCheck, async (req, res) => {
     res.json(invoices);
   } catch (err: any) {
     console.error('Error fetching client invoices:', err);
+    trackException(err, { endpoint: '/api/client/:clientId/invoices' });
     res.status(500).json({ error: err.message });
   }
 });
 
-app.delete('/api/client/:clientId/:contactEmail', jwtCheck, async (req, res) => {
+app.delete('/api/client/:clientId/:contactEmail', jwtCheck, async (req: any, res) => {
   try {
     const { clientId, contactEmail } = req.params;
-    const token = req.headers.authorization?.split(' ')[1];
-    const user = verifyToken(token || '');
+    const user = await getUserFromAzureToken(req);
     
     if (!user) {
       return res.status(403).json({ error: 'Unauthorized' });
@@ -760,10 +860,9 @@ app.delete('/api/client/:clientId/:contactEmail', jwtCheck, async (req, res) => 
   }
 });
 
-app.get('/api/users', jwtCheck, async (req, res) => {
+app.get('/api/users', jwtCheck, async (req: any, res) => {
   try {
-    const token = req.headers.authorization?.split(' ')[1];
-    const user = verifyToken(token || '');
+    const user = await getUserFromAzureToken(req);
     
     if (!user) {
       return res.status(403).json({ error: 'Unauthorized' });
@@ -785,6 +884,9 @@ app.get('/api/users', jwtCheck, async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
+// JWT error handler - handles authentication errors
+app.use(jwtErrorHandler);
 
 // Global error handler - catches unhandled errors
 app.use((err: any, req: any, res: any, next: any) => {
@@ -808,6 +910,23 @@ app.use((err: any, req: any, res: any, next: any) => {
 export default app;
 
 if (require.main === module) {
+  // Log startup configuration
+  console.log('=== Server Configuration ===');
+  console.log('NODE_ENV:', process.env.NODE_ENV || 'development');
+  console.log('AZURE_TENANT_ID:', process.env.AZURE_TENANT_ID ? 'configured' : 'MISSING');
+  console.log('RUDYARD_CLIENT_APP_REG_AZURE_CLIENT_ID:', process.env.RUDYARD_CLIENT_APP_REG_AZURE_CLIENT_ID ? 'configured' : 'MISSING');
+  console.log('RUDYARD_STORAGE_ACCOUNT_NAME:', process.env.RUDYARD_STORAGE_ACCOUNT_NAME ? 'configured' : 'MISSING');
+  console.log('ADMIN_EMAIL:', process.env.ADMIN_EMAIL ? 'configured' : 'MISSING');
+  console.log('FRONTEND_ORIGIN:', process.env.FRONTEND_ORIGIN || 'not set');
+  console.log('============================');
+  
+  trackEvent('Server_Startup', {
+    nodeEnv: process.env.NODE_ENV || 'development',
+    hasTenantId: String(!!process.env.AZURE_TENANT_ID),
+    hasClientId: String(!!process.env.RUDYARD_CLIENT_APP_REG_AZURE_CLIENT_ID),
+    hasStorageAccount: String(!!process.env.RUDYARD_STORAGE_ACCOUNT_NAME)
+  });
+
   app.listen(PORT, () => {
     console.log(`Rudyard Software Consulting server is live at http://localhost:${PORT}`);
   });
