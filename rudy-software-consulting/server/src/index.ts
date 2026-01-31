@@ -97,11 +97,15 @@ if (missing.length) {
 
 // Middleware
 // Allow CORS only from known origins.
-const frontendOrigin = (process.env.VITE_FRONTEND_ORIGIN || '').trim();
+console.log('Configuring CORS settings...');
+console.log('FRONTEND_ORIGIN: ', process.env.FRONTEND_ORIGIN ?? "<not set>");
+const frontendOrigin = (process.env.FRONTEND_ORIGIN || '').trim();
 const allowedOrigins = [
   'http://localhost:3000',
   'http://localhost:3001',
   'http://localhost:5173',
+  'https://rudyardtechnologies.com',
+  'https://www.rudyardtechnologies.com',
 ];
 
 if (frontendOrigin) {
@@ -112,6 +116,8 @@ if (frontendOrigin) {
     allowedOrigins.push(`https://www.${frontendOrigin}`);
   }
 }
+
+console.log('CORS allowed origins:', allowedOrigins);
 
 const corsOptions = {
   origin: (origin: any, callback: any) => {
