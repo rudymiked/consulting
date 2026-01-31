@@ -4,7 +4,7 @@ import * as appInsights from 'applicationinsights';
 const conn = process.env.APPINSIGHTS_CONNECTION_STRING;
 
 if (!conn) {
-    console.error('❌ Missing APPINSIGHTS_CONNECTION_STRING');
+    console.error('Missing APPINSIGHTS_CONNECTION_STRING');
     process.exit(1);
 }
 
@@ -24,14 +24,14 @@ try {
     client.context.tags[roleKey] = process.env.APPINSIGHTS_ROLE_NAME || 'rudyard-api-test';
 
     // Send test telemetry
-    client.trackTrace({ message: '✅ App Insights test trace' });
+    client.trackTrace({ message: 'App Insights test trace' });
     client.trackEvent({ name: 'AppInsights_TestEvent' });
     client.trackException({ exception: new Error('Test exception for App Insights') });
 
     client.flush();
-    console.log('✅ Telemetry sent. Check Azure Portal > Application Insights > Logs or Live Metrics.');
+    console.log('Telemetry sent. Check Azure Portal > Application Insights > Logs or Live Metrics.');
     process.exit(0);
 } catch (err: any) {
-    console.error('❌ Failed to initialize App Insights:', err?.message || err);
+    console.error('Failed to initialize App Insights:', err?.message || err);
     process.exit(1);
 }

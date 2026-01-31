@@ -17,15 +17,15 @@ jobs:
       contents: read
 
     steps:
-      - name: 📥 Checkout code
+      - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: 🔧 Set up Node.js
+      - name: Set up Node.js
         uses: actions/setup-node@v3
         with:
           node-version: '22.x'
 
-      - name: 📦 Install dependencies & build
+      - name: Install dependencies & build
         run: |
           cd rudy-software-consulting/server
           npm ci
@@ -33,14 +33,14 @@ jobs:
           # remove devDependencies so the artifact only contains production modules
           npm prune --production
 
-      - name: 🎁 Zip server contents for deploy
+      - name: Zip server contents for deploy
         run: |
           cd rudy-software-consulting/server
           # Zip the built output, package.json and production node_modules so App Service can run the app
           # NOTE: do NOT include .env in the artifact to avoid leaking secrets. Set app settings in Azure instead.
           zip -r ../../release.zip ./dist package.json node_modules --quiet || true
 
-      - name: ⬆️ Upload zipped artifact
+      - name: Upload zipped artifact
         uses: actions/upload-artifact@v4
         with:
           name: api-zip
@@ -51,12 +51,12 @@ jobs:
     needs: build
 
     steps:
-      - name: 📥 Download artifact
+      - name: Download artifact
         uses: actions/download-artifact@v4
         with:
           name: api-zip
 
-      - name: 🚀 Deploy to Azure Web App
+      - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v3
         with:
           app-name: 'rudyardapi'

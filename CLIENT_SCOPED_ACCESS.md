@@ -1,10 +1,10 @@
 # Client-Scoped Access Implementation
 
-## 🏢 Overview
+## Overview
 
 Users are now assigned to clients (companies) and have access scoped to their client's data. This implements multi-tenant isolation at the data level.
 
-## 🔐 Security Model
+## Security Model
 
 ### User → Client Relationship
 - Each `IUser` has a `clientId` field linking them to their company
@@ -16,7 +16,7 @@ Users are now assigned to clients (companies) and have access scoped to their cl
 - **Clients**: PartitionKey = `clientId`, RowKey = `contactEmail`
 - Users can only see invoices where partitionKey matches their clientId
 
-## 📋 API Endpoints Added
+## API Endpoints Added
 
 ### Client Management
 
@@ -61,7 +61,7 @@ Users are now assigned to clients (companies) and have access scoped to their cl
 - Now requires site admin role
 - Returns user list without sensitive hash/salt fields
 
-## 🛠️ Implementation Details
+## Implementation Details
 
 ### Fixed Security Issues
 
@@ -113,7 +113,7 @@ Users are now assigned to clients (companies) and have access scoped to their cl
 }
 ```
 
-## 🧪 Testing Checklist
+## Testing Checklist
 
 ### Setup
 1. Create at least 2 clients via POST /api/client
@@ -138,7 +138,7 @@ Users are now assigned to clients (companies) and have access scoped to their cl
 - [ ] SQL injection attempts in clientId params are escaped
 - [ ] Unapproved users cannot access any endpoints
 
-## 🚀 Migration Notes
+## Migration Notes
 
 ### Existing Data
 - **Invoices**: Old invoices have `partitionKey = contact` email
@@ -155,7 +155,7 @@ Users are now assigned to clients (companies) and have access scoped to their cl
 - Public invoice viewing/payment remains unchanged
 - Admin endpoints maintain existing behavior for site admins
 
-## 🎯 Usage Example
+## Usage Example
 
 ### Create a Client
 ```bash
@@ -193,7 +193,7 @@ Authorization: Bearer <user-token>
 # Returns only invoices where partitionKey = user.clientId
 ```
 
-## 📝 Notes
+## Notes
 
 - Public invoice payment flow unchanged (anyone with link can pay)
 - Client isolation only affects authenticated admin/user views

@@ -16,7 +16,7 @@ namespace APIWarmer
         [Function("APIWarmer")]
         public async Task Run([TimerTrigger("0 */5 5-21 * * *", RunOnStartup = false)] TimerInfo timerInfo)
         {
-            _logger.LogInformation("⏱️ Starting API warm-up...");
+            _logger.LogInformation("Starting API warm-up...");
 
             var stopwatch = Stopwatch.StartNew();
 

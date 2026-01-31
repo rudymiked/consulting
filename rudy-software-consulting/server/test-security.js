@@ -60,7 +60,7 @@ async function test(name, testFn) {
 }
 
 async function runTests() {
-  log('\n🔒 Security Testing Suite\n', colors.blue);
+  log('\nSecurity Testing Suite\n', colors.blue);
   
   // Test 1: CORS restriction
   await test('CORS blocks unknown origins', async () => {
@@ -222,7 +222,7 @@ async function runTests() {
   
   // Test 10: Invoice ID format check (requires creating invoice with valid auth)
   // This test is informational only since we can't easily get auth token
-  log('\nℹ️  Manual tests required:', colors.yellow);
+  log('\nManual tests required:', colors.yellow);
   log('  - Create invoice and verify ID format is inv-UUID (not inv-timestamp)', colors.yellow);
   log('  - Verify /api/users response excludes hash/salt fields', colors.yellow);
   log('  - Test invoice payment flow end-to-end', colors.yellow);

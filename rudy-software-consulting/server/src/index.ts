@@ -146,7 +146,7 @@ app.use((req, res, next) => {
 
 app.use(express.json());
 
-// 🔑 JWT Validation Setup
+// JWT Validation Setup
 const client = jwksClient({
   jwksUri: `https://login.microsoftonline.com/${process.env.AZURE_TENANT_ID}/discovery/v2.0/keys`
 });
@@ -178,12 +178,12 @@ const jwtCheck = expressjwt({
 // Routes
 
 app.get('/', (_, res) => {
-  res.send('Welcome to the Rudyard Software Consulting API 🚀');
+  res.send('Welcome to the Rudyard Software Consulting API');
 });
 
 app.get('/api', (_, res) => {
-  //console.log('API is running 🚀');
-  res.send('API is running 🚀');
+  //console.log('API is running');
+  res.send('API is running');
 });
 
 app.post('/api/contact', async (req, res) => {
@@ -730,6 +730,6 @@ export default app;
 
 if (require.main === module) {
   app.listen(PORT, () => {
-    console.log(`🚀 Rudyard Software Consulting server is live at http://localhost:${PORT}`);
+    console.log(`Rudyard Software Consulting server is live at http://localhost:${PORT}`);
   });
 }

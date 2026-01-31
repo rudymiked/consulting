@@ -27,7 +27,7 @@ jobs:
               --tenant ${{ secrets.RUDYARD_CLIENT_APP_REG_AZURE_TENANT_ID }}
 
             if [ $? -ne 0 ]; then
-              echo "❌ Azure login failed."
+              echo "Azure login failed."
               exit 1
             fi
 
@@ -35,7 +35,7 @@ jobs:
             az account set --subscription ${{ secrets.RUDYARD_AZURE_SUBSCRIPTION_ID }}
 
             if [ $? -ne 0 ]; then
-              echo "❌ Failed to set subscription."
+              echo "Failed to set subscription."
               exit 1
             fi
 
@@ -46,6 +46,6 @@ jobs:
               --setting-names CLIENT_TOKEN=${{ env.CLIENT_TOKEN }}
 
             if [ $? -ne 0 ]; then
-              echo "❌ Failed to update app settings."
+              echo "Failed to update app settings."
               exit 1
             fi
