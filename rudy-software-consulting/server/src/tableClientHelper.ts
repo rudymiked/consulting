@@ -85,6 +85,9 @@ export const queryEntities = async <T extends object>(
   filter?: string | null,
   partitionKey?: string
 ): Promise<T[]> => {
+  const start = Date.now();
+  console.log(`[Query] Starting query on ${tableName}`, { filter: filter || 'none', partitionKey: partitionKey || 'none' });
+  
   const client = getTableClient(tableName);
   
   // Build query options only if filter is provided
@@ -102,9 +105,12 @@ export const queryEntities = async <T extends object>(
     for await (const entity of client.listEntities(queryOptions ? { queryOptions } : undefined)) {
       entities.push(entity as T);
     }
+    const duration = Date.now() - start;
+    console.log(`[Query] Completed query on ${tableName}: ${entities.length} results in ${duration}ms`);
     return entities;
   } catch (error: any) {
-    console.error(`[Query] Error querying ${tableName}:`, error.message || error);
+    const duration = Date.now() - start;
+    console.error(`[Query] Error querying ${tableName} after ${duration}ms:`, error.message, error.stack);
     throw error;
   }
 }

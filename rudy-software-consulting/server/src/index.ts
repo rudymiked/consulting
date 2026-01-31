@@ -227,6 +227,7 @@ app.post('/api/contact', async (req, res) => {
     res.status(200).json({ message: 'Contacted successfully' });
   } catch (error: any) {
     console.error('Error inserting contact log:', error);
+    trackException(error, { endpoint: '/api/contact', errorMessage: error.message });
     res.status(500).json({ error: 'Failed to process contact request' });
   }
 });
@@ -361,18 +362,34 @@ app.post('/api/invoice/pay', async (req, res) => {
   }
 });
 
-app.get('/api/invoices', jwtCheck, async (req, res) => {
+app.get('/api/invoices', jwtCheck, async (req: any, res) => {
   const start = Date.now();
   try {
-    const token = req.headers.authorization?.split(' ')[1];
-    const user = verifyToken(token || '');
+    // jwtCheck already validated the Azure AD token and put it in req.auth
+    const azureUser = req.auth;
     
-    if (!user) {
-      console.error('Invoices: Unauthorized - token verification failed');
+    if (!azureUser) {
+      console.error('Invoices: Unauthorized - no auth data from jwtCheck');
+      trackEvent('Invoices_Unauthorized', { reason: 'no_auth_data' });
       return res.status(403).json({ error: 'Unauthorized' });
     }
 
-    console.log('Invoices: User verified:', { email: user.email, siteAdmin: user.siteAdmin, clientId: user.clientId });
+    // Get user email from Azure AD token claims
+    const email = azureUser.preferred_username || azureUser.email || azureUser.upn || '';
+    console.log('Invoices: Azure AD user:', { email, sub: azureUser.sub });
+
+    // Look up user in our database to get clientId and siteAdmin status
+    const dbUser = await queryEntities(TableNames.Users, `RowKey eq '${email.toLowerCase()}'`);
+    
+    if (!dbUser || dbUser.length === 0) {
+      console.log('Invoices: User not found in database, returning empty array');
+      trackEvent('Invoices_UserNotFound', { email });
+      return res.json([]);
+    }
+
+    const user = dbUser[0] as any;
+    console.log('Invoices: User from DB:', { email: user.email, siteAdmin: user.siteAdmin, clientId: user.clientId });
+    trackEvent('Invoices_Request', { email: user.email || email, siteAdmin: String(user.siteAdmin || false) });
 
     let entities: IInvoice[];
     
@@ -384,6 +401,7 @@ app.get('/api/invoices', jwtCheck, async (req, res) => {
       // Regular users only see their client's invoices
       if (!user.clientId) {
         console.log('Invoices: No clientId for user, returning empty array');
+        trackEvent('Invoices_NoClientId', { email: user.email || email });
         return res.json([]);
       }
       console.log('Invoices: Fetching invoices for clientId:', user.clientId);
@@ -392,10 +410,21 @@ app.get('/api/invoices', jwtCheck, async (req, res) => {
     
     const duration = Date.now() - start;
     console.log(`Fetched ${entities.length} invoices in ${duration}ms`);
+    trackEvent('Invoices_Success', { count: String(entities.length), durationMs: String(duration) });
     res.json(entities);
   } catch (error: any) {
+    const duration = Date.now() - start;
     console.error('Error fetching invoices:', error.message, error.stack);
-    res.status(500).json({ error: 'Failed to fetch invoices.' });
+    trackException(error, { 
+      endpoint: '/api/invoices', 
+      durationMs: String(duration),
+      errorMessage: error.message,
+      errorStack: error.stack
+    });
+    res.status(500).json({ 
+      error: 'Failed to fetch invoices.',
+      details: process.env.NODE_ENV !== 'production' ? error.message : undefined
+    });
   }
 });
 
@@ -752,8 +781,27 @@ app.get('/api/users', jwtCheck, async (req, res) => {
     });
     res.json(safeUsers);
   } catch (err: any) {
+    trackException(err, { endpoint: '/api/users' });
     res.status(500).json({ error: err.message });
   }
+});
+
+// Global error handler - catches unhandled errors
+app.use((err: any, req: any, res: any, next: any) => {
+  console.error('Unhandled error:', err.message, err.stack);
+  trackException(err, {
+    endpoint: req.path,
+    method: req.method,
+    errorMessage: err.message,
+    errorStack: err.stack
+  });
+  
+  // Don't leak error details in production
+  const errorResponse = process.env.NODE_ENV === 'production'
+    ? { error: 'Internal server error' }
+    : { error: err.message, stack: err.stack };
+    
+  res.status(err.status || 500).json(errorResponse);
 });
 
 // Export app for testing and start server when run directly
