@@ -24,11 +24,7 @@ export interface IInvoice {
 
 const InvoicesPage: React.FC = () => {
   return (
-        <Box sx={{ pt: 9, pb: 7, backgroundColor: '#f0f4f8' }}>
-            <Container maxWidth="xl">
-                <Invoices />
-            </Container>
-        </Box>
+        <Invoices />
   );
 };
 

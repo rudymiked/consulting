@@ -72,6 +72,28 @@ export async function unapproveUser(email: string, adminToken: string) {
   return { success: true };
 }
 
+export async function toggleAdmin(email: string, adminToken: string) {
+  const adminPayload = verifyToken(adminToken);
+
+  if (!adminPayload || adminPayload.email !== process.env.ADMIN_EMAIL) {
+    throw new Error('Unauthorized');
+  }
+
+  // Prevent modifying your own admin status
+  if (email.trim().toLowerCase() === adminPayload.email.trim().toLowerCase()) {
+    throw new Error('Cannot modify your own admin status');
+  }
+
+  const user = await getEntity(TableNames.Users, 'user', email);
+  if (!user) throw new Error('User not found');
+  
+  user.siteAdmin = !user.siteAdmin;
+
+  await insertEntity(TableNames.Users, user);
+
+  return { success: true, isAdmin: user.siteAdmin };
+}
+
 export async function loginUser(email: string, password: string) {
   const normalizedEmail = email.trim().toLowerCase();
   const user = await getEntity(TableNames.Users, 'user', normalizedEmail).catch(() => null);

@@ -53,7 +53,7 @@ const CreateInvoice: React.FC = () => {
         token: auth.token || '',
         data: {
           name,
-          amount: parseFloat(amount)*100,
+          amount: parseFloat(amount) * 100,
           notes,
           contact,
         },
@@ -74,7 +74,15 @@ const CreateInvoice: React.FC = () => {
   };
 
   return (
-    <>
+    <Box sx={{ p: 3 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+        <Typography variant="h4" component="h1">
+          New Invoice
+        </Typography>
+        <Link to="/admin">
+          <Button variant="outlined">Back to Dashboard</Button>
+        </Link>
+      </Box>
       <Paper elevation={3} sx={{ maxWidth: 420, mx: 'auto', mt: 6, p: 4 }}>
         <Typography variant="h5" align="center" gutterBottom>
           New Invoice
@@ -132,12 +140,7 @@ const CreateInvoice: React.FC = () => {
           {error && <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>}
         </Box>
       </Paper>
-      <Box sx={{ mt: 2, textAlign: 'center' }}>
-        <Link to="/admin">
-          <Button variant="contained">Admin Dashboard</Button>
-        </Link>
-      </Box>
-    </>
+    </Box>
   );
 };
 

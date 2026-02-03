@@ -17,13 +17,16 @@ import {
 import { useAuth } from '../Auth/AuthContext';
 import HttpClient from '../../services/Http/HttpClient';
 import { Link } from 'react-router-dom';
+import { Guid } from 'guid-ts';
 
 interface IUser {
-  email: string;
-  createdAt: string;
-  approved: boolean;
-  siteAdmin?: boolean;
-  clientId: string;
+    partitionKey?: string;
+    rowKey?: string;
+    email: string;
+    createdAt: string;
+    approved: boolean;
+    siteAdmin?: boolean;
+    clientId: string;
 }
 
 const UserManagement: React.FC = () => {
@@ -32,6 +35,7 @@ const UserManagement: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [adminActionLoading, setAdminActionLoading] = useState<string | null>(null);
 
   const httpClient = new HttpClient();
 
@@ -49,7 +53,11 @@ const UserManagement: React.FC = () => {
         url: '/api/users',
         token: token || '',
       });
-      setUsers(data);
+      setUsers(data.map(user => ({
+        ...user,
+        clientId: user.clientId || Guid.empty.toString(),
+        email: user.email || user.rowKey || 'unknown',
+      })));
     } catch (err: any) {
       const errorMessage = err.response?.data?.error || err.message || 'Failed to fetch users';
       setError(errorMessage);
@@ -78,6 +86,27 @@ const UserManagement: React.FC = () => {
       setError(errorMessage);
     } finally {
       setActionLoading(null);
+    }
+  };
+
+  const handleAdminToggle = async (email: string, currentIsAdmin: boolean) => {
+    try {
+      setAdminActionLoading(email);
+      setError(null);
+
+      await httpClient.post<{ success: boolean; isAdmin: boolean }>({
+        url: '/api/toggleAdmin',
+        token: token || '',
+        data: { email },
+      });
+
+      // Refresh user list after action
+      await fetchUsers();
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.error || err.message || 'Failed to update admin status';
+      setError(errorMessage);
+    } finally {
+      setAdminActionLoading(null);
     }
   };
 
@@ -159,21 +188,38 @@ const UserManagement: React.FC = () => {
                       )}
                     </TableCell>
                     <TableCell>
-                      <Button
-                        variant="contained"
-                        size="small"
-                        color={user.approved ? 'error' : 'success'}
-                        onClick={() => handleApprovalToggle(user.email, user.approved)}
-                        disabled={actionLoading === user.email || user.siteAdmin}
-                      >
-                        {actionLoading === user.email ? (
-                          <CircularProgress size={20} color="inherit" />
-                        ) : user.approved ? (
-                          'Revoke'
-                        ) : (
-                          'Approve'
-                        )}
-                      </Button>
+                      <Box sx={{ display: 'flex', gap: 1 }}>
+                        <Button
+                          variant="contained"
+                          size="small"
+                          color={user.approved ? 'error' : 'success'}
+                          onClick={() => handleApprovalToggle(user.email, user.approved)}
+                          disabled={actionLoading === user.email || user.siteAdmin}
+                        >
+                          {actionLoading === user.email ? (
+                            <CircularProgress size={20} color="inherit" />
+                          ) : user.approved ? (
+                            'Revoke'
+                          ) : (
+                            'Approve'
+                          )}
+                        </Button>
+                        <Button
+                          variant="outlined"
+                          size="small"
+                          color={user.siteAdmin ? 'warning' : 'primary'}
+                          onClick={() => handleAdminToggle(user.email, user.siteAdmin || false)}
+                          disabled={adminActionLoading === user.email}
+                        >
+                          {adminActionLoading === user.email ? (
+                            <CircularProgress size={20} color="inherit" />
+                          ) : user.siteAdmin ? (
+                            'Remove Admin'
+                          ) : (
+                            'Make Admin'
+                          )}
+                        </Button>
+                      </Box>
                     </TableCell>
                   </TableRow>
                 ))

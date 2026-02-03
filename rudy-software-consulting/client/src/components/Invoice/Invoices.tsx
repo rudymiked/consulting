@@ -64,69 +64,65 @@ const Invoices: React.FC = () => {
     }, [token, isAdmin]);
 
     return (
-        <Box sx={{ pt: 9, pb: 7, backgroundColor: '#f0f4f8' }}>
-            <Container maxWidth="xl">
-                <Link to="/admin">
-                    <Button variant="contained" className="main-button">
-                        Admin Dashboard
-                    </Button>
-                </Link>
-                <br />
-                <br />
-                <Typography variant="h4" gutterBottom>
+        <Box sx={{ p: 3 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+                <Typography variant="h4" component="h1">
                     Invoices
                 </Typography>
+                <Link to="/admin">
+                    <Button variant="outlined">Back to Dashboard</Button>
+                </Link>
+            </Box>
 
-                {loading ? (
-                    <CircularProgress />
-                ) : (
-                    <TableContainer component={Paper}>
-                        <Table>
-                            <TableHead>
-                                <TableRow>
-                                    <TableCell>Invoice ID</TableCell>
-                                    {isAdmin && <TableCell>Client</TableCell>}
-                                    <TableCell>Contact</TableCell>
-                                    <TableCell>Amount</TableCell>
-                                    <TableCell>Status</TableCell>
-                                    <TableCell>Link</TableCell>
-                                </TableRow>
-                            </TableHead>
-                            <TableBody>
-                                {invoices.map((invoice) => (
-                                    <TableRow key={invoice.id}>
-                                        <TableCell>{invoice.id}</TableCell>
-                                        {isAdmin && (
-                                            <TableCell>
-                                                {invoice.clientId ? clients.get(invoice.clientId) || invoice.clientId : 'N/A'}
-                                            </TableCell>
-                                        )}
-                                        <TableCell>{invoice.contact}</TableCell>
-                                        <TableCell>${(invoice.amount / 100).toFixed(2)}</TableCell>
+            {loading ? (
+                <CircularProgress />
+            ) : (
+                <TableContainer component={Paper}>
+                    <Table>
+                        <TableHead>
+                            <TableRow>
+                                <TableCell>Invoice ID</TableCell>
+                                {isAdmin && <TableCell>Client</TableCell>}
+                                <TableCell>Contact</TableCell>
+                                <TableCell>Amount</TableCell>
+                                <TableCell>Status</TableCell>
+                                <TableCell>Link</TableCell>
+                            </TableRow>
+                        </TableHead>
+                        <TableBody>
+                            {invoices.map((invoice) => (
+                                <TableRow key={invoice.id}>
+                                    <TableCell>{invoice.id}</TableCell>
+                                    {isAdmin && (
                                         <TableCell>
-                                            <Chip 
-                                                label={invoice.status} 
-                                                color={
-                                                    invoice.status === 'PAID' ? 'success' :
+                                            {invoice.clientId ? clients.get(invoice.clientId) || invoice.clientId : 'N/A'}
+                                        </TableCell>
+                                    )}
+                                    <TableCell>{invoice.contact}</TableCell>
+                                    <TableCell>${(invoice.amount / 100).toFixed(2)}</TableCell>
+                                    <TableCell>
+                                        <Chip
+                                            label={invoice.status}
+                                            color={
+                                                invoice.status === 'PAID' ? 'success' :
                                                     invoice.status === 'NEW' ? 'primary' :
-                                                    invoice.status === 'PARTIALLY_PAID' ? 'warning' :
-                                                    'default'
-                                                }
-                                                size="small"
-                                            />
-                                        </TableCell>
-                                        <TableCell>
-                                            <Link to={`/invoice/${invoice.id}`}>
-                                                View
-                                            </Link>
-                                        </TableCell>
-                                    </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
-                    </TableContainer>
-                )}
-            </Container>
+                                                        invoice.status === 'PARTIALLY_PAID' ? 'warning' :
+                                                            'default'
+                                            }
+                                            size="small"
+                                        />
+                                    </TableCell>
+                                    <TableCell>
+                                        <Link to={`/invoice/${invoice.id}`}>
+                                            View
+                                        </Link>
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </TableContainer>
+            )}
         </Box>
     );
 };
