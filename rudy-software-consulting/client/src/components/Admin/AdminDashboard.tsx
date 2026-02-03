@@ -86,6 +86,30 @@ const AdminDashboard: React.FC = () => {
           </Box>
         )}
 
+        {isAdmin && (
+          <Box>
+            <Paper
+              sx={{
+                p: 3,
+                height: '100%',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Typography variant="h6" gutterBottom>
+                Clients
+              </Typography>
+              <Link to="/admin/clients">
+                <Button variant="contained" className="main-button">
+                  Manage Clients
+                </Button>
+              </Link>
+            </Paper>
+          </Box>
+        )}
+
         {/* <Box>
           <Paper
             sx={{

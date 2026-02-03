@@ -21,6 +21,7 @@ import ProtectedRoute from './components/Auth/ProtectedRoute';
 import RegistrationPage from './pages/RegistrationPage';
 import InvoicesPage from './pages/InvoicesPage';
 import UserManagement from './components/Admin/UserManagement';
+import ClientManagement from './components/Admin/ClientManagement';
 import HttpClient from './services/Http/HttpClient';
 import { useAuth } from './components/Auth/AuthContext';
 import { useAppInsights } from './services/Telemtry/AppInsightsProvider';
@@ -108,6 +109,14 @@ const App: React.FC = () => {
               element={
                 <ProtectedRoute>
                   <UserManagement />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/clients"
+              element={
+                <ProtectedRoute>
+                  <ClientManagement />
                 </ProtectedRoute>
               }
             />

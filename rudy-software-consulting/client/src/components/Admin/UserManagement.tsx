@@ -27,6 +27,7 @@ interface IUser {
     approved: boolean;
     siteAdmin?: boolean;
     clientId: string;
+    clientName?: string | null;
 }
 
 const UserManagement: React.FC = () => {
@@ -153,6 +154,7 @@ const UserManagement: React.FC = () => {
             <TableHead>
               <TableRow>
                 <TableCell><strong>Email</strong></TableCell>
+                <TableCell><strong>Client</strong></TableCell>
                 <TableCell><strong>Created</strong></TableCell>
                 <TableCell><strong>Status</strong></TableCell>
                 <TableCell><strong>Role</strong></TableCell>
@@ -162,7 +164,7 @@ const UserManagement: React.FC = () => {
             <TableBody>
               {users.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} align="center">
+                  <TableCell colSpan={6} align="center">
                     No users found
                   </TableCell>
                 </TableRow>
@@ -170,6 +172,11 @@ const UserManagement: React.FC = () => {
                 users.map((user) => (
                   <TableRow key={user.email}>
                     <TableCell>{user.email}</TableCell>
+                    <TableCell>
+                      <Typography variant="body2" sx={{ maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {user.clientName || '-'}
+                      </Typography>
+                    </TableCell>
                     <TableCell>
                       {new Date(user.createdAt).toLocaleDateString()}
                     </TableCell>

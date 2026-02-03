@@ -957,10 +957,20 @@ app.get('/api/users', customJwtCheck, async (req: any, res) => {
       return res.status(403).json({ error: 'Access denied: Admin only' });
     }
 
-    const users = await queryEntities(TableNames.Users, null);
+    const [users, clients] = await Promise.all([
+      queryEntities(TableNames.Users, null),
+      getAllClients()
+    ]);
+
+    // Create a map of clientId -> clientName for quick lookup
+    const clientMap = new Map(clients.map((c: any) => [c.id, c.name]));
+
     const safeUsers = users.map((u: any) => {
       const { hash, salt, ...rest } = u || {};
-      return rest;
+      return {
+        ...rest,
+        clientName: clientMap.get(rest.clientId) || null
+      };
     });
     res.json(safeUsers);
   } catch (err: any) {
