@@ -11,37 +11,57 @@ import {
     TableRow,
     Paper,
     CircularProgress,
-    Button
+    Button,
+    Chip
 } from '@mui/material';
 import { Link } from 'react-router-dom';
 import { IInvoice } from '../../pages/InvoicesPage';
 import HttpClient from '../../services/Http/HttpClient';
 import { useAuth } from '../Auth/AuthContext';
 
+interface IClient {
+    id: string;
+    name: string;
+}
+
 const Invoices: React.FC = () => {
     const [invoices, setInvoices] = useState<IInvoice[]>([]);
+    const [clients, setClients] = useState<Map<string, string>>(new Map());
     const [loading, setLoading] = useState(true);
-    const { token } = useAuth();
+    const { token, isAdmin } = useAuth();
     const httpClient = new HttpClient();
 
     useEffect(() => {
-        const fetchInvoices = async () => {
+        const fetchData = async () => {
             try {
-                const response = await httpClient.get<IInvoice[]>({
+                // Fetch invoices
+                const invoicesResponse = await httpClient.get<IInvoice[]>({
                     url: '/api/invoices',
                     token: token || '',
                 });
-                
-                setInvoices(response);
+                setInvoices(invoicesResponse);
+
+                // For admins, fetch clients to display client names
+                if (isAdmin) {
+                    const clientsResponse = await httpClient.get<IClient[]>({
+                        url: '/api/clients',
+                        token: token || '',
+                    });
+                    const clientMap = new Map<string, string>();
+                    clientsResponse.forEach(client => {
+                        clientMap.set(client.id, client.name);
+                    });
+                    setClients(clientMap);
+                }
             } catch (error) {
-                console.error('Failed to fetch invoices:', error);
+                console.error('Failed to fetch data:', error);
             } finally {
                 setLoading(false);
             }
         };
 
-        fetchInvoices();
-    }, [token]);
+        fetchData();
+    }, [token, isAdmin]);
 
     return (
         <Box sx={{ pt: 9, pb: 7, backgroundColor: '#f0f4f8' }}>
@@ -65,6 +85,7 @@ const Invoices: React.FC = () => {
                             <TableHead>
                                 <TableRow>
                                     <TableCell>Invoice ID</TableCell>
+                                    {isAdmin && <TableCell>Client</TableCell>}
                                     <TableCell>Contact</TableCell>
                                     <TableCell>Amount</TableCell>
                                     <TableCell>Status</TableCell>
@@ -75,9 +96,25 @@ const Invoices: React.FC = () => {
                                 {invoices.map((invoice) => (
                                     <TableRow key={invoice.id}>
                                         <TableCell>{invoice.id}</TableCell>
+                                        {isAdmin && (
+                                            <TableCell>
+                                                {invoice.clientId ? clients.get(invoice.clientId) || invoice.clientId : 'N/A'}
+                                            </TableCell>
+                                        )}
                                         <TableCell>{invoice.contact}</TableCell>
                                         <TableCell>${(invoice.amount / 100).toFixed(2)}</TableCell>
-                                        <TableCell>{invoice.status}</TableCell>
+                                        <TableCell>
+                                            <Chip 
+                                                label={invoice.status} 
+                                                color={
+                                                    invoice.status === 'PAID' ? 'success' :
+                                                    invoice.status === 'NEW' ? 'primary' :
+                                                    invoice.status === 'PARTIALLY_PAID' ? 'warning' :
+                                                    'default'
+                                                }
+                                                size="small"
+                                            />
+                                        </TableCell>
                                         <TableCell>
                                             <Link to={`/invoice/${invoice.id}`}>
                                                 View

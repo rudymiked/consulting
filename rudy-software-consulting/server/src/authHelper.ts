@@ -50,6 +50,28 @@ export async function approveUser(email: string, adminToken: string) {
   return { success: true };
 }
 
+export async function unapproveUser(email: string, adminToken: string) {
+  const adminPayload = verifyToken(adminToken);
+
+  if (!adminPayload || adminPayload.email !== process.env.ADMIN_EMAIL) {
+    throw new Error('Unauthorized');
+  }
+
+  const user = await getEntity(TableNames.Users, 'user', email);
+  if (!user) throw new Error('User not found');
+  
+  // Prevent unapproving site admins
+  if (user.siteAdmin) {
+    throw new Error('Cannot revoke approval for site administrators');
+  }
+  
+  user.approved = false;
+
+  await insertEntity(TableNames.Users, user);
+
+  return { success: true };
+}
+
 export async function loginUser(email: string, password: string) {
   const normalizedEmail = email.trim().toLowerCase();
   const user = await getEntity(TableNames.Users, 'user', normalizedEmail).catch(() => null);

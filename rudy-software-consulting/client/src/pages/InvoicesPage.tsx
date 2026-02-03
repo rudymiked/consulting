@@ -15,6 +15,7 @@ export interface IInvoice {
     amount: number; // Amount in cents (e.g., $50.00 is stored
     notes: string; // Additional notes or description for the invoice
     contact: string; // Contact information for the client
+    clientId?: string; // Client/Company ID
     createdDate: Date; // Timestamp of when the invoice was created
     updatedDate: Date; // Timestamp of when the invoice was last updated
     status: IInvoiceStatus; // Status of the invoice

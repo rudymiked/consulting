@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Button,
@@ -21,6 +21,14 @@ const RegistrationForm: React.FC = () => {
   const httpClient = new HttpClient();
   const {isAuthenticated, token} = useAuth();
 
+  useEffect(() => {
+    setLoginLink(
+      <Box sx={{ mt: 1 }}>
+        <a href="/admin/login">Go to Login</a>
+      </Box>
+    );
+  }, []);
+
   if (!isAuthenticated) {
     return (
       <Box sx={{ p: 3 }}>
@@ -30,14 +38,6 @@ const RegistrationForm: React.FC = () => {
       </Box>
     );
   }
-
-  React.useEffect(() => {
-    setLoginLink(
-      <Box sx={{ mt: 1 }}>
-        <a href="/admin/login">Go to Login</a>
-      </Box>
-    );
-  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -62,7 +62,8 @@ const RegistrationForm: React.FC = () => {
         throw new Error('Registration failed. Please try again.');
       }
     } catch (err: any) {
-      setError(err.message);
+      const errorMessage = err.response?.data?.error || err.message || 'Registration failed. Please try again.';
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }

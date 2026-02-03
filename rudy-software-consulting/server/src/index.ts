@@ -8,7 +8,7 @@ import jwksClient from 'jwks-rsa';
 import { expressjwt } from 'express-jwt';
 import { createInvoice, finalizePayment, getInvoiceDetails, getInvoices, payInvoice } from './invoiceHelper';
 import { trackEvent, trackException } from './telemetry';
-import { approveUser, loginUser, registerUser, verifyToken } from './authHelper';
+import { approveUser, unapproveUser, loginUser, registerUser, verifyToken } from './authHelper';
 import { IEmailOptions, IInvoice, IInvoiceResult, IInvoiceStatus, IWarmerEntity, TableNames } from './models';
 import Stripe from 'stripe';
 import rateLimit from 'express-rate-limit';
@@ -692,6 +692,22 @@ app.post('/api/approveUser', async (req, res) => {
     trackEvent('ApproveUser_API_Attempt', { email });
 
     const result = await approveUser(email, token);
+    res.json(result);
+  }
+  catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+app.post('/api/unapproveUser', async (req, res) => {
+  try {
+    const { email } = req.body;
+    // Only allow if the requester is an admin
+    const token = req.headers.authorization?.split(' ')[1];
+
+    trackEvent('UnapproveUser_API_Attempt', { email });
+
+    const result = await unapproveUser(email, token);
     res.json(result);
   }
   catch (err) {
