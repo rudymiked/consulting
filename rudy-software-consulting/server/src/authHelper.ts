@@ -1,6 +1,6 @@
 import crypto from 'crypto';
 import jwt, { JwtPayload } from 'jsonwebtoken';
-import { insertEntity, queryEntities } from './tableClientHelper';
+import { insertEntity, queryEntities, updateEntity } from './tableClientHelper';
 import { trackEvent } from './telemetry';
 import { IUser, TableNames } from './models';
 import { Guid } from 'guid-ts';
@@ -45,7 +45,7 @@ export async function approveUser(email: string, adminToken: string) {
   if (!user) throw new Error('User not found');
   user.approved = true;
 
-  await insertEntity(TableNames.Users, user);
+  await updateEntity(TableNames.Users, user);
 
   return { success: true };
 }
@@ -67,7 +67,7 @@ export async function unapproveUser(email: string, adminToken: string) {
   
   user.approved = false;
 
-  await insertEntity(TableNames.Users, user);
+  await updateEntity(TableNames.Users, user);
 
   return { success: true };
 }
@@ -89,7 +89,7 @@ export async function toggleAdmin(email: string, adminToken: string) {
   
   user.siteAdmin = !user.siteAdmin;
 
-  await insertEntity(TableNames.Users, user);
+  await updateEntity(TableNames.Users, user);
 
   return { success: true, isAdmin: user.siteAdmin };
 }
