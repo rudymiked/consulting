@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Button,
@@ -7,10 +7,20 @@ import {
   Alert,
   CircularProgress,
   Paper,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
 } from '@mui/material';
 import { Link } from 'react-router-dom';
 import HttpClient from '../../services/Http/HttpClient';
 import { useAuth } from '../Auth/AuthContext';
+
+interface IClient {
+  id: string;
+  name: string;
+  contactEmail: string;
+}
 
 const CreateInvoice: React.FC = () => {
   const [form, setForm] = useState({
@@ -18,7 +28,9 @@ const CreateInvoice: React.FC = () => {
     amount: '',
     notes: '',
     contact: '',
+    clientId: '',
   });
+  const [clients, setClients] = useState<IClient[]>([]);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -26,13 +38,39 @@ const CreateInvoice: React.FC = () => {
   const httpClient = new HttpClient();
   const auth = useAuth();
 
+  useEffect(() => {
+    fetchClients();
+  }, []);
+
+  const fetchClients = async () => {
+    try {
+      const data = await httpClient.get<IClient[]>({
+        url: '/api/clients',
+        token: auth.token || '',
+      });
+      setClients(data);
+    } catch (err: any) {
+      console.error('Failed to fetch clients:', err);
+    }
+  };
+
   const handleChange = (field: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm(prev => ({ ...prev, [field]: e.target.value }));
   };
 
+  const handleClientChange = (e: any) => {
+    const clientId = e.target.value;
+    const selectedClient = clients.find(c => c.id === clientId);
+    setForm(prev => ({
+      ...prev,
+      clientId,
+      contact: selectedClient?.contactEmail || prev.contact,
+    }));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const { name, amount, contact, notes } = form;
+    const { name, amount, contact, notes, clientId } = form;
 
     if (!name || !amount || !contact) {
       setError('Please fill in all required fields.');
@@ -56,12 +94,13 @@ const CreateInvoice: React.FC = () => {
           amount: parseFloat(amount) * 100,
           notes,
           contact,
+          clientId: clientId || undefined,
         },
       });
 
       if (res.success) {
         setSuccess(true);
-        setForm({ name: '', amount: '', notes: '', contact: '' });
+        setForm({ name: '', amount: '', notes: '', contact: '', clientId: '' });
       } else {
         setError(`Failed to create invoice: ${res.message}`);
       }
@@ -88,6 +127,24 @@ const CreateInvoice: React.FC = () => {
           New Invoice
         </Typography>
         <Box component="form" onSubmit={handleSubmit} noValidate>
+          <FormControl fullWidth margin="normal">
+            <InputLabel id="client-select-label">Client</InputLabel>
+            <Select
+              labelId="client-select-label"
+              value={form.clientId}
+              label="Client"
+              onChange={handleClientChange}
+            >
+              <MenuItem value="">
+                <em>No client</em>
+              </MenuItem>
+              {clients.map((client) => (
+                <MenuItem key={client.id} value={client.id}>
+                  {client.name}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
           <TextField
             label="Name"
             value={form.name}
