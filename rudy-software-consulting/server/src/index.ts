@@ -12,6 +12,8 @@ import { approveUser, unapproveUser, toggleAdmin, loginUser, registerUser, verif
 import { IEmailOptions, IInvoice, IInvoiceResult, IInvoiceStatus, IWarmerEntity, TableNames } from './models';
 import Stripe from 'stripe';
 import rateLimit from 'express-rate-limit';
+import helmet from 'helmet';
+import cookieParser from 'cookie-parser';
 import { queryEntities, updateEntity } from './tableClientHelper';
 import { addClient, deleteClient, getAllClients, getClientByEmail, getClientById, getClientsByName, getInvoicesByClientId } from './clientHelper';
 
@@ -80,6 +82,34 @@ const limiter = rateLimit({
 });
 
 app.use(limiter);
+
+// Security middleware
+app.use(helmet());
+app.use(cookieParser());
+
+// Rate limiting for authentication endpoints (stricter than general limiter)
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5,                     // 5 attempts per 15 minutes
+  keyGenerator: (req) => {
+    const email = req.body?.email || req.ip;
+    return `login-${email}`;
+  },
+  message: 'Too many login attempts, please try again later',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const registerLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 3,                     // 3 registrations per hour per IP
+  keyGenerator: (req) => {
+    return `register-${req.ip}`;
+  },
+  message: 'Too many registration attempts, please try again later',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 const PORT = process.env.PORT || 4001;
 
@@ -673,7 +703,7 @@ app.post('/api/invoice', customJwtCheck, async (req, res) => {
   }
 });
 
-app.post('/api/register', async (req, res) => {
+app.post('/api/register', registerLimiter, async (req, res) => {
   try {
     const { email, password } = req.body;
     const result = await registerUser(email, password);
@@ -731,7 +761,7 @@ app.post('/api/toggleAdmin', async (req, res) => {
   }
 });
 
-app.post('/api/login', async (req, res) => {
+app.post('/api/login', loginLimiter, async (req, res) => {
   try {
     const { email, password } = req.body;
     const { token } = await loginUser(email, password);
@@ -753,10 +783,10 @@ app.get('/api/protected', (req, res) => {
 });
 
 app.post('/api/invoice/create-payment-intent', async (req, res) => {
-  const { invoiceId, amount } = req.body;
+  const { invoiceId } = req.body;
 
-  if (!invoiceId || !amount) {
-    return res.status(400).json({ error: 'Missing invoiceId or amount' });
+  if (!invoiceId) {
+    return res.status(400).json({ error: 'Missing invoiceId' });
   }
 
   try {
@@ -772,9 +802,8 @@ app.post('/api/invoice/create-payment-intent', async (req, res) => {
       return res.status(400).json({ error: 'Invoice is already paid' });
     }
 
-    if (typeof amount !== 'number' || amount <= 0 || amount > invoice.amount) {
-      return res.status(400).json({ error: 'Invalid payment amount' });
-    }
+    // Server-side: Use the full invoice amount (not client-provided)
+    const amount = invoice.amount;
 
     const paymentIntent = await stripe.paymentIntents.create({
       amount,
@@ -786,7 +815,7 @@ app.post('/api/invoice/create-payment-intent', async (req, res) => {
     res.send({ clientSecret: paymentIntent.client_secret });
   } catch (err: any) {
     console.error('Stripe error:', err);
-    trackException(err, { invoiceId, amount });
+    trackException(err, { invoiceId });
     res.status(500).json({ error: 'Failed to create payment intent' + err.message });
   }
 });

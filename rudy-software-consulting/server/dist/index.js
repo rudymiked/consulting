@@ -18,6 +18,8 @@ const authHelper_1 = require("./authHelper");
 const models_1 = require("./models");
 const stripe_1 = __importDefault(require("stripe"));
 const express_rate_limit_1 = __importDefault(require("express-rate-limit"));
+const helmet_1 = __importDefault(require("helmet"));
+const cookie_parser_1 = __importDefault(require("cookie-parser"));
 const tableClientHelper_1 = require("./tableClientHelper");
 const clientHelper_1 = require("./clientHelper");
 dotenv_1.default.config();
@@ -76,6 +78,31 @@ const limiter = (0, express_rate_limit_1.default)({
     },
 });
 app.use(limiter);
+// Security middleware
+app.use((0, helmet_1.default)());
+app.use((0, cookie_parser_1.default)());
+// Rate limiting for authentication endpoints (stricter than general limiter)
+const loginLimiter = (0, express_rate_limit_1.default)({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 5, // 5 attempts per 15 minutes
+    keyGenerator: (req) => {
+        const email = req.body?.email || req.ip;
+        return `login-${email}`;
+    },
+    message: 'Too many login attempts, please try again later',
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+const registerLimiter = (0, express_rate_limit_1.default)({
+    windowMs: 60 * 60 * 1000, // 1 hour
+    max: 3, // 3 registrations per hour per IP
+    keyGenerator: (req) => {
+        return `register-${req.ip}`;
+    },
+    message: 'Too many registration attempts, please try again later',
+    standardHeaders: true,
+    legacyHeaders: false,
+});
 const PORT = process.env.PORT || 4001;
 const required = [
     'RUDYARD_STORAGE_ACCOUNT_NAME',
@@ -87,13 +114,21 @@ if (missing.length) {
     console.error('Missing required env vars:', missing);
     process.exit(1); // fail fast so App Service shows startup error
 }
+// Initialize Stripe
+const stripe = new stripe_1.default(process.env.STRIPE_SECRET_KEY, {
+    apiVersion: '2025-08-27.basil',
+});
 // Middleware
 // Allow CORS only from known origins.
-const frontendOrigin = (process.env.VITE_FRONTEND_ORIGIN || '').trim();
+console.log('Configuring CORS settings...');
+console.log('FRONTEND_ORIGIN: ', process.env.FRONTEND_ORIGIN ?? "<not set>");
+const frontendOrigin = (process.env.FRONTEND_ORIGIN || '').trim();
 const allowedOrigins = [
     'http://localhost:3000',
     'http://localhost:3001',
     'http://localhost:5173',
+    'https://rudyardtechnologies.com',
+    'https://www.rudyardtechnologies.com',
 ];
 if (frontendOrigin) {
     if (frontendOrigin.startsWith('http://') || frontendOrigin.startsWith('https://')) {
@@ -104,6 +139,7 @@ if (frontendOrigin) {
         allowedOrigins.push(`https://www.${frontendOrigin}`);
     }
 }
+console.log('CORS allowed origins:', allowedOrigins);
 const corsOptions = {
     origin: (origin, callback) => {
         if (!origin || allowedOrigins.indexOf(origin) !== -1) {
@@ -115,7 +151,7 @@ const corsOptions = {
     },
     methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-    credentials: false,
+    credentials: true,
     optionsSuccessStatus: 204,
 };
 app.use((0, cors_1.default)(corsOptions));
@@ -128,14 +164,48 @@ app.use((req, res, next) => {
     next();
 });
 app.use(express_1.default.json());
-// 🔑 JWT Validation Setup
-const client = (0, jwks_rsa_1.default)({
-    jwksUri: `https://login.microsoftonline.com/${process.env.AZURE_TENANT_ID}/discovery/v2.0/keys`
+// Request logging middleware
+app.use((req, res, next) => {
+    const start = Date.now();
+    res.on('finish', () => {
+        const duration = Date.now() - start;
+        if (req.path.startsWith('/api/')) {
+            (0, telemetry_1.trackEvent)('API_Request', {
+                method: req.method,
+                path: req.path,
+                statusCode: String(res.statusCode),
+                durationMs: String(duration),
+                hasAuth: String(!!req.headers.authorization)
+            });
+        }
+    });
+    next();
+});
+// JWT Validation Setup
+const jwksClientInstance = (0, jwks_rsa_1.default)({
+    jwksUri: `https://login.microsoftonline.com/${process.env.AZURE_TENANT_ID}/discovery/v2.0/keys`,
+    cache: true,
+    cacheMaxAge: 600000, // 10 minutes
+    rateLimit: true,
+    jwksRequestsPerMinute: 10
 });
 async function getSigningKey(header) {
+    const kid = header?.kid;
+    const alg = header?.alg;
+    const typ = header?.typ;
+    (0, telemetry_1.trackEvent)('JWT_GetSigningKey', { kid: kid || 'none', alg: alg || 'unknown', typ: typ || 'unknown' });
+    console.log('JWT header:', JSON.stringify(header));
+    // If no KID provided, this is likely a custom JWT (from /api/login), not an Azure AD token
+    if (!kid) {
+        console.error('ERROR: No KID in token header. This token appears to be a custom JWT, not an Azure AD token.');
+        console.error('Endpoints using jwtCheck require Azure AD tokens. Custom JWTs should use /api/protected endpoint.');
+        (0, telemetry_1.trackEvent)('JWT_WrongTokenType', { alg, typ, message: 'Token missing KID - likely custom JWT sent to Azure AD protected endpoint' });
+        throw new Error('Invalid token: Azure AD token required. This appears to be a custom JWT token.');
+    }
     return new Promise((resolve, reject) => {
-        client.getSigningKey(header.kid, (err, key) => {
+        jwksClientInstance.getSigningKey(kid, (err, key) => {
             if (err) {
+                (0, telemetry_1.trackException)(err, { context: 'getSigningKey', kid });
                 reject(err);
             }
             else {
@@ -144,7 +214,9 @@ async function getSigningKey(header) {
                     resolve(signingKey);
                 }
                 else {
-                    reject(new Error('Signing key is undefined'));
+                    const error = new Error('Signing key is undefined');
+                    (0, telemetry_1.trackException)(error, { context: 'getSigningKey', kid });
+                    reject(error);
                 }
             }
         });
@@ -156,13 +228,123 @@ const jwtCheck = (0, express_jwt_1.expressjwt)({
     issuer: `https://login.microsoftonline.com/${process.env.AZURE_TENANT_ID}/v2.0`,
     audience: `api://${process.env.RUDYARD_CLIENT_APP_REG_AZURE_CLIENT_ID}`
 });
+// Custom JWT middleware - verifies tokens created by /api/login
+const customJwtCheck = (req, res, next) => {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return res.status(401).json({ error: 'No token provided' });
+    }
+    const token = authHeader.split(' ')[1];
+    const user = (0, authHelper_1.verifyToken)(token);
+    if (!user) {
+        (0, telemetry_1.trackEvent)('CustomJWT_ValidationFailed', { path: req.path });
+        return res.status(401).json({ error: 'Invalid or expired token' });
+    }
+    // Attach user to request (similar to how jwtCheck attaches req.auth)
+    req.user = user;
+    next();
+};
+// Helper to get user from custom JWT token (attached by customJwtCheck)
+function getUserFromCustomToken(req) {
+    return req.user || null;
+}
+// JWT error handler - must be after routes that use jwtCheck
+const jwtErrorHandler = (err, req, res, next) => {
+    if (err.name === 'UnauthorizedError' || err.name === 'SigningKeyNotFoundError') {
+        // Log token header for debugging (don't log the full token for security)
+        const authHeader = req.headers.authorization || '';
+        const token = authHeader.replace('Bearer ', '');
+        let tokenInfo = 'none';
+        if (token) {
+            try {
+                const parts = token.split('.');
+                if (parts.length >= 2) {
+                    const header = JSON.parse(Buffer.from(parts[0], 'base64').toString());
+                    tokenInfo = JSON.stringify(header);
+                }
+            }
+            catch (e) {
+                tokenInfo = 'invalid format';
+            }
+        }
+        (0, telemetry_1.trackEvent)('JWT_ValidationFailed', {
+            path: req.path,
+            errorMessage: err.message,
+            errorCode: err.code || 'unknown',
+            tokenHeader: tokenInfo
+        });
+        console.error('JWT validation failed:', err.message, 'Token header:', tokenInfo);
+        return res.status(401).json({ error: 'Invalid or expired token', details: err.message });
+    }
+    next(err);
+};
+// Helper to get user info from Azure AD token and look up in database
+async function getUserFromAzureToken(req) {
+    const start = Date.now();
+    (0, telemetry_1.trackEvent)('GetUserFromToken_Start');
+    const azureUser = req.auth;
+    if (!azureUser) {
+        (0, telemetry_1.trackEvent)('GetUserFromToken_NoAuth', { reason: 'req.auth is null/undefined' });
+        console.log('getUserFromAzureToken: No auth data in request');
+        return null;
+    }
+    // Log all available claims for debugging
+    console.log('Azure AD token claims:', JSON.stringify(azureUser, null, 2));
+    (0, telemetry_1.trackEvent)('GetUserFromToken_Claims', {
+        hasPreferredUsername: String(!!azureUser.preferred_username),
+        hasEmail: String(!!azureUser.email),
+        hasUpn: String(!!azureUser.upn),
+        sub: azureUser.sub || 'none'
+    });
+    const email = (azureUser.preferred_username || azureUser.email || azureUser.upn || '').toLowerCase();
+    if (!email) {
+        (0, telemetry_1.trackEvent)('GetUserFromToken_NoEmail', { claims: Object.keys(azureUser).join(',') });
+        console.log('getUserFromAzureToken: No email found in token');
+        return null;
+    }
+    try {
+        console.log(`Looking up user in DB: ${email}`);
+        const safeEmail = email.replace(/'/g, "''");
+        const dbUsers = await (0, tableClientHelper_1.queryEntities)(models_1.TableNames.Users, `RowKey eq '${safeEmail}'`);
+        const duration = Date.now() - start;
+        if (!dbUsers || dbUsers.length === 0) {
+            (0, telemetry_1.trackEvent)('GetUserFromToken_UserNotInDB', { email, durationMs: String(duration) });
+            console.log(`User not found in DB: ${email}`);
+            return { email, clientId: '', siteAdmin: false };
+        }
+        const user = dbUsers[0];
+        (0, telemetry_1.trackEvent)('GetUserFromToken_Success', {
+            email,
+            clientId: user.clientId || 'none',
+            siteAdmin: String(user.siteAdmin || false),
+            durationMs: String(duration)
+        });
+        console.log(`User found in DB: ${email}, siteAdmin: ${user.siteAdmin}, clientId: ${user.clientId}`);
+        return {
+            email: user.email || email,
+            clientId: user.clientId || '',
+            siteAdmin: user.siteAdmin || false
+        };
+    }
+    catch (err) {
+        const duration = Date.now() - start;
+        (0, telemetry_1.trackException)(err, {
+            context: 'getUserFromAzureToken',
+            email,
+            durationMs: String(duration),
+            errorMessage: err.message
+        });
+        console.error('Error looking up user:', err);
+        return null;
+    }
+}
 // Routes
 app.get('/', (_, res) => {
-    res.send('Welcome to the Rudyard Technologies API 🚀');
+    res.send('Welcome to the Rudyard Technologies API');
 });
 app.get('/api', (_, res) => {
-    //console.log('API is running 🚀');
-    res.send('API is running 🚀');
+    //console.log('API is running');
+    res.send('API is running');
 });
 app.post('/api/contact', async (req, res) => {
     const { to, subject, text, html } = req.body;
@@ -170,15 +352,42 @@ app.post('/api/contact', async (req, res) => {
     try {
         await (0, emailHelper_1.insertIntoContactLogs)(options);
         (0, telemetry_1.trackEvent)('InsertContactLog_API', { to, subject });
+        // Send notification email to admin
+        const adminEmail = process.env.ADMIN_EMAIL;
+        console.log('ADMIN_EMAIL configured:', adminEmail ? 'yes' : 'no');
+        if (adminEmail) {
+            try {
+                console.log('Attempting to send notification to:', adminEmail);
+                await (0, emailHelper_1.sendEmail)({
+                    to: adminEmail,
+                    subject: `New Contact Form Submission: ${subject}`,
+                    text: `New contact form submission:\n\nFrom: ${to}\nSubject: ${subject}\n\nMessage:\n${text}`,
+                    html: `<h2>New Contact Form Submission</h2>
+            ${html || `<p>${text}</p>`}`,
+                    sent: true
+                });
+                console.log('Notification email sent successfully to:', adminEmail);
+                (0, telemetry_1.trackEvent)('ContactNotification_Sent', { to: adminEmail });
+            }
+            catch (emailError) {
+                console.error('Failed to send admin notification:', emailError.message, emailError.stack);
+                (0, telemetry_1.trackException)(emailError, { context: 'ContactNotification', adminEmail });
+                // Don't fail the request if notification fails
+            }
+        }
+        else {
+            console.warn('ADMIN_EMAIL not configured - skipping notification');
+        }
         res.status(200).json({ message: 'Contacted successfully' });
     }
     catch (error) {
         console.error('Error inserting contact log:', error);
+        (0, telemetry_1.trackException)(error, { endpoint: '/api/contact', errorMessage: error.message });
         res.status(500).json({ error: 'Failed to process contact request' });
     }
 });
 // Protected route example
-app.post('/api/sendEmail', jwtCheck, async (req, res) => {
+app.post('/api/sendEmail', customJwtCheck, async (req, res) => {
     const { to, subject, text, html } = req.body;
     try {
         await (0, emailHelper_1.sendEmail)({ to, subject, text, html, sent: true });
@@ -192,7 +401,7 @@ app.post('/api/sendEmail', jwtCheck, async (req, res) => {
 app.get('/api/ping', (_, res) => {
     res.json({ message: 'pong' });
 });
-app.get('/api/email', jwtCheck, (_, res) => {
+app.get('/api/email', customJwtCheck, (_, res) => {
     res.json({ message: 'ok' });
 });
 // routes/invoice.ts
@@ -292,30 +501,51 @@ app.post('/api/invoice/pay', async (req, res) => {
         return res.status(500).json({ error: 'Unexpected server error.' });
     }
 });
-app.get('/api/invoices', jwtCheck, async (req, res) => {
+app.get('/api/invoices', customJwtCheck, async (req, res) => {
     const start = Date.now();
     try {
-        const token = req.headers.authorization?.split(' ')[1];
-        const user = (0, authHelper_1.verifyToken)(token || '');
+        const user = getUserFromCustomToken(req);
         if (!user) {
+            console.error('Invoices: Unauthorized - no user from token');
+            (0, telemetry_1.trackEvent)('Invoices_Unauthorized', { reason: 'no_user' });
             return res.status(403).json({ error: 'Unauthorized' });
         }
+        console.log('Invoices: User:', { email: user.email, siteAdmin: user.siteAdmin, clientId: user.clientId });
+        (0, telemetry_1.trackEvent)('Invoices_Request', { email: user.email, siteAdmin: String(user.siteAdmin) });
         let entities;
         // Site admins can see all invoices
         if (user.siteAdmin) {
+            console.log('Invoices: Fetching all invoices for admin');
             entities = await (0, invoiceHelper_1.getInvoices)();
         }
         else {
             // Regular users only see their client's invoices
+            if (!user.clientId) {
+                console.log('Invoices: No clientId for user, returning empty array');
+                (0, telemetry_1.trackEvent)('Invoices_NoClientId', { email: user.email });
+                return res.json([]);
+            }
+            console.log('Invoices: Fetching invoices for clientId:', user.clientId);
             entities = await (0, clientHelper_1.getInvoicesByClientId)(user.clientId);
         }
         const duration = Date.now() - start;
-        console.log(`Fetched invoices in ${duration}ms`);
+        console.log(`Fetched ${entities.length} invoices in ${duration}ms`);
+        (0, telemetry_1.trackEvent)('Invoices_Success', { count: String(entities.length), durationMs: String(duration) });
         res.json(entities);
     }
     catch (error) {
-        console.error('Error fetching invoices:', error.message);
-        res.status(500).json({ error: 'Failed to fetch invoices.' });
+        const duration = Date.now() - start;
+        console.error('Error fetching invoices:', error.message, error.stack);
+        (0, telemetry_1.trackException)(error, {
+            endpoint: '/api/invoices',
+            durationMs: String(duration),
+            errorMessage: error.message,
+            errorStack: error.stack
+        });
+        res.status(500).json({
+            error: 'Failed to fetch invoices.',
+            details: process.env.NODE_ENV !== 'production' ? error.message : undefined
+        });
     }
 });
 app.get('/api/invoice/:id/payment-status', async (req, res) => {
@@ -355,18 +585,26 @@ app.get('/api/invoice/:id/payment-status', async (req, res) => {
     }
     catch (err) {
         console.error('Error fetching payment status:', err.message);
+        (0, telemetry_1.trackException)(err, { endpoint: '/api/invoice/:id/payment-status', invoiceId });
         return res.status(500).json({ error: 'Failed to fetch payment status.' });
     }
 });
 app.get('/api/invoice/:invoiceId', async (req, res) => {
     const { invoiceId } = req.params;
-    const invoiceDetails = await (0, invoiceHelper_1.getInvoiceDetails)(invoiceId);
-    if (!invoiceDetails) {
-        return res.status(404).json({ error: 'Invoice not found' });
+    try {
+        const invoiceDetails = await (0, invoiceHelper_1.getInvoiceDetails)(invoiceId);
+        if (!invoiceDetails) {
+            return res.status(404).json({ error: 'Invoice not found' });
+        }
+        res.json(invoiceDetails);
     }
-    res.json(invoiceDetails);
+    catch (err) {
+        console.error('Error fetching invoice:', err.message);
+        (0, telemetry_1.trackException)(err, { endpoint: '/api/invoice/:invoiceId', invoiceId });
+        res.status(500).json({ error: 'Failed to fetch invoice.' });
+    }
 });
-app.post('/api/invoice', jwtCheck, async (req, res) => {
+app.post('/api/invoice', customJwtCheck, async (req, res) => {
     const { name, amount, notes, contact, clientId } = req.body;
     if (!name || !amount || !contact) {
         return res.status(400).json({ error: 'Missing required fields.' });
@@ -393,7 +631,7 @@ app.post('/api/invoice', jwtCheck, async (req, res) => {
         res.status(500).json({ error: 'Failed to save invoice.' + error.message });
     }
 });
-app.post('/api/register', async (req, res) => {
+app.post('/api/register', registerLimiter, async (req, res) => {
     try {
         const { email, password } = req.body;
         const result = await (0, authHelper_1.registerUser)(email, password);
@@ -416,7 +654,33 @@ app.post('/api/approveUser', async (req, res) => {
         res.status(400).json({ error: err.message });
     }
 });
-app.post('/api/login', async (req, res) => {
+app.post('/api/unapproveUser', async (req, res) => {
+    try {
+        const { email } = req.body;
+        // Only allow if the requester is an admin
+        const token = req.headers.authorization?.split(' ')[1];
+        (0, telemetry_1.trackEvent)('UnapproveUser_API_Attempt', { email });
+        const result = await (0, authHelper_1.unapproveUser)(email, token);
+        res.json(result);
+    }
+    catch (err) {
+        res.status(400).json({ error: err.message });
+    }
+});
+app.post('/api/toggleAdmin', async (req, res) => {
+    try {
+        const { email } = req.body;
+        // Only allow if the requester is an admin
+        const token = req.headers.authorization?.split(' ')[1];
+        (0, telemetry_1.trackEvent)('ToggleAdmin_API_Attempt', { email });
+        const result = await (0, authHelper_1.toggleAdmin)(email, token);
+        res.json(result);
+    }
+    catch (err) {
+        res.status(400).json({ error: err.message });
+    }
+});
+app.post('/api/login', loginLimiter, async (req, res) => {
     try {
         const { email, password } = req.body;
         const { token } = await (0, authHelper_1.loginUser)(email, password);
@@ -435,13 +699,10 @@ app.get('/api/protected', (req, res) => {
         return res.status(403).json({ error: 'Unauthorized' });
     res.json({ message: `Welcome ${user.email}` });
 });
-const stripe = new stripe_1.default(process.env.STRIPE_SECRET_KEY, {
-    apiVersion: '2025-08-27.basil',
-});
 app.post('/api/invoice/create-payment-intent', async (req, res) => {
-    const { invoiceId, amount } = req.body;
-    if (!invoiceId || !amount) {
-        return res.status(400).json({ error: 'Missing invoiceId or amount' });
+    const { invoiceId } = req.body;
+    if (!invoiceId) {
+        return res.status(400).json({ error: 'Missing invoiceId' });
     }
     try {
         const invoice = await (0, invoiceHelper_1.getInvoiceDetails)(invoiceId);
@@ -454,9 +715,8 @@ app.post('/api/invoice/create-payment-intent', async (req, res) => {
         if (invoice.status.toUpperCase() === models_1.IInvoiceStatus.PAID.toUpperCase()) {
             return res.status(400).json({ error: 'Invoice is already paid' });
         }
-        if (typeof amount !== 'number' || amount <= 0 || amount > invoice.amount) {
-            return res.status(400).json({ error: 'Invalid payment amount' });
-        }
+        // Server-side: Use the full invoice amount (not client-provided)
+        const amount = invoice.amount;
         const paymentIntent = await stripe.paymentIntents.create({
             amount,
             currency: 'usd',
@@ -467,7 +727,7 @@ app.post('/api/invoice/create-payment-intent', async (req, res) => {
     }
     catch (err) {
         console.error('Stripe error:', err);
-        (0, telemetry_1.trackException)(err, { invoiceId, amount });
+        (0, telemetry_1.trackException)(err, { invoiceId });
         res.status(500).json({ error: 'Failed to create payment intent' + err.message });
     }
 });
@@ -500,7 +760,7 @@ app.post('/api/table-warmer', async (req, res) => {
     }
 });
 // Client Management Routes
-app.post('/api/client', jwtCheck, async (req, res) => {
+app.post('/api/client', customJwtCheck, async (req, res) => {
     try {
         const { clientId, clientName, contactEmail, address, phone } = req.body;
         if (!clientId || !clientName || !contactEmail) {
@@ -513,13 +773,12 @@ app.post('/api/client', jwtCheck, async (req, res) => {
     catch (err) {
         console.error('Error creating client:', err);
         (0, telemetry_1.trackException)(err, { clientId: req.body.clientId });
-        res.status(500).json({ error: err.message });
+        res.status(500).json({ error: 'Failed to create client.' });
     }
 });
-app.get('/api/clients', jwtCheck, async (req, res) => {
+app.get('/api/clients', customJwtCheck, async (req, res) => {
     try {
-        const token = req.headers.authorization?.split(' ')[1];
-        const user = (0, authHelper_1.verifyToken)(token || '');
+        const user = getUserFromCustomToken(req);
         if (!user) {
             return res.status(403).json({ error: 'Unauthorized' });
         }
@@ -536,14 +795,14 @@ app.get('/api/clients', jwtCheck, async (req, res) => {
     }
     catch (err) {
         console.error('Error fetching clients:', err);
-        res.status(500).json({ error: err.message });
+        (0, telemetry_1.trackException)(err, { endpoint: '/api/clients' });
+        res.status(500).json({ error: 'Failed to fetch clients.' });
     }
 });
-app.get('/api/client/:clientId', jwtCheck, async (req, res) => {
+app.get('/api/client/:clientId', customJwtCheck, async (req, res) => {
     try {
         const { clientId } = req.params;
-        const token = req.headers.authorization?.split(' ')[1];
-        const user = (0, authHelper_1.verifyToken)(token || '');
+        const user = getUserFromCustomToken(req);
         if (!user) {
             return res.status(403).json({ error: 'Unauthorized' });
         }
@@ -559,14 +818,14 @@ app.get('/api/client/:clientId', jwtCheck, async (req, res) => {
     }
     catch (err) {
         console.error('Error fetching client:', err);
-        res.status(500).json({ error: err.message });
+        (0, telemetry_1.trackException)(err, { endpoint: '/api/client/:clientId', clientId: req.params.clientId });
+        res.status(500).json({ error: 'Failed to fetch client.' });
     }
 });
-app.get('/api/client/:clientId/invoices', jwtCheck, async (req, res) => {
+app.get('/api/client/:clientId/invoices', customJwtCheck, async (req, res) => {
     try {
         const { clientId } = req.params;
-        const token = req.headers.authorization?.split(' ')[1];
-        const user = (0, authHelper_1.verifyToken)(token || '');
+        const user = getUserFromCustomToken(req);
         if (!user) {
             return res.status(403).json({ error: 'Unauthorized' });
         }
@@ -579,14 +838,14 @@ app.get('/api/client/:clientId/invoices', jwtCheck, async (req, res) => {
     }
     catch (err) {
         console.error('Error fetching client invoices:', err);
-        res.status(500).json({ error: err.message });
+        (0, telemetry_1.trackException)(err, { endpoint: '/api/client/:clientId/invoices' });
+        res.status(500).json({ error: 'Failed to fetch client invoices.' });
     }
 });
-app.delete('/api/client/:clientId/:contactEmail', jwtCheck, async (req, res) => {
+app.delete('/api/client/:clientId/:contactEmail', customJwtCheck, async (req, res) => {
     try {
         const { clientId, contactEmail } = req.params;
-        const token = req.headers.authorization?.split(' ')[1];
-        const user = (0, authHelper_1.verifyToken)(token || '');
+        const user = getUserFromCustomToken(req);
         if (!user) {
             return res.status(403).json({ error: 'Unauthorized' });
         }
@@ -600,13 +859,13 @@ app.delete('/api/client/:clientId/:contactEmail', jwtCheck, async (req, res) => 
     }
     catch (err) {
         console.error('Error deleting client:', err);
-        res.status(500).json({ error: err.message });
+        (0, telemetry_1.trackException)(err, { endpoint: '/api/client/:clientId/:contactEmail', clientId: req.params.clientId });
+        res.status(500).json({ error: 'Failed to delete client.' });
     }
 });
-app.get('/api/users', jwtCheck, async (req, res) => {
+app.get('/api/users', customJwtCheck, async (req, res) => {
     try {
-        const token = req.headers.authorization?.split(' ')[1];
-        const user = (0, authHelper_1.verifyToken)(token || '');
+        const user = getUserFromCustomToken(req);
         if (!user) {
             return res.status(403).json({ error: 'Unauthorized' });
         }
@@ -614,21 +873,62 @@ app.get('/api/users', jwtCheck, async (req, res) => {
         if (!user.siteAdmin) {
             return res.status(403).json({ error: 'Access denied: Admin only' });
         }
-        const users = await (0, tableClientHelper_1.queryEntities)(models_1.TableNames.Users, null);
+        const [users, clients] = await Promise.all([
+            (0, tableClientHelper_1.queryEntities)(models_1.TableNames.Users, null),
+            (0, clientHelper_1.getAllClients)()
+        ]);
+        // Create a map of clientId -> clientName for quick lookup
+        const clientMap = new Map(clients.map((c) => [c.id, c.name]));
         const safeUsers = users.map((u) => {
             const { hash, salt, ...rest } = u || {};
-            return rest;
+            return {
+                ...rest,
+                clientName: clientMap.get(rest.clientId) || null
+            };
         });
         res.json(safeUsers);
     }
     catch (err) {
-        res.status(500).json({ error: err.message });
+        (0, telemetry_1.trackException)(err, { endpoint: '/api/users' });
+        res.status(500).json({ error: 'Failed to fetch users.' });
     }
+});
+// JWT error handler - handles authentication errors
+app.use(jwtErrorHandler);
+// Global error handler - catches unhandled errors
+app.use((err, req, res, next) => {
+    console.error('Unhandled error:', err.message, err.stack);
+    (0, telemetry_1.trackException)(err, {
+        endpoint: req.path,
+        method: req.method,
+        errorMessage: err.message,
+        errorStack: err.stack
+    });
+    // Don't leak error details in production
+    const errorResponse = process.env.NODE_ENV === 'production'
+        ? { error: 'Internal server error' }
+        : { error: err.message, stack: err.stack };
+    res.status(err.status || 500).json(errorResponse);
 });
 // Export app for testing and start server when run directly
 exports.default = app;
 if (require.main === module) {
+    // Log startup configuration
+    console.log('=== Server Configuration ===');
+    console.log('NODE_ENV:', process.env.NODE_ENV || 'development');
+    console.log('AZURE_TENANT_ID:', process.env.AZURE_TENANT_ID ? 'configured' : 'MISSING');
+    console.log('RUDYARD_CLIENT_APP_REG_AZURE_CLIENT_ID:', process.env.RUDYARD_CLIENT_APP_REG_AZURE_CLIENT_ID ? 'configured' : 'MISSING');
+    console.log('RUDYARD_STORAGE_ACCOUNT_NAME:', process.env.RUDYARD_STORAGE_ACCOUNT_NAME ? 'configured' : 'MISSING');
+    console.log('ADMIN_EMAIL:', process.env.ADMIN_EMAIL ? 'configured' : 'MISSING');
+    console.log('FRONTEND_ORIGIN:', process.env.FRONTEND_ORIGIN || 'not set');
+    console.log('============================');
+    (0, telemetry_1.trackEvent)('Server_Startup', {
+        nodeEnv: process.env.NODE_ENV || 'development',
+        hasTenantId: String(!!process.env.AZURE_TENANT_ID),
+        hasClientId: String(!!process.env.RUDYARD_CLIENT_APP_REG_AZURE_CLIENT_ID),
+        hasStorageAccount: String(!!process.env.RUDYARD_STORAGE_ACCOUNT_NAME)
+    });
     app.listen(PORT, () => {
-        console.log(`🚀 Rudyard Technologies server is live at http://localhost:${PORT}`);
+        console.log(`Rudyard Technologies server is live at http://localhost:${PORT}`);
     });
 }

@@ -23,6 +23,7 @@ export async function sendEmail(options: IEmailOptions): Promise<void> {
   } else {
     const secure = process.env.EMAIL_SECURE ? process.env.EMAIL_SECURE.trim().toLowerCase() === 'true' : true;
     const port = process.env.EMAIL_PORT ? parseInt(process.env.EMAIL_PORT, 10) : (secure ? 465 : 587);
+    const isProduction = process.env.NODE_ENV === 'production';
 
     console.log('Using secure:', secure);
     console.log('Using port:', port);
@@ -36,8 +37,8 @@ export async function sendEmail(options: IEmailOptions): Promise<void> {
         user: process.env.EMAIL_USERNAME,
         pass: process.env.EMAIL_PASSWORD
       },
-      logger: true,
-      debug: true
+      logger: !isProduction,
+      debug: !isProduction
     });
   }
 

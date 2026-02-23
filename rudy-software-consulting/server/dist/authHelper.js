@@ -5,10 +5,12 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.registerUser = registerUser;
 exports.approveUser = approveUser;
+exports.unapproveUser = unapproveUser;
+exports.toggleAdmin = toggleAdmin;
 exports.loginUser = loginUser;
 exports.getEntity = getEntity;
 exports.verifyToken = verifyToken;
-const crypto_1 = __importDefault(require("crypto"));
+const bcrypt_1 = __importDefault(require("bcrypt"));
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const tableClientHelper_1 = require("./tableClientHelper");
 const telemetry_1 = require("./telemetry");
@@ -19,13 +21,13 @@ async function registerUser(email, password, clientId) {
     const existing = await getEntity(models_1.TableNames.Users, 'user', normalizedEmail).catch(() => null);
     if (existing)
         throw new Error('User already exists');
-    const salt = crypto_1.default.randomBytes(16).toString('hex');
-    const hash = crypto_1.default.pbkdf2Sync(password, salt, 1000, 64, 'sha512').toString('hex');
+    // Use bcrypt with cost factor 12 (modern standard)
+    const hash = await bcrypt_1.default.hash(password, 12);
     const emptyGuid = guid_ts_1.Guid.empty();
     clientId = clientId || emptyGuid.toString();
     const user = {
         email: normalizedEmail,
-        salt,
+        salt: '', // No longer needed with bcrypt, kept for backwards compatibility
         hash,
         createdAt: new Date().toISOString(),
         approved: false,
@@ -46,22 +48,55 @@ async function approveUser(email, adminToken) {
     if (!user)
         throw new Error('User not found');
     user.approved = true;
-    await (0, tableClientHelper_1.insertEntity)(models_1.TableNames.Users, user);
+    await (0, tableClientHelper_1.updateEntity)(models_1.TableNames.Users, user);
     return { success: true };
+}
+async function unapproveUser(email, adminToken) {
+    const adminPayload = verifyToken(adminToken);
+    if (!adminPayload || adminPayload.email !== process.env.ADMIN_EMAIL) {
+        throw new Error('Unauthorized');
+    }
+    const user = await getEntity(models_1.TableNames.Users, 'user', email);
+    if (!user)
+        throw new Error('User not found');
+    // Prevent unapproving site admins
+    if (user.siteAdmin) {
+        throw new Error('Cannot revoke approval for site administrators');
+    }
+    user.approved = false;
+    await (0, tableClientHelper_1.updateEntity)(models_1.TableNames.Users, user);
+    return { success: true };
+}
+async function toggleAdmin(email, adminToken) {
+    const adminPayload = verifyToken(adminToken);
+    if (!adminPayload || adminPayload.email !== process.env.ADMIN_EMAIL) {
+        throw new Error('Unauthorized');
+    }
+    // Prevent modifying your own admin status
+    if (email.trim().toLowerCase() === adminPayload.email.trim().toLowerCase()) {
+        throw new Error('Cannot modify your own admin status');
+    }
+    const user = await getEntity(models_1.TableNames.Users, 'user', email);
+    if (!user)
+        throw new Error('User not found');
+    user.siteAdmin = !user.siteAdmin;
+    await (0, tableClientHelper_1.updateEntity)(models_1.TableNames.Users, user);
+    return { success: true, isAdmin: user.siteAdmin };
 }
 async function loginUser(email, password) {
     const normalizedEmail = email.trim().toLowerCase();
     const user = await getEntity(models_1.TableNames.Users, 'user', normalizedEmail).catch(() => null);
     (0, telemetry_1.trackEvent)('Login_Attempt', { email: normalizedEmail });
-    if (!user || !user.salt || !user.hash) {
+    if (!user || !user.hash) {
         console.error('User not found or missing credentials:', user);
         throw new Error('Invalid credentials');
     }
     if (!user.approved) {
         throw new Error('Account not approved');
     }
-    const computedHash = crypto_1.default.pbkdf2Sync(password, user.salt, 1000, 64, 'sha512').toString('hex');
-    if (computedHash !== user.hash)
+    // Use bcrypt to compare password with stored hash
+    const isValid = await bcrypt_1.default.compare(password, user.hash);
+    if (!isValid)
         throw new Error('Invalid credentials');
     const token = jsonwebtoken_1.default.sign({
         email: normalizedEmail,

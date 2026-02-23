@@ -4,6 +4,31 @@ exports.getInvoicesByClientId = exports.getAllClients = exports.deleteClient = e
 const tableClientHelper_1 = require("./tableClientHelper");
 const authHelper_1 = require("./authHelper");
 const models_1 = require("./models");
+/**
+ * Validate clientId format to prevent OData injection
+ * Allows alphanumeric, hyphens, underscores, and GUIDs
+ */
+const validateClientId = (id) => {
+    if (!id || typeof id !== 'string') {
+        throw new Error('Invalid clientId: must be a non-empty string');
+    }
+    // Allow alphanumeric, hyphens, underscores, and GUID format
+    if (!/^[a-zA-Z0-9\-_]{1,100}$/.test(id)) {
+        throw new Error('Invalid clientId format: only alphanumeric, hyphens, and underscores allowed');
+    }
+};
+/**
+ * Validate email format
+ */
+const validateEmail = (email) => {
+    if (!email || typeof email !== 'string') {
+        throw new Error('Invalid email: must be a non-empty string');
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+        throw new Error('Invalid email format');
+    }
+};
 const addClient = async (clientId, clientName, contactEmail, address, phone) => {
     const client = {
         id: clientId,
@@ -19,6 +44,7 @@ const addClient = async (clientId, clientName, contactEmail, address, phone) => 
 };
 exports.addClient = addClient;
 const getClientById = async (clientId) => {
+    validateClientId(clientId);
     try {
         const query = `PartitionKey eq '${clientId.replace(/'/g, "''")}'`;
         const clients = await (0, tableClientHelper_1.queryEntities)(models_1.TableNames.Clients, query);
@@ -31,6 +57,7 @@ const getClientById = async (clientId) => {
 };
 exports.getClientById = getClientById;
 const getClientByEmail = async (email) => {
+    validateEmail(email);
     const query = `RowKey eq '${email.replace(/'/g, "''")}'`;
     const clients = await (0, tableClientHelper_1.queryEntities)(models_1.TableNames.Clients, query);
     return clients.length > 0 ? clients[0] : null;
@@ -55,6 +82,7 @@ const getAllClients = async () => {
 };
 exports.getAllClients = getAllClients;
 const getInvoicesByClientId = async (clientId) => {
+    validateClientId(clientId);
     const query = `PartitionKey eq '${clientId.replace(/'/g, "''")}'`;
     const invoices = await (0, tableClientHelper_1.queryEntities)(models_1.TableNames.Invoices, query);
     return invoices;

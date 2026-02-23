@@ -49,15 +49,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const httpClient = new HttpClient();
 
     useEffect(() => {
-        const storedToken = localStorage.getItem('admin_token');
-        console.log('AuthProvider mounted.' + (storedToken != null ? ' Found stored admin_token.' : ' No admin_token found.'));
-
-        if (storedToken) {
-            setToken(storedToken);
-            setIsAuthenticated(true);
-            const payload = parseJwt(storedToken);
-            setIsAdmin(payload?.siteAdmin || false);
-        }
+        // Token is stored in memory only (in React state)
+        // Users will need to re-authenticate on page reload
+        // This prevents XSS attacks from accessing persistent storage
+        console.log('AuthProvider mounted. Token is memory-only.');
     }, []);
 
     const login = async (email: string, password: string) => {
@@ -73,7 +68,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 throw new Error(error);
             }
             if (!token) throw new Error('No token received');
-            localStorage.setItem('admin_token', token);
+            // Token stored in memory only (React state), not persisted to localStorage
             setToken(token);
             setIsAuthenticated(true);
             const payload = parseJwt(token);
@@ -85,8 +80,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     const logout = () => {
-        console.log('Logging out, removing admin_token from localStorage.');
-        localStorage.removeItem('admin_token');
+        console.log('Logging out, clearing authentication state.');
         setToken(null);
         setIsAuthenticated(false);
         setIsAdmin(false);

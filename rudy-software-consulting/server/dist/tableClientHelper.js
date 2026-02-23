@@ -4,34 +4,48 @@ exports.updateEntity = exports.deleteEntity = exports.queryEntities = exports.in
 exports.getTableClient = getTableClient;
 const identity_1 = require("@azure/identity");
 const data_tables_1 = require("@azure/data-tables");
-// Helper to create a client for any table.
-function getTableClient(tableName) {
-    const connectionString = process.env.AZURE_STORAGE_CONNECTION_STRING;
-    const env = process.env.NODE_ENV || "development";
-    if (connectionString && env !== "production") {
-        const hint = connectionString.length > 12 ? connectionString.slice(0, 8) + "..." : "present";
-        return data_tables_1.TableClient.fromConnectionString(connectionString, tableName);
-    }
-    if (connectionString && env === "production") {
-        console.warn("[TableClient] AZURE_STORAGE_CONNECTION_STRING is set but ignored in production for security.");
-    }
-    const account = process.env.RUDYARD_STORAGE_ACCOUNT_NAME;
-    if (!account) {
-        throw new Error("[TableClient] RUDYARD_STORAGE_ACCOUNT_NAME must be set when not using a connection string.");
+// Cache for table clients to avoid creating new connections on every request
+const tableClientCache = new Map();
+// Cached credential (reused across all table clients)
+let cachedCredential = null;
+function getCredential() {
+    if (cachedCredential) {
+        return cachedCredential;
     }
     const managedClientId = process.env.RUDYARD_MANAGED_IDENTITY_CLIENT_ID;
-    let credential;
-    try {
-        credential = managedClientId
-            ? new identity_1.ManagedIdentityCredential(managedClientId)
-            : new identity_1.DefaultAzureCredential();
+    cachedCredential = managedClientId
+        ? new identity_1.ManagedIdentityCredential(managedClientId)
+        : new identity_1.DefaultAzureCredential();
+    return cachedCredential;
+}
+// Helper to create a client for any table (with caching).
+function getTableClient(tableName) {
+    // Check cache first
+    const cached = tableClientCache.get(tableName);
+    if (cached) {
+        return cached;
     }
-    catch (err) {
-        console.error("[TableClient] Failed to initialize credential:", err);
-        throw err;
+    const connectionString = process.env.AZURE_STORAGE_CONNECTION_STRING;
+    const env = process.env.NODE_ENV || "development";
+    let client;
+    if (connectionString && env !== "production") {
+        client = data_tables_1.TableClient.fromConnectionString(connectionString, tableName);
     }
-    const endpoint = `https://${account}.table.core.windows.net`;
-    return new data_tables_1.TableClient(endpoint, tableName, credential);
+    else {
+        if (connectionString && env === "production") {
+            console.warn("[TableClient] AZURE_STORAGE_CONNECTION_STRING is set but ignored in production for security.");
+        }
+        const account = process.env.RUDYARD_STORAGE_ACCOUNT_NAME;
+        if (!account) {
+            throw new Error("[TableClient] RUDYARD_STORAGE_ACCOUNT_NAME must be set when not using a connection string.");
+        }
+        const endpoint = `https://${account}.table.core.windows.net`;
+        client = new data_tables_1.TableClient(endpoint, tableName, getCredential());
+    }
+    // Cache the client for future use
+    tableClientCache.set(tableName, client);
+    console.log(`[TableClient] Created and cached client for table: ${tableName}`);
+    return client;
 }
 const insertEntity = async (tableName, entity) => {
     try {
@@ -46,19 +60,32 @@ const insertEntity = async (tableName, entity) => {
 exports.insertEntity = insertEntity;
 // Query entities
 const queryEntities = async (tableName, filter, partitionKey) => {
+    const start = Date.now();
+    console.log(`[Query] Starting query on ${tableName}`, { filter: filter || 'none', partitionKey: partitionKey || 'none' });
     const client = getTableClient(tableName);
-    const queryOptions = partitionKey
-        ? { filter: `${filter} and PartitionKey eq '${partitionKey}'` }
-        : { filter };
+    // Build query options only if filter is provided
+    let queryOptions;
+    if (filter && partitionKey) {
+        queryOptions = { filter: `${filter} and PartitionKey eq '${partitionKey}'` };
+    }
+    else if (filter) {
+        queryOptions = { filter };
+    }
+    else if (partitionKey) {
+        queryOptions = { filter: `PartitionKey eq '${partitionKey}'` };
+    }
     try {
         const entities = [];
-        for await (const entity of client.listEntities({ queryOptions })) {
+        for await (const entity of client.listEntities(queryOptions ? { queryOptions } : undefined)) {
             entities.push(entity);
         }
+        const duration = Date.now() - start;
+        console.log(`[Query] Completed query on ${tableName}: ${entities.length} results in ${duration}ms`);
         return entities;
     }
     catch (error) {
-        console.error(`[Query] Error querying ${tableName}:`, error.message || error);
+        const duration = Date.now() - start;
+        console.error(`[Query] Error querying ${tableName} after ${duration}ms:`, error.message, error.stack);
         throw error;
     }
 };

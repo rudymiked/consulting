@@ -1,4 +1,5 @@
 import crypto from 'crypto';
+import bcrypt from 'bcrypt';
 import jwt, { JwtPayload } from 'jsonwebtoken';
 import { insertEntity, queryEntities, updateEntity } from './tableClientHelper';
 import { trackEvent } from './telemetry';
@@ -10,8 +11,8 @@ export async function registerUser(email: string, password: string, clientId?: s
   const existing = await getEntity(TableNames.Users, 'user', normalizedEmail).catch(() => null);
   if (existing) throw new Error('User already exists');
 
-  const salt = crypto.randomBytes(16).toString('hex');
-  const hash = crypto.pbkdf2Sync(password, salt, 1000, 64, 'sha512').toString('hex');
+  // Use bcrypt with cost factor 12 (modern standard)
+  const hash = await bcrypt.hash(password, 12);
 
   const emptyGuid: Guid = Guid.empty();
 
@@ -19,7 +20,7 @@ export async function registerUser(email: string, password: string, clientId?: s
 
   const user: IUser = {
     email: normalizedEmail,
-    salt,
+    salt: '', // No longer needed with bcrypt, kept for backwards compatibility
     hash,
     createdAt: new Date().toISOString(),
     approved: false,
@@ -100,7 +101,7 @@ export async function loginUser(email: string, password: string) {
 
   trackEvent('Login_Attempt', { email: normalizedEmail });
 
-  if (!user || !user.salt || !user.hash) {
+  if (!user || !user.hash) {
     console.error('User not found or missing credentials:', user);
     throw new Error('Invalid credentials');
   }
@@ -109,9 +110,10 @@ export async function loginUser(email: string, password: string) {
     throw new Error('Account not approved');
   }
 
-  const computedHash = crypto.pbkdf2Sync(password, user.salt, 1000, 64, 'sha512').toString('hex');
+  // Use bcrypt to compare password with stored hash
+  const isValid = await bcrypt.compare(password, user.hash);
 
-  if (computedHash !== user.hash) throw new Error('Invalid credentials');
+  if (!isValid) throw new Error('Invalid credentials');
 
   const token = jwt.sign({ 
     email: normalizedEmail, 
