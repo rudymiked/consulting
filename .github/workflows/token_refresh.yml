@@ -1,8 +1,7 @@
 name: Rotate API Token
 
 on:
-  schedule:
-    - cron: '0 0 * * 0' # Every Sunday
+  # Disabled: no scheduled rotation needed
   workflow_dispatch: # Optional: allows manual trigger
 
 jobs:
