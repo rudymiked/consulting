@@ -27,7 +27,7 @@ const LoginForm: React.FC<ILoginFormProps> = ({ onLogin }) => {
     try {
       await onLogin(email, password);
     } catch (err) {
-      setError('Invalid email or password');
+      setError(err instanceof Error ? err.message : 'Login failed');
     } finally {
       setLoading(false);
     }

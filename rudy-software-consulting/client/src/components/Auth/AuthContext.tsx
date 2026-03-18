@@ -1,6 +1,11 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import HttpClient from '../../services/Http/HttpClient';
 
+interface IApiErrorPayload {
+    error?: string;
+    message?: string;
+}
+
 interface IAuthContextType {
     isAuthenticated: boolean;
     isAdmin: boolean;
@@ -75,7 +80,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setIsAdmin(payload?.siteAdmin || false);
         }
         catch (error: any) {
-            throw new Error(error.message || 'Login failed');
+            const apiMessage = (error?.response?.data as IApiErrorPayload | undefined)?.error
+                || (error?.response?.data as IApiErrorPayload | undefined)?.message;
+            throw new Error(apiMessage || error.message || 'Login failed');
         }
     };
 

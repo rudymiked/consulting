@@ -90,7 +90,7 @@ app.use(cookieParser());
 // Rate limiting for authentication endpoints (stricter than general limiter)
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5,                     // 5 attempts per 15 minutes
+  max: 20,                     // 20 attempts per 15 minutes
   keyGenerator: (req) => {
     const email = req.body?.email || req.ip;
     return `login-${email}`;
