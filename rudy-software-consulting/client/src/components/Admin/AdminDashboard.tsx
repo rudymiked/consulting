@@ -30,6 +30,30 @@ const AdminDashboard: React.FC = () => {
       </Box>
 
       <Grid container spacing={3}>
+        {isAdmin && (
+          <Box>
+            <Paper
+              sx={{
+                p: 3,
+                height: '100%',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Typography variant="h6" gutterBottom>
+                Dashboard
+              </Typography>
+              <Link to="/admin/dashboard">
+                <Button variant="contained" className="main-button">
+                  View Dashboard
+                </Button>
+              </Link>
+            </Paper>
+          </Box>
+        )}
+
         <Box>
           <Paper
             sx={{

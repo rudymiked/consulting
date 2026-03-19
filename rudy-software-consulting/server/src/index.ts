@@ -949,6 +949,84 @@ app.get('/api/client/:clientId/invoices', customJwtCheck, async (req: any, res) 
   }
 });
 
+app.get('/api/admin/dashboard/:clientId', customJwtCheck, async (req: any, res) => {
+  try {
+    const { clientId } = req.params;
+    const user = getUserFromCustomToken(req);
+
+    if (!user) {
+      return res.status(403).json({ error: 'Unauthorized' });
+    }
+
+    if (!user.siteAdmin) {
+      return res.status(403).json({ error: 'Access denied: Admin only' });
+    }
+
+    const client = await getClientById(clientId);
+    if (!client) {
+      return res.status(404).json({ error: 'Client not found' });
+    }
+
+    const [invoices, users, warmerEntities] = await Promise.all([
+      getInvoicesByClientId(clientId),
+      queryEntities(TableNames.Users, null),
+      queryEntities(TableNames.Warmer, null),
+    ]);
+
+    const clientUsers = users
+      .filter((entry: any) => entry?.clientId === clientId)
+      .map((entry: any) => {
+        const { hash, salt, ...rest } = entry || {};
+        return rest;
+      });
+
+    const warmerEntity = warmerEntities.length > 0 ? warmerEntities[0] as IWarmerEntity : null;
+    const lastPingValue = warmerEntity?.lastPing ? new Date(warmerEntity.lastPing) : null;
+    const lastPingIso = lastPingValue && !Number.isNaN(lastPingValue.getTime())
+      ? lastPingValue.toISOString()
+      : null;
+    const minutesSinceLastPing = lastPingValue
+      ? Math.floor((Date.now() - lastPingValue.getTime()) / 60000)
+      : null;
+
+    const totalBilled = invoices.reduce((sum: number, invoice: any) => sum + (Number(invoice.amount) || 0), 0);
+    const paidInvoices = invoices.filter((invoice: any) => invoice.status === IInvoiceStatus.PAID);
+    const cancelledInvoices = invoices.filter((invoice: any) => invoice.status === IInvoiceStatus.CANCELLED);
+    const activeInvoices = invoices.filter((invoice: any) => invoice.status !== IInvoiceStatus.CANCELLED);
+    const outstandingInvoices = invoices.filter((invoice: any) => invoice.status !== IInvoiceStatus.PAID && invoice.status !== IInvoiceStatus.CANCELLED);
+    const totalOutstanding = outstandingInvoices.reduce((sum: number, invoice: any) => sum + (Number(invoice.amount) || 0), 0);
+
+    res.json({
+      client,
+      users: clientUsers,
+      invoices,
+      metrics: {
+        invoiceCount: invoices.length,
+        activeInvoiceCount: activeInvoices.length,
+        paidInvoiceCount: paidInvoices.length,
+        cancelledInvoiceCount: cancelledInvoices.length,
+        outstandingInvoiceCount: outstandingInvoices.length,
+        userCount: clientUsers.length,
+        approvedUserCount: clientUsers.filter((entry: any) => entry.approved).length,
+        pendingUserCount: clientUsers.filter((entry: any) => !entry.approved).length,
+        totalBilled,
+        totalOutstanding,
+      },
+      uptime: {
+        apiProcessSeconds: Math.floor(process.uptime()),
+        apiStartedAt: new Date(Date.now() - process.uptime() * 1000).toISOString(),
+        warmerLastPing: lastPingIso,
+        warmerMinutesSinceLastPing: minutesSinceLastPing,
+        warmerStatus: minutesSinceLastPing === null ? 'unavailable' : minutesSinceLastPing <= 15 ? 'healthy' : 'stale',
+      },
+    });
+  } catch (err: any) {
+    console.error('Error fetching admin dashboard data:', err);
+    trackException(err, { endpoint: '/api/admin/dashboard/:clientId', clientId: req.params.clientId });
+    res.status(500).json({ error: 'Failed to fetch dashboard data.' });
+  }
+});
+
 app.delete('/api/client/:clientId/:contactEmail', customJwtCheck, async (req: any, res) => {
   try {
     const { clientId, contactEmail } = req.params;

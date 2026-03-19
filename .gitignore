@@ -305,6 +305,7 @@ FakesAssemblies/
 /client/package-lock.json
 /server/package-lock.json
 node_modules/
+rudy-software-consulting/client/dist/
 
 # Visual Studio 6 build log
 *.plg

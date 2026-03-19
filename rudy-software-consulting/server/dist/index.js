@@ -84,7 +84,7 @@ app.use((0, cookie_parser_1.default)());
 // Rate limiting for authentication endpoints (stricter than general limiter)
 const loginLimiter = (0, express_rate_limit_1.default)({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 5, // 5 attempts per 15 minutes
+    max: 20, // 20 attempts per 15 minutes
     keyGenerator: (req) => {
         const email = req.body?.email || req.ip;
         return `login-${email}`;
@@ -840,6 +840,76 @@ app.get('/api/client/:clientId/invoices', customJwtCheck, async (req, res) => {
         console.error('Error fetching client invoices:', err);
         (0, telemetry_1.trackException)(err, { endpoint: '/api/client/:clientId/invoices' });
         res.status(500).json({ error: 'Failed to fetch client invoices.' });
+    }
+});
+app.get('/api/admin/dashboard/:clientId', customJwtCheck, async (req, res) => {
+    try {
+        const { clientId } = req.params;
+        const user = getUserFromCustomToken(req);
+        if (!user) {
+            return res.status(403).json({ error: 'Unauthorized' });
+        }
+        if (!user.siteAdmin) {
+            return res.status(403).json({ error: 'Access denied: Admin only' });
+        }
+        const client = await (0, clientHelper_1.getClientById)(clientId);
+        if (!client) {
+            return res.status(404).json({ error: 'Client not found' });
+        }
+        const [invoices, users, warmerEntities] = await Promise.all([
+            (0, clientHelper_1.getInvoicesByClientId)(clientId),
+            (0, tableClientHelper_1.queryEntities)(models_1.TableNames.Users, null),
+            (0, tableClientHelper_1.queryEntities)(models_1.TableNames.Warmer, null),
+        ]);
+        const clientUsers = users
+            .filter((entry) => entry?.clientId === clientId)
+            .map((entry) => {
+            const { hash, salt, ...rest } = entry || {};
+            return rest;
+        });
+        const warmerEntity = warmerEntities.length > 0 ? warmerEntities[0] : null;
+        const lastPingValue = warmerEntity?.lastPing ? new Date(warmerEntity.lastPing) : null;
+        const lastPingIso = lastPingValue && !Number.isNaN(lastPingValue.getTime())
+            ? lastPingValue.toISOString()
+            : null;
+        const minutesSinceLastPing = lastPingValue
+            ? Math.floor((Date.now() - lastPingValue.getTime()) / 60000)
+            : null;
+        const totalBilled = invoices.reduce((sum, invoice) => sum + (Number(invoice.amount) || 0), 0);
+        const paidInvoices = invoices.filter((invoice) => invoice.status === models_1.IInvoiceStatus.PAID);
+        const cancelledInvoices = invoices.filter((invoice) => invoice.status === models_1.IInvoiceStatus.CANCELLED);
+        const activeInvoices = invoices.filter((invoice) => invoice.status !== models_1.IInvoiceStatus.CANCELLED);
+        const outstandingInvoices = invoices.filter((invoice) => invoice.status !== models_1.IInvoiceStatus.PAID && invoice.status !== models_1.IInvoiceStatus.CANCELLED);
+        const totalOutstanding = outstandingInvoices.reduce((sum, invoice) => sum + (Number(invoice.amount) || 0), 0);
+        res.json({
+            client,
+            users: clientUsers,
+            invoices,
+            metrics: {
+                invoiceCount: invoices.length,
+                activeInvoiceCount: activeInvoices.length,
+                paidInvoiceCount: paidInvoices.length,
+                cancelledInvoiceCount: cancelledInvoices.length,
+                outstandingInvoiceCount: outstandingInvoices.length,
+                userCount: clientUsers.length,
+                approvedUserCount: clientUsers.filter((entry) => entry.approved).length,
+                pendingUserCount: clientUsers.filter((entry) => !entry.approved).length,
+                totalBilled,
+                totalOutstanding,
+            },
+            uptime: {
+                apiProcessSeconds: Math.floor(process.uptime()),
+                apiStartedAt: new Date(Date.now() - process.uptime() * 1000).toISOString(),
+                warmerLastPing: lastPingIso,
+                warmerMinutesSinceLastPing: minutesSinceLastPing,
+                warmerStatus: minutesSinceLastPing === null ? 'unavailable' : minutesSinceLastPing <= 15 ? 'healthy' : 'stale',
+            },
+        });
+    }
+    catch (err) {
+        console.error('Error fetching admin dashboard data:', err);
+        (0, telemetry_1.trackException)(err, { endpoint: '/api/admin/dashboard/:clientId', clientId: req.params.clientId });
+        res.status(500).json({ error: 'Failed to fetch dashboard data.' });
     }
 });
 app.delete('/api/client/:clientId/:contactEmail', customJwtCheck, async (req, res) => {
