@@ -994,6 +994,7 @@ app.get('/api/admin/dashboard/:clientId', customJwtCheck, async (req: any, res) 
     const cancelledInvoices = invoices.filter((invoice: any) => invoice.status === IInvoiceStatus.CANCELLED);
     const activeInvoices = invoices.filter((invoice: any) => invoice.status !== IInvoiceStatus.CANCELLED);
     const outstandingInvoices = invoices.filter((invoice: any) => invoice.status !== IInvoiceStatus.PAID && invoice.status !== IInvoiceStatus.CANCELLED);
+    const totalPaid = paidInvoices.reduce((sum: number, invoice: any) => sum + (Number(invoice.amount) || 0), 0);
     const totalOutstanding = outstandingInvoices.reduce((sum: number, invoice: any) => sum + (Number(invoice.amount) || 0), 0);
 
     res.json({
@@ -1010,6 +1011,7 @@ app.get('/api/admin/dashboard/:clientId', customJwtCheck, async (req: any, res) 
         approvedUserCount: clientUsers.filter((entry: any) => entry.approved).length,
         pendingUserCount: clientUsers.filter((entry: any) => !entry.approved).length,
         totalBilled,
+        totalPaid,
         totalOutstanding,
       },
       uptime: {

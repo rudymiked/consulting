@@ -57,6 +57,7 @@ interface IDashboardMetrics {
   approvedUserCount: number;
   pendingUserCount: number;
   totalBilled: number;
+  totalPaid: number;
   totalOutstanding: number;
 }
 
@@ -248,7 +249,7 @@ const ClientDashboard: React.FC = () => {
           <Box
             sx={{
               display: 'grid',
-              gridTemplateColumns: { xs: '1fr', md: 'repeat(4, minmax(0, 1fr))' },
+              gridTemplateColumns: { xs: '1fr', md: 'repeat(5, minmax(0, 1fr))' },
               gap: 2,
               mb: 3,
             }}
@@ -270,6 +271,13 @@ const ClientDashboard: React.FC = () => {
               <Typography variant="body2" color="text.secondary">
                 {dashboard.metrics.outstandingInvoiceCount} open invoices
               </Typography>
+            </Paper>
+            <Paper sx={{ p: 3 }}>
+              <Typography variant="overline" color="text.secondary">
+                Paid Invoices
+              </Typography>
+              <Typography variant="h5">{formatCurrency(dashboard.metrics.totalPaid)}</Typography>
+              <Typography variant="h5">{dashboard.metrics.paidInvoiceCount}</Typography>
             </Paper>
             <Paper sx={{ p: 3 }}>
               <Typography variant="overline" color="text.secondary">
