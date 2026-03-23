@@ -1,14 +1,18 @@
 import { TableNames, IDomain } from './models';
 import { insertEntity, queryEntities, deleteEntity } from './tableClientHelper';
+import { normalizeDomain } from './domainHealthHelper';
 import { v4 as uuidv4 } from 'uuid';
 
 export async function addDomainToClient(clientId: string, domain: string): Promise<IDomain> {
   const id = uuidv4();
+  // Normalize domain to extract hostname (e.g., https://example.com/ -> example.com)
+  const normalizedDomain = normalizeDomain(domain);
+  
   const domainEntity: IDomain = {
     partitionKey: clientId,
     rowKey: id,
     clientId,
-    domain: domain.toLowerCase().trim(),
+    domain: normalizedDomain,
     createdAt: new Date(),
   };
 

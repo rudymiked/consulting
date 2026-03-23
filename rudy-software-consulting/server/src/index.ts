@@ -1301,7 +1301,48 @@ if (require.main === module) {
     hasStorageAccount: String(!!process.env.RUDYARD_STORAGE_ACCOUNT_NAME)
   });
 
-  app.listen(PORT, () => {
-    console.log(`Rudyard Technologies server is live at http://localhost:${PORT}`);
+  // Migrate existing domains to normalize format (e.g., https://example.com/ -> example.com)
+  async function migrateDomainNormalization() {
+    try {
+      console.log('Starting domain normalization migration...');
+      const allDomains: any[] = await queryEntities(TableNames.Domains, null);
+      let updated = 0;
+      
+      for (const domain of allDomains) {
+        if (domain.domain && domain.domain.includes('://')) {
+          // This domain needs normalization
+          const normalized = domain.domain.replace(/^https?:\/\//, '').replace(/\/$/, '').toLowerCase();
+          if (normalized !== domain.domain) {
+            domain.domain = normalized;
+            try {
+              await updateEntity(TableNames.Domains, domain);
+              updated++;
+            } catch (err: any) {
+              console.warn(`Failed to normalize domain ${domain.domain}:`, err.message);
+            }
+          }
+        }
+      }
+      
+      if (updated > 0) {
+        console.log(`✓ Normalized ${updated} domains`);
+        trackEvent('DomainMigration_Complete', { normalizedCount: String(updated) });
+      } else {
+        console.log('✓ All domains already normalized');
+      }
+    } catch (err: any) {
+      console.error('Domain normalization migration failed:', err.message);
+      // Don't fail startup, just log the error
+    }
+  }
+
+  // Run migration before starting server
+  migrateDomainNormalization().then(() => {
+    app.listen(PORT, () => {
+      console.log(`Rudyard Technologies server is live at http://localhost:${PORT}`);
+    });
+  }).catch((err) => {
+    console.error('Failed to complete startup migrations:', err);
+    process.exit(1);
   });
 }

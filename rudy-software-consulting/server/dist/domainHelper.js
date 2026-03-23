@@ -5,14 +5,17 @@ exports.getClientDomains = getClientDomains;
 exports.removeDomain = removeDomain;
 const models_1 = require("./models");
 const tableClientHelper_1 = require("./tableClientHelper");
+const domainHealthHelper_1 = require("./domainHealthHelper");
 const uuid_1 = require("uuid");
 async function addDomainToClient(clientId, domain) {
     const id = (0, uuid_1.v4)();
+    // Normalize domain to extract hostname (e.g., https://example.com/ -> example.com)
+    const normalizedDomain = (0, domainHealthHelper_1.normalizeDomain)(domain);
     const domainEntity = {
         partitionKey: clientId,
         rowKey: id,
         clientId,
-        domain: domain.toLowerCase().trim(),
+        domain: normalizedDomain,
         createdAt: new Date(),
     };
     await (0, tableClientHelper_1.insertEntity)(models_1.TableNames.Domains, domainEntity);

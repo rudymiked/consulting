@@ -1145,7 +1145,48 @@ if (require.main === module) {
         hasClientId: String(!!process.env.RUDYARD_CLIENT_APP_REG_AZURE_CLIENT_ID),
         hasStorageAccount: String(!!process.env.RUDYARD_STORAGE_ACCOUNT_NAME)
     });
-    app.listen(PORT, () => {
-        console.log(`Rudyard Technologies server is live at http://localhost:${PORT}`);
+    // Migrate existing domains to normalize format (e.g., https://example.com/ -> example.com)
+    async function migrateDomainNormalization() {
+        try {
+            console.log('Starting domain normalization migration...');
+            const allDomains = await (0, tableClientHelper_1.queryEntities)(models_1.TableNames.Domains, null);
+            let updated = 0;
+            for (const domain of allDomains) {
+                if (domain.domain && domain.domain.includes('://')) {
+                    // This domain needs normalization
+                    const normalized = domain.domain.replace(/^https?:\/\//, '').replace(/\/$/, '').toLowerCase();
+                    if (normalized !== domain.domain) {
+                        domain.domain = normalized;
+                        try {
+                            await (0, tableClientHelper_1.updateEntity)(models_1.TableNames.Domains, domain);
+                            updated++;
+                        }
+                        catch (err) {
+                            console.warn(`Failed to normalize domain ${domain.domain}:`, err.message);
+                        }
+                    }
+                }
+            }
+            if (updated > 0) {
+                console.log(`✓ Normalized ${updated} domains`);
+                (0, telemetry_1.trackEvent)('DomainMigration_Complete', { normalizedCount: String(updated) });
+            }
+            else {
+                console.log('✓ All domains already normalized');
+            }
+        }
+        catch (err) {
+            console.error('Domain normalization migration failed:', err.message);
+            // Don't fail startup, just log the error
+        }
+    }
+    // Run migration before starting server
+    migrateDomainNormalization().then(() => {
+        app.listen(PORT, () => {
+            console.log(`Rudyard Technologies server is live at http://localhost:${PORT}`);
+        });
+    }).catch((err) => {
+        console.error('Failed to complete startup migrations:', err);
+        process.exit(1);
     });
 }

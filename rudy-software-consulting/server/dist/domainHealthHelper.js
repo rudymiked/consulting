@@ -3,6 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.normalizeDomain = normalizeDomain;
 exports.checkEmailHealth = checkEmailHealth;
 exports.checkWebsiteHealth = checkWebsiteHealth;
 exports.performDomainHealthCheck = performDomainHealthCheck;
@@ -15,6 +16,26 @@ const models_1 = require("./models");
 const tableClientHelper_1 = require("./tableClientHelper");
 const emailHelper_1 = require("./emailHelper");
 const resolveMx = (0, util_1.promisify)(dns_1.default.resolveMx);
+/**
+ * Extract bare hostname from a domain string
+ * Handles: "example.com", "https://example.com", "https://example.com/", "example.com/"
+ * Returns: "example.com"
+ */
+function normalizeDomain(domain) {
+    try {
+        // If it looks like a full URL, parse it
+        if (domain.includes('://')) {
+            const url = new URL(domain);
+            return url.hostname;
+        }
+        // Otherwise remove trailing slash and return
+        return domain.replace(/\/$/, '').toLowerCase().trim();
+    }
+    catch {
+        // If URL parsing fails, just clean up and return
+        return domain.replace(/\/$/, '').toLowerCase().trim();
+    }
+}
 async function checkEmailHealth(domain) {
     try {
         const mxRecords = await resolveMx(domain);
@@ -50,15 +71,17 @@ async function checkWebsiteHealth(domain) {
     });
 }
 async function performDomainHealthCheck(clientId, domain) {
+    // Normalize domain to bare hostname
+    const normalizedDomain = normalizeDomain(domain);
     const [emailCheck, websiteCheck] = await Promise.all([
-        checkEmailHealth(domain),
-        checkWebsiteHealth(domain),
+        checkEmailHealth(normalizedDomain),
+        checkWebsiteHealth(normalizedDomain),
     ]);
     const healthCheck = {
         partitionKey: clientId,
-        rowKey: `${domain}-${Date.now()}`,
+        rowKey: `${normalizedDomain}-${Date.now()}`,
         clientId,
-        domain,
+        domain: normalizedDomain,
         emailStatus: emailCheck.status,
         websiteStatus: websiteCheck.status,
         emailError: emailCheck.error,
@@ -74,9 +97,9 @@ async function performDomainHealthCheck(clientId, domain) {
     }
     // Send alert emails if either check failed
     if (emailCheck.status === models_1.HealthStatus.DOWN || websiteCheck.status === models_1.HealthStatus.DOWN) {
-        const alertSubject = `⚠️ Domain Health Alert for ${domain}`;
+        const alertSubject = `⚠️ Domain Health Alert for ${normalizedDomain}`;
         const alertBody = `
-Domain Health Check Failed for: ${domain}
+Domain Health Check Failed for: ${normalizedDomain}
 
 Email Status: ${emailCheck.status.toUpperCase()}
 ${emailCheck.error ? `Error: ${emailCheck.error}` : ''}
@@ -102,7 +125,9 @@ Time: ${new Date().toLocaleString()}
 }
 async function getLatestDomainHealthCheck(clientId, domain) {
     try {
-        const results = await (0, tableClientHelper_1.queryEntities)(models_1.TableNames.DomainHealth, `PartitionKey eq '${clientId}' and Domain eq '${domain}'`);
+        // Escape single quotes in domain for OData query
+        const escapedDomain = domain.replace(/'/g, "''");
+        const results = await (0, tableClientHelper_1.queryEntities)(models_1.TableNames.DomainHealth, `PartitionKey eq '${clientId}' and domain eq '${escapedDomain}'`);
         if (results.length === 0)
             return null;
         // Return the most recent (last inserted)

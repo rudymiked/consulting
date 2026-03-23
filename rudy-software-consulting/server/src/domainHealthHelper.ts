@@ -8,6 +8,26 @@ import { sendEmail } from './emailHelper';
 
 const resolveMx = promisify(dns.resolveMx);
 
+/**
+ * Extract bare hostname from a domain string
+ * Handles: "example.com", "https://example.com", "https://example.com/", "example.com/"
+ * Returns: "example.com"
+ */
+export function normalizeDomain(domain: string): string {
+  try {
+    // If it looks like a full URL, parse it
+    if (domain.includes('://')) {
+      const url = new URL(domain);
+      return url.hostname;
+    }
+    // Otherwise remove trailing slash and return
+    return domain.replace(/\/$/, '').toLowerCase().trim();
+  } catch {
+    // If URL parsing fails, just clean up and return
+    return domain.replace(/\/$/, '').toLowerCase().trim();
+  }
+}
+
 export async function checkEmailHealth(domain: string): Promise<{ status: HealthStatus; error?: string }> {
   try {
     const mxRecords = await resolveMx(domain);
@@ -54,16 +74,19 @@ export async function performDomainHealthCheck(
   clientId: string,
   domain: string
 ): Promise<IDomainHealthCheck> {
+  // Normalize domain to bare hostname
+  const normalizedDomain = normalizeDomain(domain);
+  
   const [emailCheck, websiteCheck] = await Promise.all([
-    checkEmailHealth(domain),
-    checkWebsiteHealth(domain),
+    checkEmailHealth(normalizedDomain),
+    checkWebsiteHealth(normalizedDomain),
   ]);
 
   const healthCheck: IDomainHealthCheck = {
     partitionKey: clientId,
-    rowKey: `${domain}-${Date.now()}`,
+    rowKey: `${normalizedDomain}-${Date.now()}`,
     clientId,
-    domain,
+    domain: normalizedDomain,
     emailStatus: emailCheck.status,
     websiteStatus: websiteCheck.status,
     emailError: emailCheck.error,
@@ -80,9 +103,9 @@ export async function performDomainHealthCheck(
 
   // Send alert emails if either check failed
   if (emailCheck.status === HealthStatus.DOWN || websiteCheck.status === HealthStatus.DOWN) {
-    const alertSubject = `⚠️ Domain Health Alert for ${domain}`;
+    const alertSubject = `⚠️ Domain Health Alert for ${normalizedDomain}`;
     const alertBody = `
-Domain Health Check Failed for: ${domain}
+Domain Health Check Failed for: ${normalizedDomain}
 
 Email Status: ${emailCheck.status.toUpperCase()}
 ${emailCheck.error ? `Error: ${emailCheck.error}` : ''}
@@ -113,9 +136,11 @@ export async function getLatestDomainHealthCheck(
   domain: string
 ): Promise<IDomainHealthCheck | null> {
   try {
+    // Escape single quotes in domain for OData query
+    const escapedDomain = domain.replace(/'/g, "''");
     const results: any[] = await queryEntities(
       TableNames.DomainHealth,
-      `PartitionKey eq '${clientId}' and Domain eq '${domain}'`
+      `PartitionKey eq '${clientId}' and domain eq '${escapedDomain}'`
     );
     if (results.length === 0) return null;
     // Return the most recent (last inserted)
