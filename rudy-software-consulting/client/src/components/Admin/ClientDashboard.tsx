@@ -279,7 +279,9 @@ const ClientDashboard: React.FC = () => {
                 Paid Invoices
               </Typography>
               <Typography variant="h5">{formatCurrency(dashboard.metrics.totalPaid)}</Typography>
-              <Typography variant="h5">{dashboard.metrics.paidInvoiceCount}</Typography>
+              <Typography variant="body2" color="text.secondary">
+                {dashboard.metrics.paidInvoiceCount} paid invoices
+              </Typography>
             </Paper>
             <Paper sx={{ p: 3 }}>
               <Typography variant="overline" color="text.secondary">
