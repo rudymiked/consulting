@@ -1048,11 +1048,15 @@ app.get('/api/admin/dashboard/:clientId', customJwtCheck, async (req: any, res) 
       ? Math.floor((Date.now() - lastPingValue.getTime()) / 60000)
       : null;
 
+    const normalizeStatus = (status: any): string => String(status || '').trim().toUpperCase();
+    const isPaid = (invoice: any): boolean => normalizeStatus(invoice?.status) === IInvoiceStatus.PAID;
+    const isCancelled = (invoice: any): boolean => normalizeStatus(invoice?.status) === IInvoiceStatus.CANCELLED;
+
     const totalBilled = invoices.reduce((sum: number, invoice: any) => sum + (Number(invoice.amount) || 0), 0);
-    const paidInvoices = invoices.filter((invoice: any) => invoice.status === IInvoiceStatus.PAID);
-    const cancelledInvoices = invoices.filter((invoice: any) => invoice.status === IInvoiceStatus.CANCELLED);
-    const activeInvoices = invoices.filter((invoice: any) => invoice.status !== IInvoiceStatus.CANCELLED);
-    const outstandingInvoices = invoices.filter((invoice: any) => invoice.status !== IInvoiceStatus.PAID && invoice.status !== IInvoiceStatus.CANCELLED);
+    const paidInvoices = invoices.filter((invoice: any) => isPaid(invoice));
+    const cancelledInvoices = invoices.filter((invoice: any) => isCancelled(invoice));
+    const activeInvoices = invoices.filter((invoice: any) => !isCancelled(invoice));
+    const outstandingInvoices = invoices.filter((invoice: any) => !isPaid(invoice) && !isCancelled(invoice));
     const totalPaid = paidInvoices.reduce((sum: number, invoice: any) => sum + (Number(invoice.amount) || 0), 0);
     const totalOutstanding = outstandingInvoices.reduce((sum: number, invoice: any) => sum + (Number(invoice.amount) || 0), 0);
 
