@@ -1126,7 +1126,8 @@ app.post('/api/admin/client/:clientId/domains', customJwtCheck, async (req: any,
   } catch (err: any) {
     console.error('Error adding domain:', err);
     trackException(err, { endpoint: '/api/admin/client/:clientId/domains', clientId: req.params.clientId });
-    res.status(500).json({ error: 'Failed to add domain.' });
+    const errorMessage = err?.details?.odataError?.message?.value || err?.message || 'Failed to add domain.';
+    res.status(500).json({ error: errorMessage });
   }
 });
 

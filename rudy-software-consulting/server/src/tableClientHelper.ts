@@ -7,6 +7,7 @@ import { TableClient } from "@azure/data-tables";
 
 // Cache for table clients to avoid creating new connections on every request
 const tableClientCache = new Map<string, TableClient>();
+const ensuredTableNames = new Set<string>();
 
 // Cached credential (reused across all table clients)
 let cachedCredential: TokenCredential | null = null;
@@ -66,11 +67,32 @@ export function getTableClient(tableName: string): TableClient {
 
 type RequiredTableEntity = { partitionKey: string; rowKey: string };
 
+const ensureTableExists = async (tableName: string): Promise<void> => {
+  if (ensuredTableNames.has(tableName)) {
+    return;
+  }
+
+  const client = getTableClient(tableName);
+  try {
+    await client.createTable();
+    console.log(`[TableClient] Created table: ${tableName}`);
+  } catch (error: any) {
+    // Ignore "table already exists" conflicts.
+    if (error?.statusCode !== 409) {
+      console.error(`[TableClient] Error ensuring table ${tableName}:`, error.message || error);
+      throw error;
+    }
+  }
+
+  ensuredTableNames.add(tableName);
+};
+
 export const insertEntity = async <T extends RequiredTableEntity>(
   tableName: string,
   entity: T
 ): Promise<void> => {
   try {
+    await ensureTableExists(tableName);
     const client = getTableClient(tableName);
     await client.createEntity(entity);
   } catch (error: any) {
@@ -87,6 +109,8 @@ export const queryEntities = async <T extends object>(
 ): Promise<T[]> => {
   const start = Date.now();
   console.log(`[Query] Starting query on ${tableName}`, { filter: filter || 'none', partitionKey: partitionKey || 'none' });
+
+  await ensureTableExists(tableName);
   
   const client = getTableClient(tableName);
   
@@ -121,6 +145,7 @@ export const deleteEntity = async (
   partitionKey: string,
   rowKey: string
 ): Promise<void> => {
+  await ensureTableExists(tableName);
   const client = getTableClient(tableName);
   try {
     await client.deleteEntity(partitionKey, rowKey);
@@ -138,6 +163,7 @@ export const updateEntity = async <T extends RequiredTableEntity>(
   merge: boolean = true
 ): Promise<void> => {
   try {
+    await ensureTableExists(tableName);
     const client = getTableClient(tableName);
     await client.updateEntity(entity, merge ? "Merge" : "Replace");
   } catch (error: any) {

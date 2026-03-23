@@ -6,6 +6,7 @@ const identity_1 = require("@azure/identity");
 const data_tables_1 = require("@azure/data-tables");
 // Cache for table clients to avoid creating new connections on every request
 const tableClientCache = new Map();
+const ensuredTableNames = new Set();
 // Cached credential (reused across all table clients)
 let cachedCredential = null;
 function getCredential() {
@@ -47,8 +48,27 @@ function getTableClient(tableName) {
     console.log(`[TableClient] Created and cached client for table: ${tableName}`);
     return client;
 }
+const ensureTableExists = async (tableName) => {
+    if (ensuredTableNames.has(tableName)) {
+        return;
+    }
+    const client = getTableClient(tableName);
+    try {
+        await client.createTable();
+        console.log(`[TableClient] Created table: ${tableName}`);
+    }
+    catch (error) {
+        // Ignore "table already exists" conflicts.
+        if (error?.statusCode !== 409) {
+            console.error(`[TableClient] Error ensuring table ${tableName}:`, error.message || error);
+            throw error;
+        }
+    }
+    ensuredTableNames.add(tableName);
+};
 const insertEntity = async (tableName, entity) => {
     try {
+        await ensureTableExists(tableName);
         const client = getTableClient(tableName);
         await client.createEntity(entity);
     }
@@ -62,6 +82,7 @@ exports.insertEntity = insertEntity;
 const queryEntities = async (tableName, filter, partitionKey) => {
     const start = Date.now();
     console.log(`[Query] Starting query on ${tableName}`, { filter: filter || 'none', partitionKey: partitionKey || 'none' });
+    await ensureTableExists(tableName);
     const client = getTableClient(tableName);
     // Build query options only if filter is provided
     let queryOptions;
@@ -92,6 +113,7 @@ const queryEntities = async (tableName, filter, partitionKey) => {
 exports.queryEntities = queryEntities;
 // Delete entity
 const deleteEntity = async (tableName, partitionKey, rowKey) => {
+    await ensureTableExists(tableName);
     const client = getTableClient(tableName);
     try {
         await client.deleteEntity(partitionKey, rowKey);
@@ -106,6 +128,7 @@ exports.deleteEntity = deleteEntity;
 // Update entity
 const updateEntity = async (tableName, entity, merge = true) => {
     try {
+        await ensureTableExists(tableName);
         const client = getTableClient(tableName);
         await client.updateEntity(entity, merge ? "Merge" : "Replace");
     }
