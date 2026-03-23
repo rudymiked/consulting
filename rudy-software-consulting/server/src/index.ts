@@ -16,6 +16,8 @@ import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
 import { queryEntities, updateEntity } from './tableClientHelper';
 import { addClient, deleteClient, getAllClients, getClientByEmail, getClientById, getClientsByName, getInvoicesByClientId } from './clientHelper';
+import { addDomainToClient, getClientDomains, removeDomain } from './domainHelper';
+import { performDomainHealthCheck, getLatestDomainHealthCheck } from './domainHealthHelper';
 
 dotenv.config();
 
@@ -274,6 +276,63 @@ const customJwtCheck = (req: any, res: any, next: any) => {
 function getUserFromCustomToken(req: any): { email: string; clientId: string; siteAdmin: boolean } | null {
   return req.user || null;
 }
+
+// API Key validation middleware for scheduled jobs
+const apiKeyCheck = (req: any, res: any, next: any) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'No token provided' });
+  }
+
+  const token = authHeader.split(' ')[1];
+  const expectedApiKey = process.env.DOMAIN_HEALTH_API_KEY;
+
+  if (!expectedApiKey) {
+    console.warn('DOMAIN_HEALTH_API_KEY not configured');
+    return res.status(500).json({ error: 'API key not configured' });
+  }
+
+  if (token !== expectedApiKey) {
+    trackEvent('APIKey_ValidationFailed', { path: req.path });
+    return res.status(403).json({ error: 'Invalid API key' });
+  }
+
+  // Mark as API key authenticated (not user-based)
+  req.apiKeyAuthenticated = true;
+  next();
+};
+
+// Helper to check if request is authenticated (either JWT or API key)
+function isAuthenticated(req: any): boolean {
+  return !!(req.user || req.apiKeyAuthenticated);
+}
+
+// Combined middleware: accepts JWT OR API key
+const authCheck = (req: any, res: any, next: any) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'No token provided' });
+  }
+
+  const token = authHeader.split(' ')[1];
+
+  // Try JWT first
+  const user = verifyToken(token);
+  if (user) {
+    req.user = user;
+    return next();
+  }
+
+  // Fall back to API key
+  const expectedApiKey = process.env.DOMAIN_HEALTH_API_KEY;
+  if (expectedApiKey && token === expectedApiKey) {
+    req.apiKeyAuthenticated = true;
+    return next();
+  }
+
+  trackEvent('Auth_ValidationFailed', { path: req.path });
+  return res.status(403).json({ error: 'Invalid credentials' });
+};
 
 // JWT error handler - must be after routes that use jwtCheck
 const jwtErrorHandler = (err: any, req: any, res: any, next: any) => {
@@ -1026,6 +1085,113 @@ app.get('/api/admin/dashboard/:clientId', customJwtCheck, async (req: any, res) 
     console.error('Error fetching admin dashboard data:', err);
     trackException(err, { endpoint: '/api/admin/dashboard/:clientId', clientId: req.params.clientId });
     res.status(500).json({ error: 'Failed to fetch dashboard data.' });
+  }
+});
+
+// Domain management endpoints
+app.get('/api/admin/client/:clientId/domains', customJwtCheck, async (req: any, res) => {
+  try {
+    const { clientId } = req.params;
+    const user = getUserFromCustomToken(req);
+
+    if (!user || !user.siteAdmin) {
+      return res.status(403).json({ error: 'Access denied: Admin only' });
+    }
+
+    const domains = await getClientDomains(clientId);
+    res.json(domains);
+  } catch (err: any) {
+    console.error('Error fetching client domains:', err);
+    trackException(err, { endpoint: '/api/admin/client/:clientId/domains', clientId: req.params.clientId });
+    res.status(500).json({ error: 'Failed to fetch domains.' });
+  }
+});
+
+app.post('/api/admin/client/:clientId/domains', customJwtCheck, async (req: any, res) => {
+  try {
+    const { clientId } = req.params;
+    const { domain } = req.body;
+    const user = getUserFromCustomToken(req);
+
+    if (!user || !user.siteAdmin) {
+      return res.status(403).json({ error: 'Access denied: Admin only' });
+    }
+
+    if (!domain || typeof domain !== 'string') {
+      return res.status(400).json({ error: 'Domain is required' });
+    }
+
+    const newDomain = await addDomainToClient(clientId, domain);
+    res.json(newDomain);
+  } catch (err: any) {
+    console.error('Error adding domain:', err);
+    trackException(err, { endpoint: '/api/admin/client/:clientId/domains', clientId: req.params.clientId });
+    res.status(500).json({ error: 'Failed to add domain.' });
+  }
+});
+
+app.delete('/api/admin/client/:clientId/domains/:rowKey', customJwtCheck, async (req: any, res) => {
+  try {
+    const { clientId, rowKey } = req.params;
+    const user = getUserFromCustomToken(req);
+
+    if (!user || !user.siteAdmin) {
+      return res.status(403).json({ error: 'Access denied: Admin only' });
+    }
+
+    await removeDomain(clientId, rowKey);
+    res.json({ success: true });
+  } catch (err: any) {
+    console.error('Error removing domain:', err);
+    trackException(err, { endpoint: '/api/admin/client/:clientId/domains/:rowKey', clientId: req.params.clientId });
+    res.status(500).json({ error: 'Failed to remove domain.' });
+  }
+});
+
+// Domain health check endpoints
+app.get('/api/admin/domain-health/:clientId', customJwtCheck, async (req: any, res) => {
+  try {
+    const { clientId } = req.params;
+    const user = getUserFromCustomToken(req);
+
+    if (!user || !user.siteAdmin) {
+      return res.status(403).json({ error: 'Access denied: Admin only' });
+    }
+
+    const domains = await getClientDomains(clientId);
+    const healthChecks = await Promise.all(
+      domains.map(async (d) => ({
+        domain: d.domain,
+        rowKey: d.rowKey,
+        health: await getLatestDomainHealthCheck(clientId, d.domain),
+      }))
+    );
+
+    res.json(healthChecks);
+  } catch (err: any) {
+    console.error('Error fetching domain health:', err);
+    trackException(err, { endpoint: '/api/admin/domain-health/:clientId', clientId: req.params.clientId });
+    res.status(500).json({ error: 'Failed to fetch domain health.' });
+  }
+});
+
+app.post('/api/admin/domain-health/:clientId/check/:domain', authCheck, async (req: any, res) => {
+  try {
+    const { clientId, domain } = req.params;
+    const user = getUserFromCustomToken(req);
+    const isApiKeyAuth = req.apiKeyAuthenticated;
+
+    // Allow if: (user is authenticated and admin) OR (API key authenticated)
+    if (!isApiKeyAuth && (!user || !user.siteAdmin)) {
+      return res.status(403).json({ error: 'Access denied: Admin only' });
+    }
+
+    const health = await performDomainHealthCheck(clientId, decodeURIComponent(domain));
+    res.json(health);
+  } catch (err: any) {
+    console.error('Error checking domain health:', err);
+    trackException(err, { endpoint: '/api/admin/domain-health/:clientId/check/:domain', clientId: req.params.clientId });
+    res.status(500).json({ error: 'Failed to check domain health.' });
   }
 });
 

@@ -60,6 +60,8 @@ export enum TableNames {
     ContactLogs = 'ContactLogs',
     Users = 'Users',
     Clients = 'Clients',
+    Domains = 'Domains',
+    DomainHealth = 'DomainHealth',
 }
 
 export interface IUser extends TableEntity {
@@ -78,4 +80,26 @@ export interface IClient extends TableEntity {
     contactEmail: string;
     address: string;
     phone: string;
+}
+
+export interface IDomain extends TableEntity {
+    clientId: string;
+    domain: string; // e.g., example.com
+    createdAt: Date;
+}
+
+export enum HealthStatus {
+    HEALTHY = 'healthy',
+    DOWN = 'down',
+    UNKNOWN = 'unknown',
+}
+
+export interface IDomainHealthCheck extends TableEntity {
+    clientId: string;
+    domain: string;
+    emailStatus: HealthStatus;
+    websiteStatus: HealthStatus;
+    emailError?: string;
+    websiteError?: string;
+    lastCheckTime: Date;
 }

@@ -422,3 +422,5 @@ FodyWeavers.xsd
 *.msix
 *.msm
 *.msp
+rudy-software-consulting/services/APIWarmer/DOMAIN_HEALTH_CHECK_SETUP.md
+rudy-software-consulting/DOMAIN_HEALTH_DEPLOYMENT_GUIDE.md

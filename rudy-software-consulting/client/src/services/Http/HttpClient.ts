@@ -12,6 +12,11 @@ export interface IHttpPOSTProps {
     data?: any;
 }
 
+export interface IHttpDELETEProps {
+    url: string;
+    token: string;
+}
+
 export interface IHttpClient {
     get<T>(parameters: IHttpGETProps): Promise<T>;
     getExternal<T>(parameters: IHttpGETProps): Promise<T>;
@@ -19,6 +24,7 @@ export interface IHttpClient {
     post<T>(parameters: IHttpPOSTProps): Promise<T>;
     postLocal<T>(parameters: IHttpPOSTProps): Promise<T>;
     postWithParams<T>(parameters: IHttpPOSTProps): Promise<T>;
+    delete(parameters: IHttpDELETEProps): Promise<void>;
 }
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "https://rudyardapi-f3bydsa9avgneva5.canadacentral-01.azurewebsites.net";
@@ -93,5 +99,23 @@ export default class HttpClient implements IHttpClient {
 
     postExternal<T>(p: IHttpPOSTProps): Promise<T> {
         return this.request<T>("post", p.url, p.token, p.data, false, true);
+    }
+
+    delete(p: IHttpDELETEProps): Promise<void> {
+        const headers: Record<string, string> = {
+            Authorization: `Bearer ${p.token}`,
+        };
+
+        const config: AxiosRequestConfig = {
+            headers,
+            withCredentials: true,
+        };
+
+        const fullUrl = API_BASE_URL + p.url;
+
+        return axios.delete(fullUrl, config).then(() => undefined).catch((error) => {
+            console.error(`HTTP DELETE ${fullUrl} failed`, error);
+            throw error;
+        });
     }
 }
