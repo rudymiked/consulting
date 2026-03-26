@@ -15,6 +15,7 @@ import {
 import { Link } from 'react-router-dom';
 import HttpClient from '../../services/Http/HttpClient';
 import { useAuth } from '../Auth/AuthContext';
+import { IInvoice } from '../../pages/InvoicesPage';
 
 interface IClient {
   id: string;
@@ -22,7 +23,12 @@ interface IClient {
   contactEmail: string;
 }
 
-const CreateInvoice: React.FC = () => {
+interface ICreateInvoiceProps {
+  invoiceId?: string;
+}
+
+const CreateInvoice: React.FC<ICreateInvoiceProps> = ({ invoiceId }) => {
+  const isEditMode = Boolean(invoiceId);
   const [form, setForm] = useState({
     name: '',
     amount: '',
@@ -32,6 +38,7 @@ const CreateInvoice: React.FC = () => {
   });
   const [clients, setClients] = useState<IClient[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadingInvoice, setLoadingInvoice] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -41,6 +48,39 @@ const CreateInvoice: React.FC = () => {
   useEffect(() => {
     fetchClients();
   }, []);
+
+  useEffect(() => {
+    if (!isEditMode || !invoiceId) {
+      return;
+    }
+
+    const fetchInvoice = async () => {
+      setLoadingInvoice(true);
+      setError(null);
+
+      try {
+        const invoice = await httpClient.get<IInvoice>({
+          url: `/api/invoice/${invoiceId}`,
+          token: auth.token || '',
+        });
+
+        setForm({
+          name: invoice.name || '',
+          amount: ((invoice.amount || 0) / 100).toFixed(2),
+          notes: invoice.notes || '',
+          contact: invoice.contact || '',
+          clientId: invoice.clientId || '',
+        });
+      } catch (err: any) {
+        const apiError = err?.response?.data?.error;
+        setError(apiError || 'Failed to load invoice for editing.');
+      } finally {
+        setLoadingInvoice(false);
+      }
+    };
+
+    fetchInvoice();
+  }, [isEditMode, invoiceId, auth.token]);
 
   const fetchClients = async () => {
     try {
@@ -82,31 +122,46 @@ const CreateInvoice: React.FC = () => {
     setSuccess(false);
 
     try {
-      const res = await httpClient.post<{
-        success: boolean;
-        message: string;
-        invoiceId?: string;
-      }>({
-        url: '/api/invoice',
-        token: auth.token || '',
-        data: {
-          name,
-          amount: parseFloat(amount) * 100,
-          notes,
-          contact,
-          clientId: clientId || undefined,
-        },
-      });
+      const payload = {
+        name,
+        amount: parseFloat(amount) * 100,
+        notes,
+        contact,
+        clientId: clientId || undefined,
+      };
+
+      const res = isEditMode && invoiceId
+        ? await httpClient.put<{
+            success: boolean;
+            message: string;
+            invoiceId?: string;
+          }>({
+            url: `/api/invoice/${invoiceId}`,
+            token: auth.token || '',
+            data: payload,
+          })
+        : await httpClient.post<{
+            success: boolean;
+            message: string;
+            invoiceId?: string;
+          }>({
+            url: '/api/invoice',
+            token: auth.token || '',
+            data: payload,
+          });
 
       if (res.success) {
         setSuccess(true);
-        setForm({ name: '', amount: '', notes: '', contact: '', clientId: '' });
+        if (!isEditMode) {
+          setForm({ name: '', amount: '', notes: '', contact: '', clientId: '' });
+        }
       } else {
-        setError(`Failed to create invoice: ${res.message}`);
+        setError(`Failed to ${isEditMode ? 'update' : 'create'} invoice: ${res.message}`);
       }
     } catch (err: any) {
-      setError('Failed to save invoice.');
-      console.error('API error:', err.message);
+      const apiError = err?.response?.data?.error;
+      setError(apiError || `Failed to ${isEditMode ? 'update' : 'save'} invoice.`);
+      console.error('API error:', err.message || err);
     } finally {
       setLoading(false);
     }
@@ -116,7 +171,7 @@ const CreateInvoice: React.FC = () => {
     <Box sx={{ p: 3 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Typography variant="h4" component="h1">
-          New Invoice
+          {isEditMode ? 'Edit Invoice' : 'New Invoice'}
         </Typography>
         <Link to="/admin">
           <Button variant="outlined">Back to Dashboard</Button>
@@ -124,8 +179,9 @@ const CreateInvoice: React.FC = () => {
       </Box>
       <Paper elevation={3} sx={{ maxWidth: 420, mx: 'auto', mt: 6, p: 4 }}>
         <Typography variant="h5" align="center" gutterBottom>
-          New Invoice
+          {isEditMode ? 'Edit Invoice' : 'New Invoice'}
         </Typography>
+        {loadingInvoice && <CircularProgress size={24} sx={{ display: 'block', mx: 'auto', mb: 2 }} />}
         <Box component="form" onSubmit={handleSubmit} noValidate>
           <FormControl fullWidth margin="normal">
             <InputLabel id="client-select-label">Client</InputLabel>
@@ -185,15 +241,19 @@ const CreateInvoice: React.FC = () => {
               type="submit"
               variant="contained"
               color="primary"
-              disabled={loading}
+              disabled={loading || loadingInvoice}
               fullWidth
               size="large"
               startIcon={loading ? <CircularProgress size={20} /> : null}
             >
-              {loading ? 'Saving...' : 'Create Invoice'}
+              {loading ? 'Saving...' : isEditMode ? 'Update Invoice' : 'Create Invoice'}
             </Button>
           </Box>
-          {success && <Alert severity="success" sx={{ mt: 2 }}>Invoice saved!</Alert>}
+          {success && (
+            <Alert severity="success" sx={{ mt: 2 }}>
+              {isEditMode ? 'Invoice updated!' : 'Invoice saved!'}
+            </Alert>
+          )}
           {error && <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>}
         </Box>
       </Paper>

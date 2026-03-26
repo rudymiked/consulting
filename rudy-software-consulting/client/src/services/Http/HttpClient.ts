@@ -12,6 +12,12 @@ export interface IHttpPOSTProps {
     data?: any;
 }
 
+export interface IHttpPUTProps {
+    url: string;
+    token: string;
+    data?: any;
+}
+
 export interface IHttpDELETEProps {
     url: string;
     token: string;
@@ -22,6 +28,7 @@ export interface IHttpClient {
     getExternal<T>(parameters: IHttpGETProps): Promise<T>;
     getLocal<T>(parameters: IHttpGETProps): Promise<T>;
     post<T>(parameters: IHttpPOSTProps): Promise<T>;
+    put<T>(parameters: IHttpPUTProps): Promise<T>;
     postLocal<T>(parameters: IHttpPOSTProps): Promise<T>;
     postWithParams<T>(parameters: IHttpPOSTProps): Promise<T>;
     delete(parameters: IHttpDELETEProps): Promise<void>;
@@ -32,7 +39,7 @@ const LOCAL_BASE_URL = "https://localhost:7161";
 
 export default class HttpClient implements IHttpClient {
     private async request<T>(
-        method: "get" | "post",
+        method: "get" | "post" | "put",
         url: string,
         token: string,
         dataOrParams?: any,
@@ -59,9 +66,14 @@ export default class HttpClient implements IHttpClient {
                 return response.data;
             }
 
-            if (useParamsInPost) {
+            if (method === "post" && useParamsInPost) {
                 config.params = dataOrParams;
                 const response = await axios.post<T>(fullUrl, null, config);
+                return response.data;
+            }
+
+            if (method === "put") {
+                const response = await axios.put<T>(fullUrl, dataOrParams, config);
                 return response.data;
             }
 
@@ -87,6 +99,10 @@ export default class HttpClient implements IHttpClient {
 
     post<T>(p: IHttpPOSTProps): Promise<T> {
         return this.request<T>("post", p.url, p.token, p.data);
+    }
+
+    put<T>(p: IHttpPUTProps): Promise<T> {
+        return this.request<T>("put", p.url, p.token, p.data);
     }
 
     postLocal<T>(p: IHttpPOSTProps): Promise<T> {

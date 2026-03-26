@@ -13,6 +13,7 @@ import AboutPage from './pages/AboutPage';
 import PrivacyPage from './pages/PrivacyPage';
 import TermsOfServicePage from './pages/TermsOfServicePage';
 import CreateInvoicePage from './pages/CreateInvoicePage';
+import EditInvoicePage from './pages/EditInvoicePage';
 import InvoicePage from './pages/InvoicePage';
 import LoginPage from './pages/LoginPage';
 import AdminPage from './pages/AdminPage';
@@ -90,6 +91,14 @@ const App: React.FC = () => {
               element={
                 <ProtectedRoute>
                   <CreateInvoicePage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/invoice/:invoiceId/edit"
+              element={
+                <ProtectedRoute>
+                  <EditInvoicePage />
                 </ProtectedRoute>
               }
             />

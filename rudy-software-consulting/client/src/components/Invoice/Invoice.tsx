@@ -8,6 +8,7 @@ import { StripeElementsOptions } from '@stripe/stripe-js';
 import { stripePromise } from '../../shared/stripe';
 import { useAuth } from '../Auth/AuthContext';
 import HttpClient from '../../services/Http/HttpClient';
+import { jsPDF } from 'jspdf';
 
 export interface IInvoiceProps {
     invoiceId: string;
@@ -37,6 +38,60 @@ const Invoice: React.FC<IInvoiceProps> = (props: IInvoiceProps) => {
     const { isAuthenticated, token } = useAuth();
 
     const httpClient = new HttpClient();
+    const isInvoicePaid = invoice?.status?.toUpperCase() === IInvoiceStatus.PAID.toUpperCase()
+        || paymentStatus === PaymentStatus.Succeeded;
+
+    const exportInvoicePdf = () => {
+        if (!invoice) return;
+
+        const doc = new jsPDF();
+
+        if (isInvoicePaid) {
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(18);
+            doc.setTextColor(210, 0, 0);
+            doc.text('PAID', 104, 34, { angle: -30, align: 'center' });
+            doc.setTextColor(0, 0, 0);
+        }
+
+        let y = 22;
+
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(18);
+        doc.text('Invoice', 14, y);
+
+        y += 10;
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(11);
+        doc.text(`Invoice ID: ${invoice.id}`, 14, y);
+        y += 8;
+        doc.text(`Name: ${invoice.name}`, 14, y);
+        y += 8;
+        doc.text(`Contact: ${invoice.contact}`, 14, y);
+        y += 8;
+        doc.text(`Status: ${invoice.status}`, 14, y);
+        y += 8;
+        doc.text(`Amount: $${invoice.amount.toFixed(2)}`, 14, y);
+        y += 8;
+
+        const createdDate = invoice.createdDate ? new Date(invoice.createdDate).toLocaleDateString() : 'N/A';
+        const updatedDate = invoice.updatedDate ? new Date(invoice.updatedDate).toLocaleDateString() : 'N/A';
+        doc.text(`Created: ${createdDate}`, 14, y);
+        y += 8;
+        doc.text(`Updated: ${updatedDate}`, 14, y);
+        y += 12;
+
+        doc.setFont('helvetica', 'bold');
+        doc.text('Notes', 14, y);
+        y += 8;
+        doc.setFont('helvetica', 'normal');
+        const notes = invoice.notes?.trim() || 'N/A';
+        const wrappedNotes = doc.splitTextToSize(notes, 180);
+        doc.text(wrappedNotes, 14, y);
+
+        const fileName = `${invoice.id}-${isInvoicePaid ? 'paid' : 'invoice'}.pdf`;
+        doc.save(fileName);
+    };
 
     React.useEffect(() => {
         console.log("isAuth: " + isAuthenticated);
@@ -224,6 +279,14 @@ const Invoice: React.FC<IInvoiceProps> = (props: IInvoiceProps) => {
                     <Typography variant="body1">{invoice.contact}</Typography>
                 </Box>
                 <Divider sx={{ my: 3 }} />
+
+                <Button
+                    variant="outlined"
+                    onClick={exportInvoicePdf}
+                    sx={{ mb: 2 }}
+                >
+                    Export PDF
+                </Button>
 
                 {statusChecked && (
                     <>

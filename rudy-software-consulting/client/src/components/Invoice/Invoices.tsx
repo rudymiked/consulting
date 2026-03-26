@@ -86,7 +86,7 @@ const Invoices: React.FC = () => {
                                 <TableCell>Contact</TableCell>
                                 <TableCell>Amount</TableCell>
                                 <TableCell>Status</TableCell>
-                                <TableCell>Link</TableCell>
+                                <TableCell>Actions</TableCell>
                             </TableRow>
                         </TableHead>
                         <TableBody>
@@ -113,9 +113,16 @@ const Invoices: React.FC = () => {
                                         />
                                     </TableCell>
                                     <TableCell>
-                                        <Link to={`/invoice/${invoice.id}`}>
-                                            View
-                                        </Link>
+                                        <Box sx={{ display: 'flex', gap: 2 }}>
+                                            <Link to={`/invoice/${invoice.id}`}>
+                                                View
+                                            </Link>
+                                            {isAdmin && (
+                                                <Link to={`/invoice/${invoice.id}/edit`}>
+                                                    Edit
+                                                </Link>
+                                            )}
+                                        </Box>
                                     </TableCell>
                                 </TableRow>
                             ))}

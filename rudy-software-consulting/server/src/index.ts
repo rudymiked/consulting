@@ -6,7 +6,7 @@ import appInsights from "applicationinsights";
 import { insertIntoContactLogs, sendEmail } from './emailHelper';
 import jwksClient from 'jwks-rsa';
 import { expressjwt } from 'express-jwt';
-import { createInvoice, finalizePayment, getInvoiceDetails, getInvoices, payInvoice } from './invoiceHelper';
+import { createInvoice, finalizePayment, getInvoiceDetails, getInvoices, payInvoice, updateInvoice } from './invoiceHelper';
 import { trackEvent, trackException } from './telemetry';
 import { approveUser, unapproveUser, toggleAdmin, loginUser, registerUser, verifyToken } from './authHelper';
 import { IEmailOptions, IInvoice, IInvoiceResult, IInvoiceStatus, IWarmerEntity, TableNames } from './models';
@@ -759,6 +759,55 @@ app.post('/api/invoice', customJwtCheck, async (req, res) => {
     console.error('Error saving invoice:', error.message);
     trackException(error, { name, contact });
     res.status(500).json({ error: 'Failed to save invoice.' + error.message });
+  }
+});
+
+app.put('/api/invoice/:invoiceId', customJwtCheck, async (req: any, res) => {
+  const { invoiceId } = req.params;
+  const { name, amount, notes, contact, dueDate, clientId } = req.body;
+  const user = getUserFromCustomToken(req);
+
+  if (!user) {
+    return res.status(403).json({ error: 'Unauthorized' });
+  }
+
+  if (!user.siteAdmin) {
+    return res.status(403).json({ error: 'Access denied: Admin only' });
+  }
+
+  if (!name || !amount || !contact) {
+    return res.status(400).json({ error: 'Missing required fields.' });
+  }
+
+  if (Number(amount) <= 0) {
+    return res.status(400).json({ error: 'Amount must be greater than 0.' });
+  }
+
+  try {
+    const existingInvoice = await getInvoiceDetails(invoiceId);
+    const result = await updateInvoice({
+      id: invoiceId,
+      name,
+      amount,
+      notes: notes || '',
+      contact,
+      clientId: clientId || undefined,
+      paymentIntentId: existingInvoice.paymentIntentId,
+      status: existingInvoice.status,
+      dueDate: dueDate ? new Date(dueDate) : existingInvoice.dueDate,
+    });
+
+    trackEvent('UpdateInvoice_API_Success', { invoiceId, adminEmail: user.email });
+    return res.status(200).json(result);
+  } catch (error: any) {
+    const isNotFound = String(error?.message || '').toLowerCase().includes('not found');
+
+    if (isNotFound) {
+      return res.status(404).json({ error: 'Invoice not found.' });
+    }
+
+    trackException(error, { endpoint: '/api/invoice/:invoiceId', invoiceId, adminEmail: user.email });
+    return res.status(500).json({ error: 'Failed to update invoice.' });
   }
 });
 

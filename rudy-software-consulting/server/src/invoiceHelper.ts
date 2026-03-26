@@ -1,7 +1,7 @@
 import { IInvoiceRequest, IInvoice, IInvoiceStatus, IInvoiceResult, TableNames } from "./models";
 import crypto from 'crypto';
 import { trackEvent, trackDependency, trackException, trackTrace } from './telemetry';
-import { insertEntity, queryEntities, updateEntity } from './tableClientHelper';
+import { deleteEntity, insertEntity, queryEntities, updateEntity } from './tableClientHelper';
 import Stripe from 'stripe';
 import { sendEmail } from "./emailHelper";
 
@@ -159,18 +159,36 @@ export const createInvoice = async (invoiceData: IInvoiceRequest) => {
 }
 
 export const updateInvoice = async (invoiceData: IInvoiceRequest) => {
+  const existingInvoice = await getInvoiceDetails(invoiceData.id);
+  const nextPartitionKey = invoiceData.clientId || invoiceData.contact || existingInvoice.partitionKey;
 
   const entity = {
-    partitionKey: invoiceData.contact || "default",
+    partitionKey: nextPartitionKey,
     rowKey: invoiceData.id,
-    ...invoiceData,
+    id: invoiceData.id,
+    name: invoiceData.name,
+    amount: invoiceData.amount,
+    notes: invoiceData.notes,
+    contact: invoiceData.contact,
+    clientId: invoiceData.clientId,
+    paymentIntentId: invoiceData.paymentIntentId ?? existingInvoice.paymentIntentId ?? "",
+    status: invoiceData.status,
+    dueDate: invoiceData.dueDate ? new Date(invoiceData.dueDate) : existingInvoice.dueDate,
+    createdDate: existingInvoice.createdDate,
+    updatedDate: new Date(),
   };
 
   trackEvent('UpdateInvoice_Attempt', { invoiceId: invoiceData.id });
   const start = Date.now();
   try {
-    // Update by merging properties; will throw if entity doesn't exist
-    await updateEntity(TableNames.Invoices, entity);
+    if (nextPartitionKey !== existingInvoice.partitionKey) {
+      // Partition key changes require a new entity insert and old entity delete.
+      await insertEntity(TableNames.Invoices, entity);
+      await deleteEntity(TableNames.Invoices, existingInvoice.partitionKey, existingInvoice.rowKey);
+    } else {
+      // Update by merging properties; will throw if entity doesn't exist
+      await updateEntity(TableNames.Invoices, entity);
+    }
 
     const duration = Date.now() - start;
     trackDependency({

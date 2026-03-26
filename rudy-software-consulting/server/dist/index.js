@@ -679,6 +679,47 @@ app.post('/api/invoice', customJwtCheck, async (req, res) => {
         res.status(500).json({ error: 'Failed to save invoice.' + error.message });
     }
 });
+app.put('/api/invoice/:invoiceId', customJwtCheck, async (req, res) => {
+    const { invoiceId } = req.params;
+    const { name, amount, notes, contact, dueDate, clientId } = req.body;
+    const user = getUserFromCustomToken(req);
+    if (!user) {
+        return res.status(403).json({ error: 'Unauthorized' });
+    }
+    if (!user.siteAdmin) {
+        return res.status(403).json({ error: 'Access denied: Admin only' });
+    }
+    if (!name || !amount || !contact) {
+        return res.status(400).json({ error: 'Missing required fields.' });
+    }
+    if (Number(amount) <= 0) {
+        return res.status(400).json({ error: 'Amount must be greater than 0.' });
+    }
+    try {
+        const existingInvoice = await (0, invoiceHelper_1.getInvoiceDetails)(invoiceId);
+        const result = await (0, invoiceHelper_1.updateInvoice)({
+            id: invoiceId,
+            name,
+            amount,
+            notes: notes || '',
+            contact,
+            clientId: clientId || undefined,
+            paymentIntentId: existingInvoice.paymentIntentId,
+            status: existingInvoice.status,
+            dueDate: dueDate ? new Date(dueDate) : existingInvoice.dueDate,
+        });
+        (0, telemetry_1.trackEvent)('UpdateInvoice_API_Success', { invoiceId, adminEmail: user.email });
+        return res.status(200).json(result);
+    }
+    catch (error) {
+        const isNotFound = String(error?.message || '').toLowerCase().includes('not found');
+        if (isNotFound) {
+            return res.status(404).json({ error: 'Invoice not found.' });
+        }
+        (0, telemetry_1.trackException)(error, { endpoint: '/api/invoice/:invoiceId', invoiceId, adminEmail: user.email });
+        return res.status(500).json({ error: 'Failed to update invoice.' });
+    }
+});
 app.post('/api/register', registerLimiter, async (req, res) => {
     try {
         const { email, password } = req.body;

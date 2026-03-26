@@ -145,16 +145,35 @@ const createInvoice = async (invoiceData) => {
 };
 exports.createInvoice = createInvoice;
 const updateInvoice = async (invoiceData) => {
+    const existingInvoice = await (0, exports.getInvoiceDetails)(invoiceData.id);
+    const nextPartitionKey = invoiceData.clientId || invoiceData.contact || existingInvoice.partitionKey;
     const entity = {
-        partitionKey: invoiceData.contact || "default",
+        partitionKey: nextPartitionKey,
         rowKey: invoiceData.id,
-        ...invoiceData,
+        id: invoiceData.id,
+        name: invoiceData.name,
+        amount: invoiceData.amount,
+        notes: invoiceData.notes,
+        contact: invoiceData.contact,
+        clientId: invoiceData.clientId,
+        paymentIntentId: invoiceData.paymentIntentId ?? existingInvoice.paymentIntentId ?? "",
+        status: invoiceData.status,
+        dueDate: invoiceData.dueDate ? new Date(invoiceData.dueDate) : existingInvoice.dueDate,
+        createdDate: existingInvoice.createdDate,
+        updatedDate: new Date(),
     };
     (0, telemetry_1.trackEvent)('UpdateInvoice_Attempt', { invoiceId: invoiceData.id });
     const start = Date.now();
     try {
-        // Update by merging properties; will throw if entity doesn't exist
-        await (0, tableClientHelper_1.updateEntity)(models_1.TableNames.Invoices, entity);
+        if (nextPartitionKey !== existingInvoice.partitionKey) {
+            // Partition key changes require a new entity insert and old entity delete.
+            await (0, tableClientHelper_1.insertEntity)(models_1.TableNames.Invoices, entity);
+            await (0, tableClientHelper_1.deleteEntity)(models_1.TableNames.Invoices, existingInvoice.partitionKey, existingInvoice.rowKey);
+        }
+        else {
+            // Update by merging properties; will throw if entity doesn't exist
+            await (0, tableClientHelper_1.updateEntity)(models_1.TableNames.Invoices, entity);
+        }
         const duration = Date.now() - start;
         (0, telemetry_1.trackDependency)({
             target: process.env.RUDYARD_STORAGE_ACCOUNT_NAME,
