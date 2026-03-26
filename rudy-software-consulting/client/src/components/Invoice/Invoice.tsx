@@ -274,10 +274,16 @@ const Invoice: React.FC<IInvoiceProps> = (props: IInvoiceProps) => {
                         disabled={paymentStatus === PaymentStatus.Succeeded}
                     />
                 </Box>
-                <Box>
+                <Box sx={{ mb: 2 }}>
                     <Typography variant="subtitle2" color="text.secondary">Contact</Typography>
                     <Typography variant="body1">{invoice.contact}</Typography>
                 </Box>
+                {invoice.notes && (
+                    <Box sx={{ mb: 2 }}>
+                        <Typography variant="subtitle2" color="text.secondary">Notes</Typography>
+                        <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap' }}>{invoice.notes}</Typography>
+                    </Box>
+                )}
                 <Divider sx={{ my: 3 }} />
 
                 <Button

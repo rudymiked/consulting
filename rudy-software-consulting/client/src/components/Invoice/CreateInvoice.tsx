@@ -46,7 +46,9 @@ const CreateInvoice: React.FC<ICreateInvoiceProps> = ({ invoiceId }) => {
   const auth = useAuth();
 
   useEffect(() => {
-    fetchClients();
+    if (!isEditMode) {
+      fetchClients();
+    }
   }, []);
 
   useEffect(() => {
@@ -54,11 +56,18 @@ const CreateInvoice: React.FC<ICreateInvoiceProps> = ({ invoiceId }) => {
       return;
     }
 
-    const fetchInvoice = async () => {
+    const loadEditData = async () => {
       setLoadingInvoice(true);
       setError(null);
 
       try {
+        // Fetch clients first so the Select has options ready when clientId is set
+        const clientsData = await httpClient.get<IClient[]>({
+          url: '/api/clients',
+          token: auth.token || '',
+        });
+        setClients(clientsData);
+
         const invoice = await httpClient.get<IInvoice>({
           url: `/api/invoice/${invoiceId}`,
           token: auth.token || '',
@@ -79,7 +88,7 @@ const CreateInvoice: React.FC<ICreateInvoiceProps> = ({ invoiceId }) => {
       }
     };
 
-    fetchInvoice();
+    loadEditData();
   }, [isEditMode, invoiceId, auth.token]);
 
   const fetchClients = async () => {
@@ -104,7 +113,8 @@ const CreateInvoice: React.FC<ICreateInvoiceProps> = ({ invoiceId }) => {
     setForm(prev => ({
       ...prev,
       clientId,
-      contact: selectedClient?.contactEmail || prev.contact,
+      // In create mode auto-fill contact from client; in edit mode keep the saved contact
+      contact: isEditMode ? prev.contact : (selectedClient?.contactEmail || prev.contact),
     }));
   };
 
