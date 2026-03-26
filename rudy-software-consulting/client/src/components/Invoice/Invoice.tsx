@@ -44,53 +44,147 @@ const Invoice: React.FC<IInvoiceProps> = (props: IInvoiceProps) => {
     const exportInvoicePdf = () => {
         if (!invoice) return;
 
-        const doc = new jsPDF();
+        const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+        doc.setProperties({ title: `Invoice ${invoice.id}`, author: 'Rudyard Technologies' });
 
-        if (isInvoicePaid) {
+        const pageW = 210;
+        const margin = 14;
+        const contentW = pageW - margin * 2;
+        const halfX = pageW / 2;
+
+        // ── Header bar ─────────────────────────────────────────────────
+        doc.setFillColor(30, 64, 175);
+        doc.rect(0, 0, pageW, 24, 'F');
+
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(16);
+        doc.setTextColor(255, 255, 255);
+        doc.text('INVOICE', margin, 15);
+
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(10);
+        doc.text('Rudyard Technologies', pageW - margin, 11, { align: 'right' });
+        doc.text('rudyardtechnologies.com', pageW - margin, 17, { align: 'right' });
+
+        // ── Invoice meta (2-column grid) ────────────────────────────────
+        let y = 36;
+
+        const fmt = (d: any) => d ? new Date(d).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : 'N/A';
+        const createdDate = fmt(invoice.createdDate);
+        const updatedDate = fmt(invoice.updatedDate);
+
+        const metaLabel = (text: string, col: number, yPos: number) => {
             doc.setFont('helvetica', 'bold');
-            doc.setFontSize(18);
-            doc.setTextColor(210, 0, 0);
-            doc.text('PAID', 104, 34, { angle: -30, align: 'center' });
-            doc.setTextColor(0, 0, 0);
+            doc.setFontSize(8);
+            doc.setTextColor(120, 120, 120);
+            doc.text(text.toUpperCase(), col, yPos);
+        };
+        const metaValue = (text: string, col: number, yPos: number) => {
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(10);
+            doc.setTextColor(30, 30, 30);
+            doc.text(text, col, yPos);
+        };
+
+        metaLabel('Invoice ID', margin, y);
+        metaLabel('Issued', halfX, y);
+        y += 5;
+        metaValue(invoice.id, margin, y);
+        metaValue(createdDate, halfX, y);
+        y += 10;
+        metaLabel('Status', margin, y);
+        metaLabel('Last Updated', halfX, y);
+        y += 5;
+        metaValue(invoice.status, margin, y);
+        metaValue(updatedDate, halfX, y);
+        y += 14;
+
+        // ── Divider ─────────────────────────────────────────────────────
+        doc.setDrawColor(220, 225, 235);
+        doc.setLineWidth(0.4);
+        doc.line(margin, y, pageW - margin, y);
+        y += 10;
+
+        // ── Bill To ─────────────────────────────────────────────────────
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(8);
+        doc.setTextColor(120, 120, 120);
+        doc.text('BILL TO', margin, y);
+        y += 5;
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(12);
+        doc.setTextColor(20, 20, 20);
+        doc.text(invoice.name, margin, y);
+        y += 6;
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(10);
+        doc.setTextColor(60, 60, 60);
+        doc.text(invoice.contact, margin, y);
+        y += 14;
+
+        // ── Divider ─────────────────────────────────────────────────────
+        doc.setDrawColor(220, 225, 235);
+        doc.line(margin, y, pageW - margin, y);
+        y += 10;
+
+        // ── Notes ────────────────────────────────────────────────────────
+        if (invoice.notes?.trim()) {
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(8);
+            doc.setTextColor(120, 120, 120);
+            doc.text('NOTES', margin, y);
+            y += 5;
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(10);
+            doc.setTextColor(40, 40, 40);
+            const notesLines = doc.splitTextToSize(invoice.notes.trim(), contentW);
+            doc.text(notesLines, margin, y);
+            y += notesLines.length * 6 + 8;
         }
 
-        let y = 22;
-
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(18);
-        doc.text('Invoice', 14, y);
-
+        // ── Divider ─────────────────────────────────────────────────────
+        doc.setDrawColor(220, 225, 235);
+        doc.line(margin, y, pageW - margin, y);
         y += 10;
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(11);
-        doc.text(`Invoice ID: ${invoice.id}`, 14, y);
-        y += 8;
-        doc.text(`Name: ${invoice.name}`, 14, y);
-        y += 8;
-        doc.text(`Contact: ${invoice.contact}`, 14, y);
-        y += 8;
-        doc.text(`Status: ${invoice.status}`, 14, y);
-        y += 8;
-        doc.text(`Amount: $${invoice.amount.toFixed(2)}`, 14, y);
-        y += 8;
 
-        const createdDate = invoice.createdDate ? new Date(invoice.createdDate).toLocaleDateString() : 'N/A';
-        const updatedDate = invoice.updatedDate ? new Date(invoice.updatedDate).toLocaleDateString() : 'N/A';
-        doc.text(`Created: ${createdDate}`, 14, y);
-        y += 8;
-        doc.text(`Updated: ${updatedDate}`, 14, y);
-        y += 12;
+        // ── Amount Due box ───────────────────────────────────────────────
+        const boxW = 72;
+        const boxH = 22;
+        const boxX = pageW - margin - boxW;
+
+        doc.setFillColor(239, 243, 255);
+        doc.setDrawColor(180, 195, 230);
+        doc.setLineWidth(0.5);
+        doc.roundedRect(boxX, y, boxW, boxH, 2, 2, 'FD');
 
         doc.setFont('helvetica', 'bold');
-        doc.text('Notes', 14, y);
-        y += 8;
-        doc.setFont('helvetica', 'normal');
-        const notes = invoice.notes?.trim() || 'N/A';
-        const wrappedNotes = doc.splitTextToSize(notes, 180);
-        doc.text(wrappedNotes, 14, y);
+        doc.setFontSize(8);
+        doc.setTextColor(80, 100, 160);
+        doc.text('AMOUNT DUE', boxX + boxW / 2, y + 7, { align: 'center' });
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(16);
+        doc.setTextColor(30, 64, 175);
+        doc.text(`$${invoice.amount.toFixed(2)}`, boxX + boxW / 2, y + 17, { align: 'center' });
 
-        const fileName = `${invoice.id}-${isInvoicePaid ? 'paid' : 'invoice'}.pdf`;
-        doc.save(fileName);
+        // ── Footer ───────────────────────────────────────────────────────
+        doc.setDrawColor(200, 205, 215);
+        doc.setLineWidth(0.3);
+        doc.line(margin, 280, pageW - margin, 280);
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8);
+        doc.setTextColor(160, 160, 160);
+        doc.text('rudyardtechnologies.com', margin, 286);
+        doc.text(`© ${new Date().getFullYear()} Rudyard Technologies`, pageW - margin, 286, { align: 'right' });
+
+        // ── PAID watermark (drawn last, renders on top) ─────────────────
+        if (isInvoicePaid) {
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(68);
+            doc.setTextColor(185, 28, 28);
+            doc.text('PAID', pageW / 2, 155, { angle: 30, align: 'center' });
+        }
+
+        doc.save(`${invoice.id}-${isInvoicePaid ? 'paid' : 'invoice'}.pdf`);
     };
 
     React.useEffect(() => {
