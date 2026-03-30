@@ -1,140 +1,185 @@
-import { Box, Button, Grid, Typography } from "@mui/material";
+import { Box, Button, Container, Typography } from "@mui/material";
 import { Link } from "react-router-dom";
 import ImageFadeIn from "../ImageFadeIn";
 import tech from "/src/assets/tech.jpg";
-import marathon from "/src/assets/marathon.png";
 import realestatedash from "/src/assets/realestatedash.png";
 import realestatedashiphone from "/src/assets/realestatedashiphone.png";
 
 const Banner: React.FC = () => {
   return (
-    <Box sx={{ py: 6, position: "relative" }}>
-      {/* Background image with fade-in */}
-      <Box sx={{ width: "100%" }}>
-        <ImageFadeIn
-          src={tech}
-          alt="Banner"
-          style={{ width: "100%", height: 550, objectFit: "cover", objectPosition: "left center", borderRadius: 1 }}
-          sx={(theme: any) => ({
-            [theme.breakpoints.down('sm')]: {
-              height: 500,
-            },
-          })}
-        />
-      </Box>
+    <Box
+      sx={{
+        position: "relative",
+        width: "100%",
+        minHeight: { xs: 480, md: 580 },
+        overflow: "hidden",
+        display: "flex",
+        alignItems: "center",
+      }}
+    >
+      {/* Background image */}
+      <Box
+        sx={{
+          position: "absolute",
+          inset: 0,
+          backgroundImage: `url(${tech})`,
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+        }}
+      />
+      {/* Dark gradient overlay — heavier on the left for text legibility */}
+      <Box
+        sx={{
+          position: "absolute",
+          inset: 0,
+          background:
+            "linear-gradient(to right, rgba(10,25,47,0.92) 0%, rgba(10,25,47,0.78) 55%, rgba(10,25,47,0.45) 100%)",
+        }}
+      />
 
-      <Grid container spacing={2}>
-        {/* Overlay box remains unchanged */}
+      {/* Content */}
+      <Container maxWidth="lg" sx={{ position: "relative", zIndex: 1, py: { xs: 8, md: 6 } }}>
         <Box
-          sx={(theme) => ({
-            position: "absolute",
-            top: 100,
-            left: 20,
-            backgroundColor: "rgba(255, 255, 255, 0.9)",
-            padding: 3,
-            borderRadius: 2,
-            maxWidth: 300,
-            boxShadow: 3,
-            [theme.breakpoints.down("sm")]: {
-              padding: 2,
-              height: "60%",
-              justifyContent: "flex-start",
-            },
-          })}
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+            flexDirection: { xs: "column", md: "row" },
+          }}
         >
-          <Box>
+          {/* Left: text + CTAs */}
+          <Box sx={{ flex: "0 0 auto", maxWidth: { xs: "100%", md: 520 } }}>
             <Typography
-              variant="h4"
+              variant="overline"
+              sx={{
+                color: "#60a5fa",
+                fontWeight: 700,
+                letterSpacing: 2,
+                mb: 1.5,
+                display: "block",
+                fontSize: "0.75rem",
+              }}
+            >
+              Technology Consulting &amp; Software Development
+            </Typography>
+            <Typography
+              variant="h1"
               component="h1"
-              gutterBottom
-              sx={(theme) => ({
-                [theme.breakpoints.down("sm")]: {
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  fontSize: "1.3rem",
-                },
-              })}
+              sx={{
+                color: "white",
+                fontWeight: 800,
+                lineHeight: 1.15,
+                mb: 2.5,
+                fontSize: { xs: "2rem", sm: "2.5rem", md: "3rem" },
+              }}
             >
-              Software Solutions and Consulting
+              Software Solutions That Drive Business Growth
             </Typography>
             <Typography
-              variant="body1"
-              color="text.secondary"
-              sx={(theme) => ({
-                fontSize: "1rem",
-                [theme.breakpoints.down("sm")]: {
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  fontSize: "1.2rem",
-                },
-              })}
+              variant="h6"
+              component="p"
+              sx={{
+                color: "rgba(255,255,255,0.78)",
+                fontWeight: 400,
+                mb: 4,
+                fontSize: { xs: "1rem", md: "1.1rem" },
+                lineHeight: 1.7,
+              }}
             >
-              Transform your ideas into reality with expert custom tailored software and managed IT services. Our services include custom software development for web, desktop, mobile, SaaS, API integrations, and enterprise consulting.
+              Custom web apps, managed IT services, and AI-powered solutions —
+              we help businesses transform their technology and stay ahead of
+              the competition.
             </Typography>
-            <Link to="/contact">
-              <Button className="main-button" variant="contained" color="primary" sx={{ mt: 1 }}>
-                Get Started
+            <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap" }}>
+              <Button
+                component={Link}
+                to="/contact"
+                variant="contained"
+                size="large"
+                sx={{
+                  bgcolor: "#2563eb",
+                  color: "white",
+                  fontWeight: 700,
+                  px: 4,
+                  py: 1.5,
+                  borderRadius: 2,
+                  textTransform: "none",
+                  fontSize: "1rem",
+                  "&:hover": { bgcolor: "#1d4ed8" },
+                }}
+              >
+                Get a Free Quote
               </Button>
-            </Link>
+              <Button
+                component={Link}
+                to="/software"
+                variant="outlined"
+                size="large"
+                sx={{
+                  borderColor: "rgba(255,255,255,0.5)",
+                  color: "white",
+                  fontWeight: 600,
+                  px: 4,
+                  py: 1.5,
+                  borderRadius: 2,
+                  textTransform: "none",
+                  fontSize: "1rem",
+                  "&:hover": {
+                    borderColor: "white",
+                    bgcolor: "rgba(255,255,255,0.08)",
+                  },
+                }}
+              >
+                Our Services
+              </Button>
+            </Box>
+          </Box>
+
+          {/* Right: product screenshots, hidden on mobile */}
+          <Box
+            sx={{
+              display: { xs: "none", md: "flex" },
+              flex: 1,
+              justifyContent: "flex-end",
+              position: "relative",
+              minHeight: 340,
+            }}
+          >
+            <Box sx={{ position: "relative", width: "100%", maxWidth: 460 }}>
+              <Box
+                sx={{
+                  borderRadius: 2,
+                  overflow: "hidden",
+                  boxShadow: "0 16px 48px rgba(0,0,0,0.55)",
+                  border: "2px solid rgba(255,255,255,0.1)",
+                }}
+              >
+                <ImageFadeIn
+                  src={realestatedash}
+                  alt="Real Estate Dashboard"
+                  style={{ width: "100%", height: "auto", display: "block" }}
+                />
+              </Box>
+              <Box
+                sx={{
+                  position: "absolute",
+                  bottom: -24,
+                  right: -16,
+                  borderRadius: 2,
+                  overflow: "hidden",
+                  boxShadow: "0 8px 32px rgba(0,0,0,0.55)",
+                }}
+              >
+                <ImageFadeIn
+                  src={realestatedashiphone}
+                  alt="Mobile App"
+                  style={{ width: 130, height: "auto", display: "block" }}
+                />
+              </Box>
+            </Box>
           </Box>
         </Box>
-
-        {/* Marathon image with fade-in */}
-        <Box
-          sx={(theme) => ({
-            position: "absolute",
-            top: 120,
-            right: 70,
-            boxShadow: 0,
-            [theme.breakpoints.down("md")]: {
-              display: "none",
-            },
-          })}
-        >
-          <ImageFadeIn
-            src={marathon}
-            alt="Marathon"
-            style={{ width: 450, height: "auto", borderRadius: 1 }}
-          />
-        </Box>
-
-        {/* Real Estate Dashboard image with fade-in */}
-        <Box
-          sx={(theme) => ({
-            position: "absolute",
-            top: 80,
-            right: 20,
-            boxShadow: 0,
-            [theme.breakpoints.down("md")]: {
-              display: "none",
-            },
-          })}
-        >
-          <ImageFadeIn
-            src={realestatedash}
-            alt="Real Estate Dashboard"
-            style={{ width: 450, height: "auto", borderRadius: 1 }}
-          />
-        </Box>
-        {/* Real Estate Dashboard image (as app) with fade-in */}
-        <Box
-          sx={(theme) => ({
-            position: "absolute",
-            top: 85,
-            right: 0,
-            boxShadow: 0,
-            [theme.breakpoints.down("md")]: {
-              display: "none",
-            },
-          })}
-        >
-          <ImageFadeIn
-            src={realestatedashiphone}
-            alt="Real Estate Dashboard"
-            style={{ width: 200, height: "auto", borderRadius: 1 }}
-          />
-        </Box>
-      </Grid>
+      </Container>
     </Box>
   );
 };

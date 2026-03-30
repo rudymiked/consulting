@@ -1,7 +1,7 @@
 import React from 'react';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
-import { Grid } from '@mui/material';
+import Container from '@mui/material/Container';
 import microsoft from '../assets/experience/microsoft.jpg';
 import belcan from '../assets/experience/belcan.png';
 import toyota from '../assets/experience/toyota.png';
@@ -13,32 +13,60 @@ interface IExperience {
     altText: string;
 }
 
-const ExperienceFooter: React.FC = () => {
-    const [experiences, setExperiences] = React.useState<IExperience[]>([
-        { logo: microsoft, altText: 'Microsoft Logo' },
-        { logo: belcan, altText: 'Belcan Logo' },
-        { logo: toyota, altText: 'Toyota Logo' },
-        { logo: sikorsky, altText: 'Sikorsky Logo' },
-        { logo: pratt, altText: 'Pratt and Whitney Logo' },
-        //{ logo: 'src/assets/experience/lexmark.png', altText: 'Lexmark Logo' },
-    ]);
+const experiences: IExperience[] = [
+    { logo: microsoft, altText: 'Microsoft' },
+    { logo: belcan, altText: 'Belcan' },
+    { logo: toyota, altText: 'Toyota' },
+    { logo: sikorsky, altText: 'Sikorsky' },
+    { logo: pratt, altText: 'Pratt and Whitney' },
+];
 
-    return (
-        <Box component="footer" sx={{ py: 3, textAlign: 'center', bgcolor: 'background.paper', mt: 4, borderRadius: 1 }}>
-            <Typography variant="body2" color="text.secondary" component="div">
-                <strong>Powdered by engineers with experience at:</strong>
-                <br />
-                <br />
-                <Grid container spacing={2} justifyContent="center">
-                    {experiences.map((experience, idx) => (
-                        <Box key={idx} sx={{ maxWidth: 300, width: '100%', borderRadius: 1 }}>
-                            <img src={experience.logo} alt={experience.altText} style={{ width: 100, height: 'auto', marginBottom: 10, alignContent:"center", verticalAlign:"center" }} />
-                        </Box>
-                    ))}
-                </Grid>
+const ExperienceFooter: React.FC = () => (
+    <Box sx={{ py: 7, bgcolor: '#ffffff', borderTop: '1px solid #E2E8F0' }}>
+        <Container maxWidth="lg">
+            <Typography
+                variant="overline"
+                sx={{
+                    display: 'block',
+                    textAlign: 'center',
+                    color: '#94A3B8',
+                    letterSpacing: 2,
+                    fontWeight: 600,
+                    mb: 4,
+                    fontSize: '0.72rem',
+                }}
+            >
+                Engineers with experience at leading companies
             </Typography>
-        </Box>
-    );
-}
+            <Box
+                sx={{
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    gap: { xs: 5, md: 7 },
+                }}
+            >
+                {experiences.map((exp, idx) => (
+                    <Box
+                        key={idx}
+                        sx={{
+                            opacity: 0.45,
+                            filter: 'grayscale(100%)',
+                            transition: 'opacity 0.25s, filter 0.25s',
+                            '&:hover': { opacity: 1, filter: 'grayscale(0%)' },
+                        }}
+                    >
+                        <img
+                            src={exp.logo}
+                            alt={exp.altText}
+                            style={{ height: 36, width: 'auto', display: 'block' }}
+                        />
+                    </Box>
+                ))}
+            </Box>
+        </Container>
+    </Box>
+);
 
 export default ExperienceFooter;

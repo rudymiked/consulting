@@ -1,15 +1,12 @@
 body {
-    font-family: Arial, sans-serif;
+    font-family: 'Inter', 'Segoe UI', system-ui, Arial, sans-serif;
     margin: 0;
     padding: 0;
-    background-color: #f4f4f4;
+    background-color: #ffffff;
 }
 
-header {
-    background: #007acc;
-    color: white;
-    padding: 10px 0;
-    text-align: center;
+* {
+    box-sizing: border-box;
 }
 
 nav {
@@ -49,13 +46,16 @@ footer {
 }
 
 .main-button {
-  background-color: #025680  !important;
-  color: white;
-  border-radius: 4px;
-  font-weight: bold;
-  transition: background-color 0.3s ease;
+  background-color: #2563eb !important;
+  color: white !important;
+  border-radius: 8px !important;
+  font-weight: 600 !important;
+  text-transform: none !important;
+  letter-spacing: 0 !important;
+  font-size: 1rem !important;
+  transition: background-color 0.2s ease;
 }
 
 .main-button:hover {
-  background-color: #012639  !important;
+  background-color: #1d4ed8 !important;
 }
