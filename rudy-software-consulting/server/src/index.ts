@@ -1238,6 +1238,9 @@ app.get('/api/admin/domain-health/:clientId', customJwtCheck, async (req: any, r
 app.post('/api/admin/domain-health/:clientId/check/:domain', authCheck, async (req: any, res) => {
   try {
     const { clientId, domain } = req.params;
+    const decodedDomain = decodeURIComponent(domain);
+    console.log(`[/api/admin/domain-health/:clientId/check/:domain] Starting check for domain=${decodedDomain}, clientId=${clientId}`);
+    
     const user = getUserFromCustomToken(req);
     const isApiKeyAuth = req.apiKeyAuthenticated;
 
@@ -1246,11 +1249,14 @@ app.post('/api/admin/domain-health/:clientId/check/:domain', authCheck, async (r
       return res.status(403).json({ error: 'Access denied: Admin only' });
     }
 
-    const health = await performDomainHealthCheck(clientId, decodeURIComponent(domain));
+    console.log(`[/api/admin/domain-health/:clientId/check/:domain] Calling performDomainHealthCheck...`);
+    const health = await performDomainHealthCheck(clientId, decodedDomain);
+    console.log(`[/api/admin/domain-health/:clientId/check/:domain] Check complete, returning result`);
     res.json(health);
   } catch (err: any) {
     console.error('Error checking domain health:', err);
-    trackException(err, { endpoint: '/api/admin/domain-health/:clientId/check/:domain', clientId: req.params.clientId });
+    console.error('Full error stack:', err?.stack);
+    trackException(err, { endpoint: '/api/admin/domain-health/:clientId/check/:domain', clientId: req.params.clientId, domain: req.params.domain });
     res.status(500).json({ error: 'Failed to check domain health.' });
   }
 });

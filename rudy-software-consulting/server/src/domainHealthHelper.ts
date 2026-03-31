@@ -74,32 +74,45 @@ export async function performDomainHealthCheck(
   clientId: string,
   domain: string
 ): Promise<IDomainHealthCheck> {
-  // Normalize domain to bare hostname
-  const normalizedDomain = normalizeDomain(domain);
-  
-  const [emailCheck, websiteCheck] = await Promise.all([
-    checkEmailHealth(normalizedDomain),
-    checkWebsiteHealth(normalizedDomain),
-  ]);
-
-  const healthCheck: IDomainHealthCheck = {
-    partitionKey: clientId,
-    rowKey: `${normalizedDomain}-${Date.now()}`,
-    clientId,
-    domain: normalizedDomain,
-    emailStatus: emailCheck.status,
-    websiteStatus: websiteCheck.status,
-    emailError: emailCheck.error,
-    websiteError: websiteCheck.error,
-    lastCheckTime: new Date(),
-  };
-
-  // Store the health check result
   try {
-    await insertEntity(TableNames.DomainHealth, healthCheck);
-  } catch (err: any) {
-    console.error('Error storing domain health check:', err);
-  }
+    // Normalize domain to bare hostname
+    const normalizedDomain = normalizeDomain(domain);
+    console.log(`[performDomainHealthCheck] Starting checks for ${normalizedDomain} (client: ${clientId})`);
+    
+    let emailCheck, websiteCheck;
+    try {
+      console.log(`[performDomainHealthCheck] Running email/website checks...`);
+      [emailCheck, websiteCheck] = await Promise.all([
+        checkEmailHealth(normalizedDomain),
+        checkWebsiteHealth(normalizedDomain),
+      ]);
+      console.log(`[performDomainHealthCheck] Checks complete. Email: ${emailCheck.status}, Website: ${websiteCheck.status}`);
+    } catch (checkErr: any) {
+      console.error(`[performDomainHealthCheck] Error running health checks for ${normalizedDomain}:`, checkErr);
+      throw checkErr;
+    }
+
+    const healthCheck: IDomainHealthCheck = {
+      partitionKey: clientId,
+      rowKey: `${normalizedDomain}-${Date.now()}`,
+      clientId,
+      domain: normalizedDomain,
+      emailStatus: emailCheck.status,
+      websiteStatus: websiteCheck.status,
+      emailError: emailCheck.error,
+      websiteError: websiteCheck.error,
+      lastCheckTime: new Date(),
+    };
+
+    // Store the health check result
+    try {
+      console.log(`[performDomainHealthCheck] Storing health check to table storage...`);
+      await insertEntity(TableNames.DomainHealth, healthCheck);
+      console.log(`[performDomainHealthCheck] Health check stored successfully`);
+    } catch (storageErr: any) {
+      console.error(`[performDomainHealthCheck] Error storing domain health check for ${normalizedDomain}:`, storageErr);
+      throw storageErr;
+    }
 
   // Send alert emails if either check failed
   if (emailCheck.status === HealthStatus.DOWN || websiteCheck.status === HealthStatus.DOWN) {
@@ -114,21 +127,25 @@ Website Status: ${websiteCheck.status.toUpperCase()}
 ${websiteCheck.error ? `Error: ${websiteCheck.error}` : ''}
 
 Time: ${new Date().toLocaleString()}
-    `.trim();
+      `.trim();
 
-    try {
-      await sendEmail({
-        to: process.env.ALERT_EMAIL || 'info@rudyardtechnologies.com',
-        subject: alertSubject,
-        text: alertBody,
-        sent: false,
-      });
-    } catch (err: any) {
-      console.error('Error sending alert email:', err);
+      try {
+        await sendEmail({
+          to: process.env.ALERT_EMAIL || 'info@rudyardtechnologies.com',
+          subject: alertSubject,
+          text: alertBody,
+          sent: false,
+        });
+      } catch (err: any) {
+        console.error('Error sending alert email:', err);
+      }
     }
-  }
 
-  return healthCheck;
+    return healthCheck;
+  } catch (err: any) {
+    console.error(`[performDomainHealthCheck] Unexpected error for ${domain}:`, err);
+    throw err;
+  }
 }
 
 export async function getLatestDomainHealthCheck(
