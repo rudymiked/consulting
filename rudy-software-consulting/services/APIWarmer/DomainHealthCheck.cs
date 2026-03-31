@@ -97,7 +97,8 @@ namespace APIWarmer
                                 }
                                 else
                                 {
-                                    _logger.LogWarning($"Health check failed for {domain.Domain}: {checkResponse.StatusCode}");
+                                    var errorBody = await checkResponse.Content.ReadAsStringAsync();
+                                    _logger.LogWarning($"Health check failed for {domain.Domain}: {checkResponse.StatusCode}. Body: {errorBody}");
                                     checksFailed++;
                                 }
                             }

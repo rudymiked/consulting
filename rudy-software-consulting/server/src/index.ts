@@ -1254,10 +1254,20 @@ app.post('/api/admin/domain-health/:clientId/check/:domain', authCheck, async (r
     console.log(`[/api/admin/domain-health/:clientId/check/:domain] Check complete, returning result`);
     res.json(health);
   } catch (err: any) {
+    const errorId = `dh-${Date.now()}`;
     console.error('Error checking domain health:', err);
     console.error('Full error stack:', err?.stack);
-    trackException(err, { endpoint: '/api/admin/domain-health/:clientId/check/:domain', clientId: req.params.clientId, domain: req.params.domain });
-    res.status(500).json({ error: 'Failed to check domain health.' });
+    trackException(err, {
+      endpoint: '/api/admin/domain-health/:clientId/check/:domain',
+      clientId: req.params.clientId,
+      domain: req.params.domain,
+      errorId,
+    });
+    res.status(500).json({
+      error: 'Failed to check domain health.',
+      errorId,
+      details: err?.message || 'Unknown server error',
+    });
   }
 });
 

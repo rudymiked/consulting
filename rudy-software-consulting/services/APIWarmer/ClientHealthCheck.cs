@@ -102,16 +102,20 @@ namespace APIWarmer
 
                             if (!checkResponse.IsSuccessStatusCode)
                             {
+                                var errorBody = await checkResponse.Content.ReadAsStringAsync();
+                                var requestId = checkResponse.Headers.TryGetValues("x-ms-request-id", out var requestIdValues)
+                                    ? string.Join(",", requestIdValues)
+                                    : "n/a";
                                 _logger.LogWarning(
-                                    "[DOWN] {Domain} (client: {Name}) — check endpoint returned {StatusCode}",
-                                    d.Domain, client.Name, checkResponse.StatusCode);
+                                    "[DOWN] {Domain} (client: {Name}) — check endpoint returned {StatusCode}. Body: {Body}. x-ms-request-id: {RequestId}",
+                                    d.Domain, client.Name, checkResponse.StatusCode, errorBody, requestId);
                                 domainsDown++;
                                 domainResults.Add(new DomainCheckResult
                                 {
                                     ClientName = client.Name,
                                     Domain = d.Domain,
                                     WebsiteStatus = "unknown",
-                                    WebsiteError = $"Check endpoint returned {checkResponse.StatusCode}",
+                                    WebsiteError = $"Check endpoint returned {checkResponse.StatusCode}. Body: {errorBody}",
                                     EmailStatus = "unknown",
                                 });
                                 continue;
