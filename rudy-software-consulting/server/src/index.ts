@@ -1249,6 +1249,108 @@ app.post('/api/admin/domain-health/:clientId/check/:domain', authCheck, async (r
   }
 });
 
+interface IHealthReportDomain {
+  clientName: string;
+  domain: string;
+  websiteStatus: string;
+  websiteError?: string;
+  emailStatus: string;
+  emailError?: string;
+}
+
+interface IHealthReportPayload {
+  isDailyReport: boolean;
+  totalDomains: number;
+  domainsDown: number;
+  results: IHealthReportDomain[];
+}
+
+app.post('/api/admin/send-health-report', authCheck, async (req: any, res) => {
+  try {
+    const { isDailyReport, totalDomains, domainsDown, results } = req.body as IHealthReportPayload;
+
+    if (!Array.isArray(results)) {
+      return res.status(400).json({ error: 'Missing results array.' });
+    }
+
+    const reportDate = new Date().toUTCString();
+    const subject = isDailyReport
+      ? `[Daily Report] Domain Health Summary — ${new Date().toDateString()}`
+      : `[ALERT] ${domainsDown} Domain(s) Down — ${new Date().toDateString()}`;
+
+    const statusIcon = (s: string) =>
+      s?.toLowerCase() === 'healthy' ? '✅' : '❌';
+
+    const rows = results.map((r) => {
+      const webIcon = statusIcon(r.websiteStatus);
+      const emailIcon = statusIcon(r.emailStatus);
+      const webDetail = r.websiteStatus?.toLowerCase() !== 'healthy' && r.websiteError
+        ? `<br/><small style="color:#999">${r.websiteError}</small>` : '';
+      const emailDetail = r.emailStatus?.toLowerCase() !== 'healthy' && r.emailError
+        ? `<br/><small style="color:#999">${r.emailError}</small>` : '';
+      const rowStyle = r.websiteStatus?.toLowerCase() !== 'healthy' || r.emailStatus?.toLowerCase() !== 'healthy'
+        ? 'background:#fff3f3' : '';
+      return `<tr style="${rowStyle}">
+        <td style="padding:8px;border:1px solid #ddd">${r.clientName}</td>
+        <td style="padding:8px;border:1px solid #ddd">${r.domain}</td>
+        <td style="padding:8px;border:1px solid #ddd">${webIcon}${webDetail}</td>
+        <td style="padding:8px;border:1px solid #ddd">${emailIcon}${emailDetail}</td>
+      </tr>`;
+    }).join('');
+
+    const summary = domainsDown === 0
+      ? `<p style="color:green">All ${totalDomains} domain(s) are healthy.</p>`
+      : `<p style="color:red"><strong>${domainsDown} of ${totalDomains} domain(s) have issues.</strong></p>`;
+
+    const html = `
+      <h2 style="font-family:sans-serif">Domain Health Report</h2>
+      <p style="font-family:sans-serif;color:#666">Generated: ${reportDate}</p>
+      ${summary}
+      <table style="border-collapse:collapse;font-family:sans-serif;font-size:14px;width:100%;max-width:700px">
+        <thead>
+          <tr style="background:#f5f5f5">
+            <th style="padding:8px;border:1px solid #ddd;text-align:left">Client</th>
+            <th style="padding:8px;border:1px solid #ddd;text-align:left">Domain</th>
+            <th style="padding:8px;border:1px solid #ddd;text-align:left">Website</th>
+            <th style="padding:8px;border:1px solid #ddd;text-align:left">Email / MX</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+      <p style="font-family:sans-serif;color:#999;font-size:12px;margin-top:24px">Rudyard Technologies Automated Health Monitor</p>
+    `;
+
+    const text = [
+      `Domain Health Report — ${reportDate}`,
+      `${domainsDown === 0 ? `All ${totalDomains} domain(s) healthy.` : `${domainsDown}/${totalDomains} domain(s) have issues.`}`,
+      '',
+      ...results.map((r) =>
+        `${r.domain} (${r.clientName}): website=${r.websiteStatus}${r.websiteError ? ` (${r.websiteError})` : ''}, email=${r.emailStatus}${r.emailError ? ` (${r.emailError})` : ''}`
+      ),
+    ].join('\n');
+
+    await sendEmail({
+      to: 'info@rudyardtechnologies.com',
+      subject,
+      html,
+      text,
+      sent: true,
+    });
+
+    trackEvent('HealthReport_Sent', {
+      isDailyReport: String(isDailyReport),
+      totalDomains: String(totalDomains),
+      domainsDown: String(domainsDown),
+    });
+
+    res.json({ success: true });
+  } catch (err: any) {
+    console.error('Error sending health report email:', err);
+    trackException(err, { endpoint: '/api/admin/send-health-report' });
+    res.status(500).json({ error: 'Failed to send health report.' });
+  }
+});
+
 app.delete('/api/client/:clientId/:contactEmail', customJwtCheck, async (req: any, res) => {
   try {
     const { clientId, contactEmail } = req.params;
