@@ -16,7 +16,7 @@ import {
 import MenuIcon from '@mui/icons-material/Menu';
 import CloseIcon from '@mui/icons-material/Close';
 import { Link, useLocation } from 'react-router-dom';
-import rudyard from '/src/assets/rudyardtech.png';
+import rudyard from '/src/assets/rudyardtech_clear.png';
 
 const navLinks = [
   { label: 'Software Development', path: '/software' },

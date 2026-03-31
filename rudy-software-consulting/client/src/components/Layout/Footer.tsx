@@ -2,7 +2,7 @@ import React from 'react';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import { Link } from 'react-router-dom';
-import rudyard from '/src/assets/rudyardtech.png';
+import rudyard from '/src/assets/rudyardtech_clear.png';
 
 const serviceLinks = [
   { label: 'Software Development', path: '/software' },
