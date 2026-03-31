@@ -30,11 +30,12 @@ namespace APIWarmer
 
             var apiUrl = Environment.GetEnvironmentVariable("API_URL") ??
                 "https://rudyardapi-f3bydsa9avgneva5.canadacentral-01.azurewebsites.net";
-            var apiKey = Environment.GetEnvironmentVariable("API_KEY");
+            var apiKey = Environment.GetEnvironmentVariable("DOMAIN_HEALTH_API_KEY")
+                ?? Environment.GetEnvironmentVariable("API_KEY");
 
             if (string.IsNullOrEmpty(apiKey))
             {
-                _logger.LogWarning("API_KEY not configured. Skipping client health checks.");
+                _logger.LogWarning("DOMAIN_HEALTH_API_KEY/API_KEY not configured. Skipping client health checks.");
                 return;
             }
 
