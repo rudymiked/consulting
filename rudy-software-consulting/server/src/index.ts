@@ -984,8 +984,14 @@ app.post('/api/client', customJwtCheck, async (req, res) => {
   }
 });
 
-app.get('/api/clients', customJwtCheck, async (req: any, res) => {
+app.get('/api/clients', authCheck, async (req: any, res) => {
   try {
+    // API key requests (from scheduled jobs) get all clients
+    if (req.apiKeyAuthenticated) {
+      const clients = await getAllClients();
+      return res.json(clients);
+    }
+
     const user = getUserFromCustomToken(req);
     
     if (!user) {
@@ -1142,12 +1148,12 @@ app.get('/api/admin/dashboard/:clientId', customJwtCheck, async (req: any, res) 
 });
 
 // Domain management endpoints
-app.get('/api/admin/client/:clientId/domains', customJwtCheck, async (req: any, res) => {
+app.get('/api/admin/client/:clientId/domains', authCheck, async (req: any, res) => {
   try {
     const { clientId } = req.params;
     const user = getUserFromCustomToken(req);
 
-    if (!user || !user.siteAdmin) {
+    if (!req.apiKeyAuthenticated && (!user || !user.siteAdmin)) {
       return res.status(403).json({ error: 'Access denied: Admin only' });
     }
 
