@@ -39,7 +39,13 @@ function getDomainVariants(domain: string): string[] {
 
 export async function checkEmailHealth(domain: string): Promise<{ status: HealthStatus; error?: string }> {
   try {
-    const mxRecords = await resolveMx(domain);
+    const mxRecords = await Promise.race([
+      resolveMx(domain),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('MX lookup timeout after 10000ms')), 10000)
+      ),
+    ]);
+
     if (mxRecords && mxRecords.length > 0) {
       return { status: HealthStatus.HEALTHY };
     }

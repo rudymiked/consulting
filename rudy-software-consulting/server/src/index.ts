@@ -916,7 +916,10 @@ app.post('/api/invoice/create-payment-intent', async (req, res) => {
     const paymentIntent = await stripe.paymentIntents.create({
       amount,
       currency: 'usd',
-      metadata: { invoiceId },
+      metadata: { 
+        invoiceId,
+        clientId: invoice.clientId || invoice.partitionKey || 'unknown',
+      },
       automatic_payment_methods: { enabled: true },
     });
 

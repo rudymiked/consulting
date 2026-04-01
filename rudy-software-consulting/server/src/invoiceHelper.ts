@@ -27,6 +27,7 @@ export const getInvoices = async (filter?: string | undefined): Promise<IInvoice
     amount: entity.amount,
     notes: entity.notes,
     contact: entity.contact,
+    clientId: entity.clientId,
     paymentIntentId: entity.paymentIntentId,
     createdDate: new Date(entity.createdDate),
     updatedDate: new Date(entity.updatedDate),
@@ -54,6 +55,7 @@ export const getInvoiceDetails = async (invoiceId: string): Promise<IInvoice> =>
       amount: entity.amount,
       notes: entity.notes,
       contact: entity.contact,
+      clientId: entity.clientId,
       paymentIntentId: entity.paymentIntentId,
       createdDate: new Date(entity.createdDate),
       updatedDate: new Date(entity.updatedDate),
@@ -246,6 +248,9 @@ export const payInvoice = async (
       return { Success: false, Message: message, InvoiceId: invoiceId };
     }
 
+    // Ensure clientId is tracked for partition key continuity
+    trackEvent('PayInvoice_InvoiceLoaded', { invoiceId, clientId: invoiceDetails.clientId || invoiceDetails.partitionKey });
+
     if (invoiceDetails.status.toUpperCase() === IInvoiceStatus.CANCELLED.toUpperCase()) {
       return { Success: false, Message: `Cannot pay a cancelled invoice ${invoiceId}`, InvoiceId: invoiceId };
     }
@@ -289,6 +294,7 @@ export const payInvoice = async (
               invoiceId,
               invoiceNumber: invoiceDetails.id,
               customerName: invoiceDetails.name,
+              clientId: invoiceDetails.clientId || invoiceDetails.partitionKey || 'unknown',
             },
             automatic_payment_methods: { enabled: true },
           });
@@ -303,6 +309,7 @@ export const payInvoice = async (
             invoiceId,
             invoiceNumber: invoiceDetails.id,
             customerName: invoiceDetails.name,
+            clientId: invoiceDetails.clientId || invoiceDetails.partitionKey || 'unknown',
           },
           automatic_payment_methods: { enabled: true },
         });
@@ -317,6 +324,7 @@ export const payInvoice = async (
           invoiceId,
           invoiceNumber: invoiceDetails.id,
           customerName: invoiceDetails.name,
+          clientId: invoiceDetails.clientId || invoiceDetails.partitionKey || 'unknown',
         },
         automatic_payment_methods: { enabled: true },
       });
@@ -336,7 +344,11 @@ export const payInvoice = async (
     invoiceDetails.status =
       amount === invoiceAmountCents ? IInvoiceStatus.PAID : IInvoiceStatus.PARTIALLY_PAID;
 
-    await updateInvoice(invoiceDetails);
+    // Ensure clientId is preserved during payment update to maintain partition key
+    await updateInvoice({
+      ...invoiceDetails,
+      clientId: invoiceDetails.clientId,
+    });
 
     return {
       Success: true,
@@ -397,7 +409,11 @@ export const finalizePayment = async (
   invoice.paymentIntentId = paymentIntent.id;
   invoice.updatedDate = new Date();
 
-  await updateInvoice(invoice);
+  // Ensure clientId is preserved during payment finalization to maintain partition key
+  await updateInvoice({
+    ...invoice,
+    clientId: invoice.clientId,
+  });
 
   // Send confirmation email to client
   const paidDollars = paymentIntent.amount / 100;

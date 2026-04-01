@@ -96,6 +96,7 @@ namespace APIWarmer
                         totalDomains++;
                         try
                         {
+                            _logger.LogInformation("Checking domain {Domain} for client {ClientName}", d.Domain, client.Name);
                             // 3. Trigger a live check — returns emailStatus + websiteStatus
                             var checkUrl = $"{apiUrl}/api/admin/domain-health/{client.Id}/check/{Uri.EscapeDataString(d.Domain)}";
                             var checkResponse = await http.PostAsync(checkUrl, null);
