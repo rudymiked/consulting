@@ -16,6 +16,7 @@ import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
 import { queryEntities, updateEntity } from './tableClientHelper';
 import { addClient, deleteClient, getAllClients, getClientByEmail, getClientById, getClientsByName, getInvoicesByClientId } from './clientHelper';
+import { addOrUpdateClientTenant, deleteClientTenant, getAllClientTenants, getClientTenants } from './clientTenantHelper';
 import { addDomainToClient, getClientDomains, removeDomain } from './domainHelper';
 import { performDomainHealthCheck, getLatestDomainHealthCheck } from './domainHealthHelper';
 
@@ -1066,6 +1067,108 @@ app.get('/api/client/:clientId/invoices', customJwtCheck, async (req: any, res) 
   }
 });
 
+app.get('/api/admin/client-tenants', authCheck, async (req: any, res) => {
+  try {
+    if (req.apiKeyAuthenticated) {
+      const tenants = await getAllClientTenants();
+      return res.json(tenants.filter((item: any) => item.active !== false));
+    }
+
+    const user = getUserFromCustomToken(req);
+    if (!user || !user.siteAdmin) {
+      return res.status(403).json({ error: 'Access denied: Admin only' });
+    }
+
+    const tenants = await getAllClientTenants();
+    return res.json(tenants);
+  } catch (err: any) {
+    console.error('Error fetching client tenants:', err);
+    trackException(err, { endpoint: '/api/admin/client-tenants' });
+    return res.status(500).json({ error: 'Failed to fetch client tenants.' });
+  }
+});
+
+app.get('/api/admin/client/:clientId/tenants', authCheck, async (req: any, res) => {
+  try {
+    const { clientId } = req.params;
+
+    if (!req.apiKeyAuthenticated) {
+      const user = getUserFromCustomToken(req);
+      if (!user || !user.siteAdmin) {
+        return res.status(403).json({ error: 'Access denied: Admin only' });
+      }
+    }
+
+    const tenants = await getClientTenants(clientId);
+    return res.json(req.apiKeyAuthenticated ? tenants.filter((item: any) => item.active !== false) : tenants);
+  } catch (err: any) {
+    console.error('Error fetching client tenant mappings:', err);
+    trackException(err, { endpoint: '/api/admin/client/:clientId/tenants', clientId: req.params.clientId });
+    return res.status(500).json({ error: 'Failed to fetch client tenant mappings.' });
+  }
+});
+
+app.post('/api/admin/client/:clientId/tenants', customJwtCheck, async (req: any, res) => {
+  try {
+    const { clientId } = req.params;
+    const user = getUserFromCustomToken(req);
+
+    if (!user || !user.siteAdmin) {
+      return res.status(403).json({ error: 'Access denied: Admin only' });
+    }
+
+    const { tenantId, tenantName, graphClientId, graphClientSecretSettingName, active } = req.body;
+
+    if (!tenantId || !graphClientId || !graphClientSecretSettingName) {
+      return res.status(400).json({
+        error: 'Missing required fields: tenantId, graphClientId, graphClientSecretSettingName',
+      });
+    }
+
+    const client = await getClientById(clientId);
+
+    const mapping = await addOrUpdateClientTenant(
+      clientId,
+      tenantId,
+      tenantName,
+      graphClientId,
+      graphClientSecretSettingName,
+      client?.name,
+      active !== false,
+    );
+
+    trackEvent('ClientTenant_Upsert_Success', { clientId, tenantId });
+    return res.status(201).json(mapping);
+  } catch (err: any) {
+    console.error('Error saving client tenant mapping:', err);
+    trackException(err, { endpoint: '/api/admin/client/:clientId/tenants', clientId: req.params.clientId });
+    return res.status(500).json({ error: err?.message || 'Failed to save client tenant mapping.' });
+  }
+});
+
+app.delete('/api/admin/client/:clientId/tenants/:tenantId', customJwtCheck, async (req: any, res) => {
+  try {
+    const { clientId, tenantId } = req.params;
+    const user = getUserFromCustomToken(req);
+
+    if (!user || !user.siteAdmin) {
+      return res.status(403).json({ error: 'Access denied: Admin only' });
+    }
+
+    await deleteClientTenant(clientId, tenantId);
+    trackEvent('ClientTenant_Delete_Success', { clientId, tenantId });
+    return res.json({ success: true });
+  } catch (err: any) {
+    console.error('Error deleting client tenant mapping:', err);
+    trackException(err, {
+      endpoint: '/api/admin/client/:clientId/tenants/:tenantId',
+      clientId: req.params.clientId,
+      tenantId: req.params.tenantId,
+    });
+    return res.status(500).json({ error: 'Failed to delete client tenant mapping.' });
+  }
+});
+
 app.get('/api/admin/dashboard/:clientId', customJwtCheck, async (req: any, res) => {
   try {
     const { clientId } = req.params;
@@ -1290,6 +1393,59 @@ interface IHealthReportPayload {
   results: IHealthReportDomain[];
 }
 
+interface ILicenseSkuDetail {
+  skuId: string;
+  skuPartNumber: string;
+  clientId?: string;
+  clientName?: string;
+  tenantId?: string;
+  tenantName?: string;
+  totalUnits: number;
+  consumedUnits: number;
+  availableUnits: number;
+  availablePercent?: number;
+  unusedUnits: number;
+  capabilityStatus: string;
+  expiration: string;
+}
+
+interface ILicenseUserDetail {
+  clientId?: string;
+  clientName?: string;
+  tenantId?: string;
+  tenantName?: string;
+  displayName: string;
+  userPrincipalName: string;
+}
+
+interface ILicenseReportPayload {
+  generatedAtUtc: string;
+  trigger?: string;
+  sendEmail?: boolean;
+  emailRecipients?: string[];
+  summary: {
+    skuCount: number;
+    totalUnits: number;
+    consumedUnits: number;
+    availableUnits: number;
+    unlicensedUserCount: number;
+    lowAvailabilitySkuCount: number;
+    tenantCount?: number;
+    unusedThreshold: number;
+    unusedPercentThreshold?: number;
+    expirationSource: string;
+  };
+  lowAvailabilitySkus: Array<{
+    sku: string;
+    available: number;
+    total: number;
+    consumed: number;
+    availablePercent?: number;
+  }>;
+  skuDetails: ILicenseSkuDetail[];
+  unlicensedUsers: ILicenseUserDetail[];
+}
+
 app.post('/api/admin/send-health-report', authCheck, async (req: any, res) => {
   try {
     const { isDailyReport, totalDomains, domainsDown, results } = req.body as IHealthReportPayload;
@@ -1373,6 +1529,144 @@ app.post('/api/admin/send-health-report', authCheck, async (req: any, res) => {
     console.error('Error sending health report email:', err);
     trackException(err, { endpoint: '/api/admin/send-health-report' });
     res.status(500).json({ error: 'Failed to send health report.' });
+  }
+});
+
+app.post('/api/admin/send-license-report', authCheck, async (req: any, res) => {
+  try {
+    const {
+      generatedAtUtc,
+      trigger,
+      sendEmail: sendEmailRequested,
+      emailRecipients,
+      summary,
+      lowAvailabilitySkus,
+      skuDetails,
+      unlicensedUsers,
+    } = req.body as ILicenseReportPayload;
+
+    if (!summary || !Array.isArray(skuDetails) || !Array.isArray(unlicensedUsers)) {
+      return res.status(400).json({ error: 'Invalid license report payload.' });
+    }
+
+    const reportDate = new Date(generatedAtUtc || Date.now()).toUTCString();
+    const subjectPrefix = summary.lowAvailabilitySkuCount > 0 ? '[ALERT]' : '[Daily Report]';
+    const subject = `${subjectPrefix} M365 License Summary — ${new Date().toDateString()}`;
+    const recipients = Array.isArray(emailRecipients) && emailRecipients.length > 0
+      ? emailRecipients
+      : ['info@rudyardtechnologies.com'];
+
+    const skuRows = skuDetails.map((s) => {
+      const isLowByAbsolute = s.availableUnits <= summary.unusedThreshold;
+      const isLowByPercent = typeof s.availablePercent === 'number' &&
+        typeof summary.unusedPercentThreshold === 'number' &&
+        s.availablePercent <= summary.unusedPercentThreshold;
+      const isLow = isLowByAbsolute || isLowByPercent;
+      const rowStyle = isLow ? 'background:#fff3f3' : '';
+      return `<tr style="${rowStyle}">
+        <td style="padding:8px;border:1px solid #ddd">${s.clientName || s.clientId || '-'}</td>
+        <td style="padding:8px;border:1px solid #ddd">${s.tenantName || s.tenantId || '-'}</td>
+        <td style="padding:8px;border:1px solid #ddd">${s.skuPartNumber}</td>
+        <td style="padding:8px;border:1px solid #ddd">${s.totalUnits}</td>
+        <td style="padding:8px;border:1px solid #ddd">${s.consumedUnits}</td>
+        <td style="padding:8px;border:1px solid #ddd">${s.availableUnits}${typeof s.availablePercent === 'number' ? ` (${s.availablePercent}%)` : ''}</td>
+        <td style="padding:8px;border:1px solid #ddd">${s.expiration || 'unknown'}</td>
+      </tr>`;
+    }).join('');
+
+    const unlicensedRows = unlicensedUsers.map((u) =>
+      `<tr>
+        <td style="padding:8px;border:1px solid #ddd">${u.clientName || u.clientId || '-'}</td>
+        <td style="padding:8px;border:1px solid #ddd">${u.tenantName || u.tenantId || '-'}</td>
+        <td style="padding:8px;border:1px solid #ddd">${u.displayName}</td>
+        <td style="padding:8px;border:1px solid #ddd">${u.userPrincipalName}</td>
+      </tr>`
+    ).join('');
+
+    const lowSkuSummary = Array.isArray(lowAvailabilitySkus) && lowAvailabilitySkus.length > 0
+      ? `<p style="color:red"><strong>${lowAvailabilitySkus.length} SKU(s) are at or below thresholds (available <= ${summary.unusedThreshold}${typeof summary.unusedPercentThreshold === 'number' ? ` OR available% <= ${summary.unusedPercentThreshold}%` : ''}).</strong></p>`
+      : `<p style="color:green">No SKUs are currently below threshold rules (available <= ${summary.unusedThreshold}${typeof summary.unusedPercentThreshold === 'number' ? ` OR available% <= ${summary.unusedPercentThreshold}%` : ''}).</p>`;
+
+    const html = `
+      <h2 style="font-family:sans-serif">Microsoft 365 License Report</h2>
+      <p style="font-family:sans-serif;color:#666">Generated: ${reportDate}</p>
+      <p style="font-family:sans-serif;color:#666">Trigger: ${trigger || 'timer'} | Email send requested: ${String(sendEmailRequested ?? true)}</p>
+      <p style="font-family:sans-serif">Tenants monitored: <strong>${summary.tenantCount ?? 'n/a'}</strong></p>
+      <p style="font-family:sans-serif">SKUs: <strong>${summary.skuCount}</strong> | Total: <strong>${summary.totalUnits}</strong> | Consumed: <strong>${summary.consumedUnits}</strong> | Available: <strong>${summary.availableUnits}</strong></p>
+      <p style="font-family:sans-serif">Users missing licenses (sample): <strong>${summary.unlicensedUserCount}</strong></p>
+      ${lowSkuSummary}
+      <p style="font-family:sans-serif;color:#666">Expiration source: ${summary.expirationSource || 'unknown'}</p>
+
+      <h3 style="font-family:sans-serif;margin-top:20px">SKU Details</h3>
+      <table style="border-collapse:collapse;font-family:sans-serif;font-size:14px;width:100%;max-width:900px">
+        <thead>
+          <tr style="background:#f5f5f5">
+            <th style="padding:8px;border:1px solid #ddd;text-align:left">Client</th>
+            <th style="padding:8px;border:1px solid #ddd;text-align:left">Tenant</th>
+            <th style="padding:8px;border:1px solid #ddd;text-align:left">SKU</th>
+            <th style="padding:8px;border:1px solid #ddd;text-align:left">Total</th>
+            <th style="padding:8px;border:1px solid #ddd;text-align:left">Consumed</th>
+            <th style="padding:8px;border:1px solid #ddd;text-align:left">Available / Unused</th>
+            <th style="padding:8px;border:1px solid #ddd;text-align:left">Expiration</th>
+          </tr>
+        </thead>
+        <tbody>${skuRows}</tbody>
+      </table>
+
+      <h3 style="font-family:sans-serif;margin-top:20px">Users Missing Licenses</h3>
+      <table style="border-collapse:collapse;font-family:sans-serif;font-size:14px;width:100%;max-width:900px">
+        <thead>
+          <tr style="background:#f5f5f5">
+            <th style="padding:8px;border:1px solid #ddd;text-align:left">Client</th>
+            <th style="padding:8px;border:1px solid #ddd;text-align:left">Tenant</th>
+            <th style="padding:8px;border:1px solid #ddd;text-align:left">Display Name</th>
+            <th style="padding:8px;border:1px solid #ddd;text-align:left">User Principal Name</th>
+          </tr>
+        </thead>
+        <tbody>${unlicensedRows || '<tr><td colspan="2" style="padding:8px;border:1px solid #ddd">No unlicensed users in sampled set.</td></tr>'}</tbody>
+      </table>
+
+      <p style="font-family:sans-serif;color:#999;font-size:12px;margin-top:24px">Rudyard Technologies Automated License Monitor</p>
+    `;
+
+    const text = [
+      `Microsoft 365 License Report — ${reportDate}`,
+      `SKUs: ${summary.skuCount} | Total: ${summary.totalUnits} | Consumed: ${summary.consumedUnits} | Available: ${summary.availableUnits}`,
+      `Users missing licenses (sample): ${summary.unlicensedUserCount}`,
+      `Low availability SKUs: ${summary.lowAvailabilitySkuCount}`,
+      `Tenants monitored: ${summary.tenantCount ?? 'n/a'}`,
+      `Thresholds: available <= ${summary.unusedThreshold}${typeof summary.unusedPercentThreshold === 'number' ? ` OR available% <= ${summary.unusedPercentThreshold}%` : ''}`,
+      `Trigger: ${trigger || 'timer'} | Email send requested: ${String(sendEmailRequested ?? true)}`,
+      `Expiration source: ${summary.expirationSource || 'unknown'}`,
+      '',
+      'SKU Details:',
+      ...skuDetails.map((s) =>
+        `${s.clientName || s.clientId || '-'} / ${s.tenantName || s.tenantId || '-'} / ${s.skuPartNumber}: total=${s.totalUnits}, consumed=${s.consumedUnits}, available=${s.availableUnits}, expiration=${s.expiration || 'unknown'}`
+      ),
+      '',
+      'Users Missing Licenses (sample):',
+      ...unlicensedUsers.map((u) => `${u.clientName || u.clientId || '-'} / ${u.tenantName || u.tenantId || '-'} / ${u.displayName} <${u.userPrincipalName}>`),
+    ].join('\n');
+
+    await sendEmail({
+      to: recipients.join(','),
+      subject,
+      html,
+      text,
+      sent: true,
+    });
+
+    trackEvent('LicenseReport_Sent', {
+      skuCount: String(summary.skuCount),
+      unlicensedUserCount: String(summary.unlicensedUserCount),
+      lowAvailabilitySkuCount: String(summary.lowAvailabilitySkuCount),
+    });
+
+    res.json({ success: true });
+  } catch (err: any) {
+    console.error('Error sending license report email:', err);
+    trackException(err, { endpoint: '/api/admin/send-license-report' });
+    res.status(500).json({ error: 'Failed to send license report.' });
   }
 });
 

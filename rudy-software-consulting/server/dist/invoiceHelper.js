@@ -30,6 +30,7 @@ const getInvoices = async (filter) => {
         amount: entity.amount,
         notes: entity.notes,
         contact: entity.contact,
+        clientId: entity.clientId,
         paymentIntentId: entity.paymentIntentId,
         createdDate: new Date(entity.createdDate),
         updatedDate: new Date(entity.updatedDate),
@@ -54,6 +55,7 @@ const getInvoiceDetails = async (invoiceId) => {
             amount: entity.amount,
             notes: entity.notes,
             contact: entity.contact,
+            clientId: entity.clientId,
             paymentIntentId: entity.paymentIntentId,
             createdDate: new Date(entity.createdDate),
             updatedDate: new Date(entity.updatedDate),
@@ -223,6 +225,8 @@ paymentMethodId) => {
             (0, telemetry_1.trackTrace)(message, undefined, { invoiceId });
             return { Success: false, Message: message, InvoiceId: invoiceId };
         }
+        // Ensure clientId is tracked for partition key continuity
+        (0, telemetry_1.trackEvent)('PayInvoice_InvoiceLoaded', { invoiceId, clientId: invoiceDetails.clientId || invoiceDetails.partitionKey });
         if (invoiceDetails.status.toUpperCase() === models_1.IInvoiceStatus.CANCELLED.toUpperCase()) {
             return { Success: false, Message: `Cannot pay a cancelled invoice ${invoiceId}`, InvoiceId: invoiceId };
         }
@@ -261,6 +265,7 @@ paymentMethodId) => {
                             invoiceId,
                             invoiceNumber: invoiceDetails.id,
                             customerName: invoiceDetails.name,
+                            clientId: invoiceDetails.clientId || invoiceDetails.partitionKey || 'unknown',
                         },
                         automatic_payment_methods: { enabled: true },
                     });
@@ -276,6 +281,7 @@ paymentMethodId) => {
                         invoiceId,
                         invoiceNumber: invoiceDetails.id,
                         customerName: invoiceDetails.name,
+                        clientId: invoiceDetails.clientId || invoiceDetails.partitionKey || 'unknown',
                     },
                     automatic_payment_methods: { enabled: true },
                 });
@@ -291,6 +297,7 @@ paymentMethodId) => {
                     invoiceId,
                     invoiceNumber: invoiceDetails.id,
                     customerName: invoiceDetails.name,
+                    clientId: invoiceDetails.clientId || invoiceDetails.partitionKey || 'unknown',
                 },
                 automatic_payment_methods: { enabled: true },
             });
@@ -307,7 +314,11 @@ paymentMethodId) => {
         });
         invoiceDetails.status =
             amount === invoiceAmountCents ? models_1.IInvoiceStatus.PAID : models_1.IInvoiceStatus.PARTIALLY_PAID;
-        await (0, exports.updateInvoice)(invoiceDetails);
+        // Ensure clientId is preserved during payment update to maintain partition key
+        await (0, exports.updateInvoice)({
+            ...invoiceDetails,
+            clientId: invoiceDetails.clientId,
+        });
         return {
             Success: true,
             Message: 'PaymentIntent ready',
@@ -357,7 +368,11 @@ const finalizePayment = async (invoiceId, paymentIntentId) => {
             : models_1.IInvoiceStatus.PARTIALLY_PAID;
     invoice.paymentIntentId = paymentIntent.id;
     invoice.updatedDate = new Date();
-    await (0, exports.updateInvoice)(invoice);
+    // Ensure clientId is preserved during payment finalization to maintain partition key
+    await (0, exports.updateInvoice)({
+        ...invoice,
+        clientId: invoice.clientId,
+    });
     // Send confirmation email to client
     const paidDollars = paymentIntent.amount / 100;
     const subject = `Payment Received for Invoice ${invoiceId}`;

@@ -22,6 +22,7 @@ import { useAuth } from '../Auth/AuthContext';
 import HttpClient from '../../services/Http/HttpClient';
 import DomainManagement from './DomainManagement';
 import DomainHealth from './DomainHealth';
+import ClientTenantManagement from './ClientTenantManagement';
 
 interface IClient {
   id: string;
@@ -422,6 +423,7 @@ const ClientDashboard: React.FC = () => {
           </Box>
 
           <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '1fr 1fr' }, gap: 3, mt: 3 }}>
+            <ClientTenantManagement clientId={selectedClientId} />
             <DomainManagement clientId={selectedClientId} />
             <DomainHealth clientId={selectedClientId} />
           </Box>

@@ -60,6 +60,7 @@ export enum TableNames {
     ContactLogs = 'ContactLogs',
     Users = 'Users',
     Clients = 'Clients',
+    ClientTenants = 'ClientTenants',
     Domains = 'Domains',
     DomainHealth = 'DomainHealth',
 }
@@ -80,6 +81,18 @@ export interface IClient extends TableEntity {
     contactEmail: string;
     address: string;
     phone: string;
+}
+
+export interface IClientTenant extends TableEntity {
+    clientId: string;
+    clientName?: string;
+    tenantId: string;
+    tenantName?: string;
+    graphClientId: string;
+    graphClientSecretSettingName: string;
+    active: boolean;
+    createdAt: string;
+    updatedAt: string;
 }
 
 export interface IDomain extends TableEntity {

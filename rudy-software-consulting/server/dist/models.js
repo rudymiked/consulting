@@ -15,6 +15,7 @@ var TableNames;
     TableNames["ContactLogs"] = "ContactLogs";
     TableNames["Users"] = "Users";
     TableNames["Clients"] = "Clients";
+    TableNames["ClientTenants"] = "ClientTenants";
     TableNames["Domains"] = "Domains";
     TableNames["DomainHealth"] = "DomainHealth";
 })(TableNames || (exports.TableNames = TableNames = {}));
