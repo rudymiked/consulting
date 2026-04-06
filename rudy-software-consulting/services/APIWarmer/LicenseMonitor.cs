@@ -267,37 +267,44 @@ public class LicenseMonitor
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed collecting tenant data for client {ClientId}, tenant {TenantId}", mapping.ClientId, mapping.TenantId);
+            _logger.LogError(
+                ex,
+                "Failed collecting tenant data for client {ClientId}, tenant {TenantId}. Error={Error}. Inner={InnerError}",
+                mapping.ClientId,
+                mapping.TenantId,
+                ex.Message,
+                ex.InnerException?.Message);
             return new TenantCollectionResult();
         }
     }
 
     private static async Task<string> GetGraphAccessTokenWithFederatedCredential(string tenantId, string clientId)
     {
-        // Step 1: Get a managed identity assertion token scoped to the target tenant.
-        // This assertion proves the Function's managed identity to the target tenant.
-        var managedIdentityCredential = new DefaultAzureCredential(
-            new DefaultAzureCredentialOptions
-            {
-                TenantId = tenantId,
-            });
+        var managedIdentityClientId = Environment.GetEnvironmentVariable("AZURE_CLIENT_ID");
+        Azure.Core.TokenCredential managedIdentityCredential = string.IsNullOrWhiteSpace(managedIdentityClientId)
+            ? new ManagedIdentityCredential()
+            : new ManagedIdentityCredential(managedIdentityClientId);
 
-        var assertionContext = new Azure.Core.TokenRequestContext(
-            new[] { "api://AzureADTokenExchange" },
-            tenantId: tenantId);
+        var exchangeScope = Environment.GetEnvironmentVariable("FEDERATED_TOKEN_EXCHANGE_SCOPE");
+        if (string.IsNullOrWhiteSpace(exchangeScope))
+        {
+            exchangeScope = "api://AzureADTokenExchange/.default";
+        }
 
-        var assertion = await managedIdentityCredential.GetTokenAsync(assertionContext, CancellationToken.None);
+        // Fetch a fresh managed-identity assertion for every exchange.
+        string GetAssertion()
+        {
+            var assertionContext = new Azure.Core.TokenRequestContext(
+                new[] { exchangeScope },
+                tenantId: tenantId);
 
-        // Step 2: Exchange the managed identity assertion for a Graph token using ClientAssertionCredential.
-        // This explicitly targets the client tenant's app registration (clientId) using federated credentials.
-        // The graphClientId is guaranteed to be used in this exchange.
-        string getAssertion() => assertion.Token;
+            var assertionToken = managedIdentityCredential.GetToken(assertionContext, CancellationToken.None);
+            return assertionToken.Token;
+        }
 
-        var clientAssertion = new ClientAssertionCredential(tenantId, clientId, getAssertion);
-
-        var graphContext = new Azure.Core.TokenRequestContext(
-            new[] { "https://graph.microsoft.com/.default" });
-
+        // Exchange the managed identity assertion for a Graph token against the specific client app.
+        var clientAssertion = new ClientAssertionCredential(tenantId, clientId, GetAssertion);
+        var graphContext = new Azure.Core.TokenRequestContext(new[] { "https://graph.microsoft.com/.default" });
         var graphToken = await clientAssertion.GetTokenAsync(graphContext, CancellationToken.None);
         return graphToken.Token;
     }
