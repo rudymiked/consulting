@@ -12,14 +12,7 @@ const ensureValidId = (value: string, name: string): void => {
   }
 };
 
-const ensureSecretSettingName = (value: string): void => {
-  if (!value || typeof value !== 'string') {
-    throw new Error('graphClientSecretSettingName is required');
-  }
-  if (!/^[A-Z0-9_]{3,120}$/.test(value)) {
-    throw new Error('graphClientSecretSettingName must be uppercase letters, numbers, and underscores');
-  }
-};
+
 
 export const getAllClientTenants = async (): Promise<IClientTenant[]> => {
   const tenants = await queryEntities<IClientTenant>(TableNames.ClientTenants, null);
@@ -38,14 +31,12 @@ export const addOrUpdateClientTenant = async (
   tenantId: string,
   tenantName: string | undefined,
   graphClientId: string,
-  graphClientSecretSettingName: string,
   clientName?: string,
   active: boolean = true,
 ): Promise<IClientTenant> => {
   ensureValidId(clientId, 'clientId');
   ensureValidId(tenantId, 'tenantId');
   ensureValidId(graphClientId, 'graphClientId');
-  ensureSecretSettingName(graphClientSecretSettingName);
 
   const nowIso = new Date().toISOString();
 
@@ -57,7 +48,6 @@ export const addOrUpdateClientTenant = async (
     tenantId,
     tenantName,
     graphClientId,
-    graphClientSecretSettingName,
     active,
     createdAt: nowIso,
     updatedAt: nowIso,

@@ -8,7 +8,6 @@ import {
   DialogContent,
   DialogTitle,
   FormControlLabel,
-  InputAdornment,
   IconButton,
   Paper,
   Table,
@@ -18,12 +17,10 @@ import {
   TableHead,
   TableRow,
   TextField,
-  Tooltip,
   Typography,
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
-import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import { useAuth } from '../Auth/AuthContext';
 import HttpClient from '../../services/Http/HttpClient';
 
@@ -35,7 +32,6 @@ interface IClientTenant {
   tenantId: string;
   tenantName?: string;
   graphClientId: string;
-  graphClientSecretSettingName: string;
   active: boolean;
   createdAt: string;
   updatedAt: string;
@@ -50,33 +46,27 @@ const ClientTenantManagement: React.FC<ClientTenantManagementProps> = ({ clientI
   const httpClient = new HttpClient();
 
   const guidRegex = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
-  const secretSettingRegex = /^[A-Z0-9_]{3,120}$/;
 
   const [tenants, setTenants] = useState<IClientTenant[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [openDialog, setOpenDialog] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [copyMessage, setCopyMessage] = useState<string | null>(null);
   const [form, setForm] = useState({
     tenantId: '',
     tenantName: '',
     graphClientId: '',
-    graphClientSecretSettingName: '',
     active: true,
   });
 
   const tenantIdValid = guidRegex.test(form.tenantId.trim());
   const graphClientIdValid = guidRegex.test(form.graphClientId.trim());
-  const secretSettingNameValid = secretSettingRegex.test(form.graphClientSecretSettingName.trim().toUpperCase());
 
   const canSubmit =
     form.tenantId.trim().length > 0 &&
     form.graphClientId.trim().length > 0 &&
-    form.graphClientSecretSettingName.trim().length > 0 &&
     tenantIdValid &&
-    graphClientIdValid &&
-    secretSettingNameValid;
+    graphClientIdValid;
 
   useEffect(() => {
     if (!clientId) return;
@@ -101,8 +91,8 @@ const ClientTenantManagement: React.FC<ClientTenantManagementProps> = ({ clientI
   };
 
   const handleSaveTenant = async () => {
-    if (!form.tenantId.trim() || !form.graphClientId.trim() || !form.graphClientSecretSettingName.trim()) {
-      setError('Tenant ID, Graph Client ID, and Secret Setting Name are required.');
+    if (!form.tenantId.trim() || !form.graphClientId.trim()) {
+      setError('Tenant ID and Graph Client ID are required.');
       return;
     }
 
@@ -116,11 +106,6 @@ const ClientTenantManagement: React.FC<ClientTenantManagementProps> = ({ clientI
       return;
     }
 
-    if (!secretSettingNameValid) {
-      setError('Secret Setting Name must be uppercase letters, numbers, and underscores only.');
-      return;
-    }
-
     try {
       setSubmitting(true);
       setError(null);
@@ -131,7 +116,6 @@ const ClientTenantManagement: React.FC<ClientTenantManagementProps> = ({ clientI
           tenantId: form.tenantId.trim(),
           tenantName: form.tenantName.trim() || undefined,
           graphClientId: form.graphClientId.trim(),
-          graphClientSecretSettingName: form.graphClientSecretSettingName.trim().toUpperCase(),
           active: form.active,
         },
       });
@@ -145,7 +129,6 @@ const ClientTenantManagement: React.FC<ClientTenantManagementProps> = ({ clientI
         tenantId: '',
         tenantName: '',
         graphClientId: '',
-        graphClientSecretSettingName: '',
         active: true,
       });
       setOpenDialog(false);
@@ -175,21 +158,6 @@ const ClientTenantManagement: React.FC<ClientTenantManagementProps> = ({ clientI
     }
   };
 
-  const handleCopySettingName = async () => {
-    const key = form.graphClientSecretSettingName.trim().toUpperCase();
-    if (!key) {
-      setCopyMessage('Enter a secret setting name to copy.');
-      return;
-    }
-
-    try {
-      await navigator.clipboard.writeText(key);
-      setCopyMessage(`Copied: ${key}`);
-    } catch {
-      setCopyMessage('Could not copy to clipboard.');
-    }
-  };
-
   return (
     <Paper sx={{ p: 3 }}>
       <Typography variant="h6" gutterBottom sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -205,19 +173,12 @@ const ClientTenantManagement: React.FC<ClientTenantManagementProps> = ({ clientI
       </Typography>
 
       <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-        Map one or more Microsoft 365 tenants to this client. The secret value must be configured as an app setting
-        in the Function App using the same setting name you enter here.
+        Map one or more Microsoft 365 tenants to this client. Federated credentials will be used for secure, secret-free authentication.
       </Typography>
 
       {error && (
         <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
           {error}
-        </Alert>
-      )}
-
-      {copyMessage && (
-        <Alert severity="info" sx={{ mb: 2 }} onClose={() => setCopyMessage(null)}>
-          {copyMessage}
         </Alert>
       )}
 
@@ -235,7 +196,6 @@ const ClientTenantManagement: React.FC<ClientTenantManagementProps> = ({ clientI
                 <TableCell>Tenant</TableCell>
                 <TableCell>Tenant Name</TableCell>
                 <TableCell>Graph Client ID</TableCell>
-                <TableCell>Secret Setting</TableCell>
                 <TableCell>Status</TableCell>
                 <TableCell align="right">Action</TableCell>
               </TableRow>
@@ -249,7 +209,6 @@ const ClientTenantManagement: React.FC<ClientTenantManagementProps> = ({ clientI
                     <TableCell>{tenant.tenantId}</TableCell>
                     <TableCell>{tenant.tenantName || '-'}</TableCell>
                     <TableCell>{tenant.graphClientId}</TableCell>
-                    <TableCell>{tenant.graphClientSecretSettingName}</TableCell>
                     <TableCell>{tenant.active ? 'Active' : 'Inactive'}</TableCell>
                     <TableCell align="right">
                       <IconButton
@@ -302,38 +261,6 @@ const ClientTenantManagement: React.FC<ClientTenantManagementProps> = ({ clientI
                 ? 'Enter a valid app registration client GUID.'
                 : 'App registration Application (client) ID.'
             }
-          />
-          <TextField
-            fullWidth
-            label="Secret Setting Name"
-            placeholder="M365_SECRET_CONTOSO_PROD"
-            value={form.graphClientSecretSettingName}
-            onChange={(e) => setForm((prev) => ({ ...prev, graphClientSecretSettingName: e.target.value }))}
-            error={form.graphClientSecretSettingName.trim().length > 0 && !secretSettingNameValid}
-            FormHelperTextProps={{ component: 'div' }}
-            helperText={
-              form.graphClientSecretSettingName.trim().length > 0 && !secretSettingNameValid
-                ? 'Use A-Z, 0-9, and underscore only (3-120 chars).'
-                : 'Name of the Function App setting containing the client secret value.'
-            }
-            InputProps={{
-              endAdornment: (
-                <InputAdornment position="end">
-                  <Tooltip title="Copy key name">
-                    <span>
-                      <IconButton
-                        edge="end"
-                        size="small"
-                        onClick={handleCopySettingName}
-                        disabled={!form.graphClientSecretSettingName.trim()}
-                      >
-                        <ContentCopyIcon fontSize="small" />
-                      </IconButton>
-                    </span>
-                  </Tooltip>
-                </InputAdornment>
-              ),
-            }}
           />
           <FormControlLabel
             control={

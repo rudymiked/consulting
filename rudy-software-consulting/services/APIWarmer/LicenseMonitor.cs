@@ -205,9 +205,8 @@ public class LicenseMonitor
     {
         var tenantId = Environment.GetEnvironmentVariable("AZURE_TENANT_ID");
         var graphClientId = Environment.GetEnvironmentVariable("RUDYARD_CLIENT_APP_REG_AZURE_CLIENT_ID");
-        var secret = Environment.GetEnvironmentVariable("RUDYARD_CLIENT_APP_REG_AZURE_CLIENT_SECRET");
 
-        if (string.IsNullOrWhiteSpace(tenantId) || string.IsNullOrWhiteSpace(graphClientId) || string.IsNullOrWhiteSpace(secret))
+        if (string.IsNullOrWhiteSpace(tenantId) || string.IsNullOrWhiteSpace(graphClientId))
         {
             return new List<ClientTenantMapping>();
         }
@@ -221,7 +220,6 @@ public class LicenseMonitor
                 TenantId = tenantId,
                 TenantName = tenantId,
                 GraphClientId = graphClientId,
-                GraphClientSecretSettingName = "RUDYARD_CLIENT_APP_REG_AZURE_CLIENT_SECRET",
                 Active = true,
             }
         };
@@ -229,20 +227,9 @@ public class LicenseMonitor
 
     private async Task<TenantCollectionResult> CollectTenantData(ClientTenantMapping mapping, int maxUnlicensedUsers)
     {
-        var secret = Environment.GetEnvironmentVariable(mapping.GraphClientSecretSettingName);
-        if (string.IsNullOrWhiteSpace(secret))
-        {
-            _logger.LogWarning(
-                "Skipping tenant {TenantId} for client {ClientId}: secret setting {SecretSetting} is not configured.",
-                mapping.TenantId,
-                mapping.ClientId,
-                mapping.GraphClientSecretSettingName);
-            return new TenantCollectionResult();
-        }
-
         try
         {
-            var token = await GetGraphAccessToken(mapping.TenantId, mapping.GraphClientId, secret);
+            var token = await GetGraphAccessTokenWithFederatedCredential(mapping.TenantId, mapping.GraphClientId);
 
             using var graphHttp = new HttpClient { Timeout = TimeSpan.FromSeconds(60) };
             graphHttp.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
@@ -285,12 +272,34 @@ public class LicenseMonitor
         }
     }
 
-    private static async Task<string> GetGraphAccessToken(string tenantId, string clientId, string clientSecret)
+    private static async Task<string> GetGraphAccessTokenWithFederatedCredential(string tenantId, string clientId)
     {
-        var credential = new ClientSecretCredential(tenantId, clientId, clientSecret);
-        var tokenContext = new Azure.Core.TokenRequestContext(new[] { "https://graph.microsoft.com/.default" });
-        var token = await credential.GetTokenAsync(tokenContext, CancellationToken.None);
-        return token.Token;
+        // Step 1: Get a managed identity assertion token scoped to the target tenant.
+        // This assertion proves the Function's managed identity to the target tenant.
+        var managedIdentityCredential = new DefaultAzureCredential(
+            new DefaultAzureCredentialOptions
+            {
+                TenantId = tenantId,
+            });
+
+        var assertionContext = new Azure.Core.TokenRequestContext(
+            new[] { "api://AzureADTokenExchange" },
+            tenantId: tenantId);
+
+        var assertion = await managedIdentityCredential.GetTokenAsync(assertionContext, CancellationToken.None);
+
+        // Step 2: Exchange the managed identity assertion for a Graph token using ClientAssertionCredential.
+        // This explicitly targets the client tenant's app registration (clientId) using federated credentials.
+        // The graphClientId is guaranteed to be used in this exchange.
+        string getAssertion() => assertion.Token;
+
+        var clientAssertion = new ClientAssertionCredential(tenantId, clientId, getAssertion);
+
+        var graphContext = new Azure.Core.TokenRequestContext(
+            new[] { "https://graph.microsoft.com/.default" });
+
+        var graphToken = await clientAssertion.GetTokenAsync(graphContext, CancellationToken.None);
+        return graphToken.Token;
     }
 
     private async Task<List<SkuSnapshot>> GetSubscribedSkus(HttpClient graphHttp)
@@ -582,7 +591,6 @@ public class LicenseMonitor
         public string TenantId { get; set; } = string.Empty;
         public string? TenantName { get; set; }
         public string GraphClientId { get; set; } = string.Empty;
-        public string GraphClientSecretSettingName { get; set; } = string.Empty;
         public bool Active { get; set; } = true;
     }
 

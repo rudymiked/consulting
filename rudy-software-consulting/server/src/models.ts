@@ -89,7 +89,6 @@ export interface IClientTenant extends TableEntity {
     tenantId: string;
     tenantName?: string;
     graphClientId: string;
-    graphClientSecretSettingName: string;
     active: boolean;
     createdAt: string;
     updatedAt: string;

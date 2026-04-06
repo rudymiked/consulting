@@ -1117,11 +1117,11 @@ app.post('/api/admin/client/:clientId/tenants', customJwtCheck, async (req: any,
       return res.status(403).json({ error: 'Access denied: Admin only' });
     }
 
-    const { tenantId, tenantName, graphClientId, graphClientSecretSettingName, active } = req.body;
+    const { tenantId, tenantName, graphClientId, active } = req.body;
 
-    if (!tenantId || !graphClientId || !graphClientSecretSettingName) {
+    if (!tenantId || !graphClientId) {
       return res.status(400).json({
-        error: 'Missing required fields: tenantId, graphClientId, graphClientSecretSettingName',
+        error: 'Missing required fields: tenantId, graphClientId',
       });
     }
 
@@ -1132,7 +1132,6 @@ app.post('/api/admin/client/:clientId/tenants', customJwtCheck, async (req: any,
       tenantId,
       tenantName,
       graphClientId,
-      graphClientSecretSettingName,
       client?.name,
       active !== false,
     );

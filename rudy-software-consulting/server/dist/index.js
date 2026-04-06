@@ -984,14 +984,14 @@ app.post('/api/admin/client/:clientId/tenants', customJwtCheck, async (req, res)
         if (!user || !user.siteAdmin) {
             return res.status(403).json({ error: 'Access denied: Admin only' });
         }
-        const { tenantId, tenantName, graphClientId, graphClientSecretSettingName, active } = req.body;
-        if (!tenantId || !graphClientId || !graphClientSecretSettingName) {
+        const { tenantId, tenantName, graphClientId, active } = req.body;
+        if (!tenantId || !graphClientId) {
             return res.status(400).json({
-                error: 'Missing required fields: tenantId, graphClientId, graphClientSecretSettingName',
+                error: 'Missing required fields: tenantId, graphClientId',
             });
         }
         const client = await (0, clientHelper_1.getClientById)(clientId);
-        const mapping = await (0, clientTenantHelper_1.addOrUpdateClientTenant)(clientId, tenantId, tenantName, graphClientId, graphClientSecretSettingName, client?.name, active !== false);
+        const mapping = await (0, clientTenantHelper_1.addOrUpdateClientTenant)(clientId, tenantId, tenantName, graphClientId, client?.name, active !== false);
         (0, telemetry_1.trackEvent)('ClientTenant_Upsert_Success', { clientId, tenantId });
         return res.status(201).json(mapping);
     }

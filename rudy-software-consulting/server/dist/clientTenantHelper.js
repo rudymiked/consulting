@@ -12,14 +12,6 @@ const ensureValidId = (value, name) => {
         throw new Error(`${name} has invalid characters`);
     }
 };
-const ensureSecretSettingName = (value) => {
-    if (!value || typeof value !== 'string') {
-        throw new Error('graphClientSecretSettingName is required');
-    }
-    if (!/^[A-Z0-9_]{3,120}$/.test(value)) {
-        throw new Error('graphClientSecretSettingName must be uppercase letters, numbers, and underscores');
-    }
-};
 const getAllClientTenants = async () => {
     const tenants = await (0, tableClientHelper_1.queryEntities)(models_1.TableNames.ClientTenants, null);
     return tenants;
@@ -32,11 +24,10 @@ const getClientTenants = async (clientId) => {
     return tenants;
 };
 exports.getClientTenants = getClientTenants;
-const addOrUpdateClientTenant = async (clientId, tenantId, tenantName, graphClientId, graphClientSecretSettingName, clientName, active = true) => {
+const addOrUpdateClientTenant = async (clientId, tenantId, tenantName, graphClientId, clientName, active = true) => {
     ensureValidId(clientId, 'clientId');
     ensureValidId(tenantId, 'tenantId');
     ensureValidId(graphClientId, 'graphClientId');
-    ensureSecretSettingName(graphClientSecretSettingName);
     const nowIso = new Date().toISOString();
     const entity = {
         partitionKey: clientId,
@@ -46,7 +37,6 @@ const addOrUpdateClientTenant = async (clientId, tenantId, tenantName, graphClie
         tenantId,
         tenantName,
         graphClientId,
-        graphClientSecretSettingName,
         active,
         createdAt: nowIso,
         updatedAt: nowIso,
