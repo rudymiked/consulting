@@ -1,8 +1,11 @@
 using System.Diagnostics;
 using System.Net.Http.Headers;
+using System.Security.Cryptography;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Text.Json;
 using Azure.Identity;
+using Azure.Security.KeyVault.Secrets;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
 using Microsoft.Extensions.Logging;
@@ -229,7 +232,7 @@ public class LicenseMonitor
     {
         try
         {
-            var token = await GetGraphAccessTokenWithFederatedCredential(mapping.TenantId, mapping.GraphClientId);
+            var token = await GetGraphAccessTokenWithCertificate(mapping.TenantId, mapping.GraphClientId);
 
             using var graphHttp = new HttpClient { Timeout = TimeSpan.FromSeconds(60) };
             graphHttp.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
@@ -278,35 +281,49 @@ public class LicenseMonitor
         }
     }
 
-    private static async Task<string> GetGraphAccessTokenWithFederatedCredential(string tenantId, string clientId)
+    private static async Task<string> GetGraphAccessTokenWithCertificate(string tenantId, string clientId)
     {
+        var certificate = await LoadGraphCertificateFromKeyVault();
+        var credential = new ClientCertificateCredential(tenantId, clientId, certificate);
+        var graphContext = new Azure.Core.TokenRequestContext(new[] { "https://graph.microsoft.com/.default" });
+        var graphToken = await credential.GetTokenAsync(graphContext, CancellationToken.None);
+        return graphToken.Token;
+    }
+
+    private static async Task<X509Certificate2> LoadGraphCertificateFromKeyVault()
+    {
+        var keyVaultUrl = Environment.GetEnvironmentVariable("GRAPH_CERT_KEYVAULT_URL");
+        var certName = Environment.GetEnvironmentVariable("GRAPH_CERT_NAME");
+        var certPassword = Environment.GetEnvironmentVariable("GRAPH_CERT_PASSWORD");
+        if (string.IsNullOrWhiteSpace(keyVaultUrl) || string.IsNullOrWhiteSpace(certName))
+        {
+            throw new InvalidOperationException("GRAPH_CERT_KEYVAULT_URL and GRAPH_CERT_NAME must be configured.");
+        }
+
         var managedIdentityClientId = Environment.GetEnvironmentVariable("AZURE_CLIENT_ID");
         Azure.Core.TokenCredential managedIdentityCredential = string.IsNullOrWhiteSpace(managedIdentityClientId)
             ? new ManagedIdentityCredential()
             : new ManagedIdentityCredential(managedIdentityClientId);
 
-        var exchangeScope = Environment.GetEnvironmentVariable("FEDERATED_TOKEN_EXCHANGE_SCOPE");
-        if (string.IsNullOrWhiteSpace(exchangeScope))
+        var secretClient = new SecretClient(new Uri(keyVaultUrl), managedIdentityCredential);
+        var secret = await secretClient.GetSecretAsync(certName);
+        if (string.IsNullOrWhiteSpace(secret.Value?.Value))
         {
-            exchangeScope = "api://AzureADTokenExchange/.default";
+            throw new InvalidOperationException($"Key Vault certificate secret '{certName}' has no value.");
         }
 
-        // Fetch a fresh managed-identity assertion for every exchange.
-        string GetAssertion()
+        var pfxBytes = Convert.FromBase64String(secret.Value.Value);
+        const X509KeyStorageFlags flags = X509KeyStorageFlags.EphemeralKeySet | X509KeyStorageFlags.MachineKeySet;
+
+        try
         {
-            var assertionContext = new Azure.Core.TokenRequestContext(
-                new[] { exchangeScope },
-                tenantId: tenantId);
-
-            var assertionToken = managedIdentityCredential.GetToken(assertionContext, CancellationToken.None);
-            return assertionToken.Token;
+            return new X509Certificate2(pfxBytes, certPassword, flags);
         }
-
-        // Exchange the managed identity assertion for a Graph token against the specific client app.
-        var clientAssertion = new ClientAssertionCredential(tenantId, clientId, GetAssertion);
-        var graphContext = new Azure.Core.TokenRequestContext(new[] { "https://graph.microsoft.com/.default" });
-        var graphToken = await clientAssertion.GetTokenAsync(graphContext, CancellationToken.None);
-        return graphToken.Token;
+        catch (CryptographicException)
+        {
+            // Some Key Vault-exported certificate secrets can be loaded with a null password.
+            return new X509Certificate2(pfxBytes, (string?)null, flags);
+        }
     }
 
     private async Task<List<SkuSnapshot>> GetSubscribedSkus(HttpClient graphHttp)
