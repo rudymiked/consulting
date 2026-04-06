@@ -1291,20 +1291,39 @@ app.post('/api/admin/send-license-report', authCheck, async (req, res) => {
         const recipients = Array.isArray(emailRecipients) && emailRecipients.length > 0
             ? emailRecipients
             : ['info@rudyardtechnologies.com'];
+        const getExpirationDate = (rawExpiration) => {
+            if (!rawExpiration || rawExpiration === 'unknown') {
+                return null;
+            }
+            // Expiration may include extra status text, so parse only the first token.
+            const firstToken = rawExpiration.split(' ')[0];
+            const parsed = new Date(firstToken);
+            return Number.isNaN(parsed.getTime()) ? null : parsed;
+        };
+        const isWithinNextTwoMonths = (rawExpiration) => {
+            const expiry = getExpirationDate(rawExpiration);
+            if (!expiry) {
+                return false;
+            }
+            const now = new Date();
+            const twoMonthsFromNow = new Date(now);
+            twoMonthsFromNow.setMonth(twoMonthsFromNow.getMonth() + 2);
+            return expiry >= now && expiry <= twoMonthsFromNow;
+        };
         const skuRows = skuDetails.map((s) => {
-            const isLowByAbsolute = s.availableUnits <= summary.unusedThreshold;
-            const isLowByPercent = typeof s.availablePercent === 'number' &&
-                typeof summary.unusedPercentThreshold === 'number' &&
-                s.availablePercent <= summary.unusedPercentThreshold;
-            const isLow = isLowByAbsolute || isLowByPercent;
-            const rowStyle = isLow ? 'background:#fff3f3' : '';
+            const hasUnusedLicenses = s.availableUnits > 0;
+            const expiresSoon = isWithinNextTwoMonths(s.expiration);
+            const rowStyle = hasUnusedLicenses || expiresSoon ? 'background:#ffd9d9' : '';
+            const unusedPercent = typeof s.availablePercent === 'number'
+                ? `${Number(s.availablePercent).toFixed(2)}%`
+                : 'n/a';
             return `<tr style="${rowStyle}">
         <td style="padding:8px;border:1px solid #ddd">${s.clientName || s.clientId || '-'}</td>
         <td style="padding:8px;border:1px solid #ddd">${s.tenantName || s.tenantId || '-'}</td>
         <td style="padding:8px;border:1px solid #ddd">${s.skuPartNumber}</td>
         <td style="padding:8px;border:1px solid #ddd">${s.totalUnits}</td>
         <td style="padding:8px;border:1px solid #ddd">${s.consumedUnits}</td>
-        <td style="padding:8px;border:1px solid #ddd">${s.availableUnits}${typeof s.availablePercent === 'number' ? ` (${s.availablePercent}%)` : ''}</td>
+        <td style="padding:8px;border:1px solid #ddd">${unusedPercent}</td>
         <td style="padding:8px;border:1px solid #ddd">${s.expiration || 'unknown'}</td>
       </tr>`;
         }).join('');
@@ -1336,7 +1355,7 @@ app.post('/api/admin/send-license-report', authCheck, async (req, res) => {
             <th style="padding:8px;border:1px solid #ddd;text-align:left">SKU</th>
             <th style="padding:8px;border:1px solid #ddd;text-align:left">Total</th>
             <th style="padding:8px;border:1px solid #ddd;text-align:left">Consumed</th>
-            <th style="padding:8px;border:1px solid #ddd;text-align:left">Available / Unused</th>
+            <th style="padding:8px;border:1px solid #ddd;text-align:left">Unused %</th>
             <th style="padding:8px;border:1px solid #ddd;text-align:left">Expiration</th>
           </tr>
         </thead>
