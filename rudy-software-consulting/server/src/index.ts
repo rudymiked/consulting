@@ -1581,7 +1581,11 @@ app.post('/api/admin/send-license-report', authCheck, async (req: any, res) => {
     const skuRows = skuDetails.map((s) => {
       const hasUnusedLicenses = s.availableUnits > 0;
       const expiresSoon = isWithinNextTwoMonths(s.expiration);
-      const rowStyle = hasUnusedLicenses || expiresSoon ? 'background:#ffd9d9' : '';
+      const rowStyle = expiresSoon
+        ? 'background:#ffd9d9'
+        : hasUnusedLicenses
+          ? 'background:#ffe9cc'
+          : '';
       const unusedPercent = typeof s.availablePercent === 'number'
         ? `${Number(s.availablePercent).toFixed(2)}%`
         : 'n/a';
