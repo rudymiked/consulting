@@ -1578,6 +1578,21 @@ app.post('/api/admin/send-license-report', authCheck, async (req: any, res) => {
       return expiry >= now && expiry <= twoMonthsFromNow;
     };
 
+    const formatExpirationDate = (rawExpiration?: string): string => {
+      const expDate = getExpirationDate(rawExpiration);
+      if (!expDate) return 'unknown';
+      const mm = String(expDate.getUTCMonth() + 1).padStart(2, '0');
+      const dd = String(expDate.getUTCDate()).padStart(2, '0');
+      const yyyy = expDate.getUTCFullYear();
+      return `${mm}-${dd}-${yyyy}`;
+    };
+
+    const extractStatus = (rawExpiration?: string): string => {
+      if (!rawExpiration || rawExpiration === 'unknown') return '-';
+      const match = rawExpiration.match(/\(status=([^)]+)\)/i);
+      return match ? match[1] : '-';
+    };
+
     const skuRows = skuDetails.map((s) => {
       const hasUnusedLicenses = s.availableUnits > 0;
       const expiresSoon = isWithinNextTwoMonths(s.expiration);
@@ -1589,6 +1604,8 @@ app.post('/api/admin/send-license-report', authCheck, async (req: any, res) => {
       const unusedPercent = typeof s.availablePercent === 'number'
         ? `${Number(s.availablePercent).toFixed(2)}%`
         : 'n/a';
+      const expirationDisplay = formatExpirationDate(s.expiration);
+      const statusDisplay = extractStatus(s.expiration);
 
       return `<tr style="${rowStyle}">
         <td style="padding:8px;border:1px solid #ddd">${s.clientName || s.clientId || '-'}</td>
@@ -1597,7 +1614,8 @@ app.post('/api/admin/send-license-report', authCheck, async (req: any, res) => {
         <td style="padding:8px;border:1px solid #ddd">${s.totalUnits}</td>
         <td style="padding:8px;border:1px solid #ddd">${s.consumedUnits}</td>
         <td style="padding:8px;border:1px solid #ddd">${unusedPercent}</td>
-        <td style="padding:8px;border:1px solid #ddd">${s.expiration || 'unknown'}</td>
+        <td style="padding:8px;border:1px solid #ddd">${expirationDisplay}</td>
+        <td style="padding:8px;border:1px solid #ddd">${statusDisplay}</td>
       </tr>`;
     }).join('');
 
@@ -1635,6 +1653,7 @@ app.post('/api/admin/send-license-report', authCheck, async (req: any, res) => {
             <th style="padding:8px;border:1px solid #ddd;text-align:left">Consumed</th>
             <th style="padding:8px;border:1px solid #ddd;text-align:left">Unused %</th>
             <th style="padding:8px;border:1px solid #ddd;text-align:left">Expiration</th>
+            <th style="padding:8px;border:1px solid #ddd;text-align:left">Status</th>
           </tr>
         </thead>
         <tbody>${skuRows}</tbody>
