@@ -12,8 +12,6 @@ const ensureValidId = (value: string, name: string): void => {
   }
 };
 
-
-
 export const getAllClientTenants = async (): Promise<IClientTenant[]> => {
   const tenants = await queryEntities<IClientTenant>(TableNames.ClientTenants, null);
   return tenants;
