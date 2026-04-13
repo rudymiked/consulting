@@ -243,19 +243,24 @@ public class LicenseMonitor
 
             return new TenantCollectionResult
             {
-                SkuRows = skus.Select(s => new SkuRow
+                SkuRows = skus.Select(s =>
                 {
-                    ClientId = mapping.ClientId,
-                    ClientName = mapping.ClientName,
-                    TenantId = mapping.TenantId,
-                    TenantName = mapping.TenantName,
-                    SkuId = s.SkuId,
-                    SkuPartNumber = s.SkuPartNumber,
-                    TotalUnits = s.TotalUnits,
-                    ConsumedUnits = s.ConsumedUnits,
-                    AvailableUnits = s.AvailableUnits,
-                    CapabilityStatus = s.CapabilityStatus,
-                    Expiration = expiryBySku.TryGetValue(s.SkuId, out var exp) ? exp : "unknown",
+                    expiryBySku.TryGetValue(s.SkuId, out var expInfo);
+                    return new SkuRow
+                    {
+                        ClientId = mapping.ClientId,
+                        ClientName = mapping.ClientName,
+                        TenantId = mapping.TenantId,
+                        TenantName = mapping.TenantName,
+                        SkuId = s.SkuId,
+                        SkuPartNumber = s.SkuPartNumber,
+                        TotalUnits = s.TotalUnits,
+                        ConsumedUnits = s.ConsumedUnits,
+                        AvailableUnits = s.AvailableUnits,
+                        CapabilityStatus = s.CapabilityStatus,
+                        Expiration = expInfo?.Expiration ?? "unknown",
+                        AutoRenew = expInfo?.AutoRenew,
+                    };
                 }).ToList(),
                 UnlicensedUsers = unlicensedUsers.Select(u => new UnlicensedUserRow
                 {
@@ -421,14 +426,16 @@ public class LicenseMonitor
             .ToList();
     }
 
-    private async Task<Dictionary<string, string>> GetSubscriptionExpirations(HttpClient graphHttp)
+    private sealed record SubscriptionExpiryInfo(string Expiration, bool? AutoRenew);
+
+    private async Task<Dictionary<string, SubscriptionExpiryInfo>> GetSubscriptionExpirations(HttpClient graphHttp)
     {
         // Best-effort: this endpoint can vary by tenant/permissions/commerce setup.
-        var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        var map = new Dictionary<string, SubscriptionExpiryInfo>(StringComparer.OrdinalIgnoreCase);
 
         try
         {
-            const string endpoint = "https://graph.microsoft.com/beta/directory/subscriptions?$select=skuId,nextLifecycleDateTime,status";
+            const string endpoint = "https://graph.microsoft.com/beta/directory/subscriptions?$select=skuId,nextLifecycleDateTime,status,autoRenew";
             using var response = await graphHttp.GetAsync(endpoint);
 
             if (!response.IsSuccessStatusCode)
@@ -458,8 +465,11 @@ public class LicenseMonitor
                 var expiryLabel = string.IsNullOrWhiteSpace(lifecycle)
                     ? $"status={status}, expiry unknown"
                     : $"{lifecycle} (status={status})";
+                bool? autoRenew = sub.TryGetProperty("autoRenew", out var arProp) && arProp.ValueKind != JsonValueKind.Null
+                    ? GetBool(sub, "autoRenew", false)
+                    : null;
 
-                map[skuId] = expiryLabel;
+                map[skuId] = new SubscriptionExpiryInfo(expiryLabel, autoRenew);
             }
         }
         catch (Exception ex)
@@ -514,6 +524,7 @@ public class LicenseMonitor
             capabilityStatus = s.CapabilityStatus,
             availablePercent = s.TotalUnits > 0 ? Math.Round(((double)s.AvailableUnits / s.TotalUnits) * 100, 2) : 0,
             expiration = s.Expiration,
+            autoRenew = s.AutoRenew,
         }).ToList();
 
         var users = unlicensedUsers.Select(u => new
@@ -631,6 +642,7 @@ public class LicenseMonitor
         public int AvailableUnits { get; set; }
         public string CapabilityStatus { get; set; } = string.Empty;
         public string Expiration { get; set; } = "unknown";
+        public bool? AutoRenew { get; set; }
     }
 
     private sealed class UnlicensedUserRow

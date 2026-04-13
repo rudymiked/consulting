@@ -1406,6 +1406,7 @@ interface ILicenseSkuDetail {
   unusedUnits: number;
   capabilityStatus: string;
   expiration: string;
+  autoRenew?: boolean | null;
 }
 
 interface ILicenseUserDetail {
@@ -1606,6 +1607,7 @@ app.post('/api/admin/send-license-report', authCheck, async (req: any, res) => {
         : 'n/a';
       const expirationDisplay = formatExpirationDate(s.expiration);
       const statusDisplay = extractStatus(s.expiration);
+      const autoRenewDisplay = s.autoRenew === true ? 'Yes' : s.autoRenew === false ? 'No' : '-';
 
       return `<tr style="${rowStyle}">
         <td style="padding:8px;border:1px solid #ddd">${s.clientName || s.clientId || '-'}</td>
@@ -1616,6 +1618,7 @@ app.post('/api/admin/send-license-report', authCheck, async (req: any, res) => {
         <td style="padding:8px;border:1px solid #ddd">${unusedPercent}</td>
         <td style="padding:8px;border:1px solid #ddd">${expirationDisplay}</td>
         <td style="padding:8px;border:1px solid #ddd">${statusDisplay}</td>
+        <td style="padding:8px;border:1px solid #ddd">${autoRenewDisplay}</td>
       </tr>`;
     }).join('');
 
@@ -1654,6 +1657,7 @@ app.post('/api/admin/send-license-report', authCheck, async (req: any, res) => {
             <th style="padding:8px;border:1px solid #ddd;text-align:left">Unused %</th>
             <th style="padding:8px;border:1px solid #ddd;text-align:left">Expiration</th>
             <th style="padding:8px;border:1px solid #ddd;text-align:left">Status</th>
+            <th style="padding:8px;border:1px solid #ddd;text-align:left">Auto-Renew</th>
           </tr>
         </thead>
         <tbody>${skuRows}</tbody>
