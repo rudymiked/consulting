@@ -440,7 +440,12 @@ public class LicenseMonitor
 
             if (!response.IsSuccessStatusCode)
             {
-                _logger.LogInformation("Subscription expiration endpoint unavailable: {StatusCode}", response.StatusCode);
+                var errorBody = await response.Content.ReadAsStringAsync();
+                _logger.LogWarning(
+                    "Subscription expiration endpoint unavailable: {StatusCode}. Body: {Body}. " +
+                    "Ensure the Graph app registration has Directory.Read.All or Organization.Read.All application permission.",
+                    response.StatusCode,
+                    errorBody.Length > 500 ? errorBody[..500] : errorBody);
                 return map;
             }
 
