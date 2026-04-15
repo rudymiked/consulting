@@ -193,13 +193,10 @@ namespace APIWarmer
                     "Client health check complete in {Elapsed}ms. Domains checked: {Total}, Issues: {Down}",
                     sw.ElapsedMilliseconds, totalDomains, domainsDown);
 
-                // 4. Send email if there are failures, or it's the noon daily report (UTC)
-                var isNoonReport = DateTime.UtcNow.Hour == 12;
-                var shouldEmail  = domainsDown > 0 || isNoonReport;
-
-                if (shouldEmail && domainResults.Count > 0)
+                // 4. Send email only when one or more domains are unhealthy.
+                if (domainsDown > 0 && domainResults.Count > 0)
                 {
-                    await SendHealthReportEmail(http, apiUrl, isNoonReport, totalDomains, domainsDown, domainResults);
+                    await SendHealthReportEmail(http, apiUrl, isDailyReport: false, totalDomains, domainsDown, domainResults);
                 }
             }
             catch (Exception ex)
