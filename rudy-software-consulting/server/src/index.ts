@@ -6,7 +6,7 @@ import appInsights from "applicationinsights";
 import { insertIntoContactLogs, sendEmail } from './emailHelper';
 import jwksClient from 'jwks-rsa';
 import { expressjwt } from 'express-jwt';
-import { createInvoice, finalizePayment, getInvoiceDetails, getInvoices, payInvoice, updateInvoice } from './invoiceHelper';
+import { createInvoice, deleteInvoice, finalizePayment, getInvoiceDetails, getInvoices, payInvoice, updateInvoice } from './invoiceHelper';
 import { trackEvent, trackException } from './telemetry';
 import { approveUser, unapproveUser, toggleAdmin, loginUser, registerUser, verifyToken } from './authHelper';
 import { IEmailOptions, IInvoice, IInvoiceResult, IInvoiceStatus, IWarmerEntity, TableNames } from './models';
@@ -809,6 +809,32 @@ app.put('/api/invoice/:invoiceId', customJwtCheck, async (req: any, res) => {
 
     trackException(error, { endpoint: '/api/invoice/:invoiceId', invoiceId, adminEmail: user.email });
     return res.status(500).json({ error: 'Failed to update invoice.' });
+  }
+});
+
+app.delete('/api/invoice/:invoiceId', customJwtCheck, async (req: any, res) => {
+  const { invoiceId } = req.params;
+  const user = getUserFromCustomToken(req);
+
+  if (!user) {
+    return res.status(403).json({ error: 'Unauthorized' });
+  }
+
+  if (!user.siteAdmin) {
+    return res.status(403).json({ error: 'Access denied: Admin only' });
+  }
+
+  try {
+    const result = await deleteInvoice(invoiceId);
+    trackEvent('DeleteInvoice_API_Success', { invoiceId, adminEmail: user.email });
+    return res.status(200).json(result);
+  } catch (error: any) {
+    const isNotFound = String(error?.message || '').toLowerCase().includes('not found');
+    if (isNotFound) {
+      return res.status(404).json({ error: 'Invoice not found.' });
+    }
+    trackException(error, { endpoint: 'DELETE /api/invoice/:invoiceId', invoiceId, adminEmail: user.email });
+    return res.status(500).json({ error: 'Failed to delete invoice.' });
   }
 });
 

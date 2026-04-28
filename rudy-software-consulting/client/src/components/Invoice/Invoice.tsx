@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Paper, Typography, Box, CircularProgress, Alert, Divider, Button, TextField } from '@mui/material';
-import { Link } from 'react-router-dom';
+import { Paper, Typography, Box, CircularProgress, Alert, Divider, Button, TextField, Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions } from '@mui/material';
+import { Link, useNavigate } from 'react-router-dom';
 import PaymentForm from '../Payment/PaymentForm';
 import { Elements } from '@stripe/react-stripe-js';
 import { IInvoice, IInvoiceStatus } from '../../pages/InvoicesPage';
@@ -35,7 +35,28 @@ const Invoice: React.FC<IInvoiceProps> = (props: IInvoiceProps) => {
     const [error, setError] = useState<string | undefined>(undefined);
     const [clientSecret, setClientSecret] = React.useState<string | undefined>(undefined);
     const [stripeOptions, setStripeOptions] = React.useState<StripeElementsOptions | undefined>(undefined);
-    const { isAuthenticated, token } = useAuth();
+    const { isAuthenticated, token, isAdmin } = useAuth();
+
+    const navigate = useNavigate();
+    const [confirmDelete, setConfirmDelete] = useState(false);
+    const [deleting, setDeleting] = useState(false);
+
+    const handleDelete = async () => {
+        if (!invoice) return;
+        setDeleting(true);
+        try {
+            await httpClient.delete({
+                url: `/api/invoice/${invoice.id}`,
+                token: token!,
+            });
+            navigate('/invoices');
+        } catch {
+            setError('Failed to delete invoice.');
+        } finally {
+            setDeleting(false);
+            setConfirmDelete(false);
+        }
+    };
 
     const httpClient = new HttpClient();
     const isInvoicePaid = invoice?.status?.toUpperCase() === IInvoiceStatus.PAID.toUpperCase()
@@ -141,6 +162,58 @@ const Invoice: React.FC<IInvoiceProps> = (props: IInvoiceProps) => {
             doc.text(notesLines, margin, y);
             y += notesLines.length * 6 + 8;
         }
+
+        // ── Divider ─────────────────────────────────────────────────────
+        doc.setDrawColor(220, 225, 235);
+        doc.line(margin, y, pageW - margin, y);
+        y += 10;
+
+        // ── Line items table ─────────────────────────────────────────────
+        const colDesc = margin;
+        const colRate = pageW - margin - 60;
+        const colAmt = pageW - margin;
+
+        // Header row
+        doc.setFillColor(241, 245, 255);
+        doc.rect(margin, y, contentW, 8, 'F');
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(8);
+        doc.setTextColor(80, 100, 160);
+        doc.text('DESCRIPTION', colDesc, y + 5.5);
+        doc.text('RATE', colRate, y + 5.5, { align: 'right' });
+        doc.text('AMOUNT', colAmt, y + 5.5, { align: 'right' });
+        y += 10;
+
+        // Item row
+        const hours = invoice.amount / 100; // $100/hr
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(10);
+        doc.setTextColor(30, 30, 30);
+        doc.text('IT Consulting', colDesc, y);
+        doc.setTextColor(80, 80, 80);
+        doc.setFontSize(9);
+        doc.text(`${hours % 1 === 0 ? hours : hours.toFixed(2)} hrs @ $100/hr`, colDesc, y + 5);
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(10);
+        doc.setTextColor(30, 30, 30);
+        doc.text('$100.00/hr', colRate, y, { align: 'right' });
+        doc.text(`$${invoice.amount.toFixed(2)}`, colAmt, y, { align: 'right' });
+        y += 14;
+
+        // Subtotal row
+        doc.setDrawColor(220, 225, 235);
+        doc.setLineWidth(0.3);
+        doc.line(margin, y, pageW - margin, y);
+        y += 6;
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9);
+        doc.setTextColor(80, 80, 80);
+        doc.text('Subtotal', colRate, y, { align: 'right' });
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(10);
+        doc.setTextColor(30, 30, 30);
+        doc.text(`$${invoice.amount.toFixed(2)}`, colAmt, y, { align: 'right' });
+        y += 10;
 
         // ── Divider ─────────────────────────────────────────────────────
         doc.setDrawColor(220, 225, 235);
@@ -388,6 +461,17 @@ const Invoice: React.FC<IInvoiceProps> = (props: IInvoiceProps) => {
                     Export PDF
                 </Button>
 
+                {isAdmin && (
+                    <Box sx={{ mb: 2 }}>
+                        <Button
+                            variant="outlined"
+                            color="error"
+                            onClick={() => setConfirmDelete(true)}
+                        >
+                            Delete Invoice
+                        </Button>
+                    </Box>
+                )}
                 {statusChecked && (
                     <>
                         {message && (
@@ -432,6 +516,21 @@ const Invoice: React.FC<IInvoiceProps> = (props: IInvoiceProps) => {
                     </Link>
                 </Box>
             )}
+
+            <Dialog open={confirmDelete} onClose={() => setConfirmDelete(false)}>
+                <DialogTitle>Delete Invoice</DialogTitle>
+                <DialogContent>
+                    <DialogContentText>
+                        Are you sure you want to delete invoice <strong>{invoice?.id}</strong>? This cannot be undone.
+                    </DialogContentText>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setConfirmDelete(false)} disabled={deleting}>Cancel</Button>
+                    <Button color="error" variant="contained" onClick={handleDelete} disabled={deleting}>
+                        {deleting ? 'Deleting...' : 'Delete'}
+                    </Button>
+                </DialogActions>
+            </Dialog>
         </>
     );
 };

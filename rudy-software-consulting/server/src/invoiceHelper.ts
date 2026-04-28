@@ -284,7 +284,11 @@ export const payInvoice = async (
           if (!existing.metadata?.invoiceId || existing.metadata.invoiceId !== invoiceId) {
             throw new Error('Existing PaymentIntent does not match invoice.');
           }
-          paymentIntent = existing;
+          if (existing.amount !== amount) {
+            paymentIntent = await stripe.paymentIntents.update(existing.id, { amount });
+          } else {
+            paymentIntent = existing;
+          }
         } else {
           // Existing intent is not reusable — create a new one
           paymentIntent = await stripe.paymentIntents.create({
@@ -433,4 +437,19 @@ export const finalizePayment = async (
   await sendEmail({ to: rudyardEmail, subject: rudyardSubject, text: rudyardText, html: rudyardHtml, sent: true });
 
   return { success: true, message: 'Invoice finalized and email sent' };
+};
+
+export const deleteInvoice = async (invoiceId: string): Promise<{ success: boolean; message: string }> => {
+  trackEvent('DeleteInvoice_Attempt', { invoiceId });
+  const invoice = await getInvoiceDetails(invoiceId);
+
+  try {
+    await deleteEntity(TableNames.Invoices, invoice.partitionKey, invoice.rowKey);
+    trackEvent('DeleteInvoice_Success', { invoiceId });
+    return { success: true, message: 'Invoice deleted successfully' };
+  } catch (error: any) {
+    trackException(error, { invoiceId });
+    console.error('Error deleting invoice:', error);
+    throw error;
+  }
 };

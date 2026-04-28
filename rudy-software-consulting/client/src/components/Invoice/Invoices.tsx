@@ -12,7 +12,12 @@ import {
     Paper,
     CircularProgress,
     Button,
-    Chip
+    Chip,
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    DialogContentText,
+    DialogActions
 } from '@mui/material';
 import { Link } from 'react-router-dom';
 import { IInvoice } from '../../pages/InvoicesPage';
@@ -28,8 +33,26 @@ const Invoices: React.FC = () => {
     const [invoices, setInvoices] = useState<IInvoice[]>([]);
     const [clients, setClients] = useState<Map<string, string>>(new Map());
     const [loading, setLoading] = useState(true);
+    const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+    const [deleting, setDeleting] = useState(false);
     const { token, isAdmin } = useAuth();
     const httpClient = new HttpClient();
+
+    const handleDelete = async (invoiceId: string) => {
+        setDeleting(true);
+        try {
+            await httpClient.delete({
+                url: `/api/invoice/${invoiceId}`,
+                token: token || '',
+            });
+            setInvoices(prev => prev.filter(inv => inv.id !== invoiceId));
+        } catch (error) {
+            console.error('Failed to delete invoice:', error);
+        } finally {
+            setDeleting(false);
+            setConfirmDeleteId(null);
+        }
+    };
 
     useEffect(() => {
         const fetchData = async () => {
@@ -122,6 +145,15 @@ const Invoices: React.FC = () => {
                                                     Edit
                                                 </Link>
                                             )}
+                                            {isAdmin && (
+                                                <Button
+                                                    size="small"
+                                                    color="error"
+                                                    onClick={() => setConfirmDeleteId(invoice.id)}
+                                                >
+                                                    Delete
+                                                </Button>
+                                            )}
                                         </Box>
                                     </TableCell>
                                 </TableRow>
@@ -130,6 +162,26 @@ const Invoices: React.FC = () => {
                     </Table>
                 </TableContainer>
             )}
+
+            <Dialog open={!!confirmDeleteId} onClose={() => setConfirmDeleteId(null)}>
+                <DialogTitle>Delete Invoice</DialogTitle>
+                <DialogContent>
+                    <DialogContentText>
+                        Are you sure you want to delete invoice <strong>{confirmDeleteId}</strong>? This cannot be undone.
+                    </DialogContentText>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setConfirmDeleteId(null)} disabled={deleting}>Cancel</Button>
+                    <Button
+                        color="error"
+                        variant="contained"
+                        onClick={() => confirmDeleteId && handleDelete(confirmDeleteId)}
+                        disabled={deleting}
+                    >
+                        {deleting ? 'Deleting...' : 'Delete'}
+                    </Button>
+                </DialogActions>
+            </Dialog>
         </Box>
     );
 };
