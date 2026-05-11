@@ -86,9 +86,7 @@ const Banner: React.FC = () => {
                 lineHeight: 1.7,
               }}
             >
-              Custom web apps, managed IT services, and AI-powered solutions —
-              we help businesses transform their technology and stay ahead of
-              the competition.
+              Custom software solutions, enterprise software oversight, and AI‑powered managed IT services that help businesses operate smarter, faster, and more securely.
             </Typography>
             <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap" }}>
               <Button
