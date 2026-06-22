@@ -51,24 +51,9 @@ const App: React.FC = () => {
         httpClient.post<{ message?: string; error?: string }>({
           url: '/api/table-warmer',
           token: auth.token || ''
-        })
-          .then((res) => {
-            console.log('Response data:', res);
-            if (res.error) {
-              console.error('Server error:', res.error);
-            } else {
-              console.log('Success:', res.message);
-            }
-          })
-          .catch((err) => {
-            console.error('Request failed:', err.message);
-          });
-
-        console.log('API is reachable');
+        }).catch(() => { /* silent warm-up */ });
       })
-      .catch(() => {
-        console.error('Error reaching API');
-      });
+      .catch(() => { /* silent warm-up */ });
   }, []);
   
   React.useEffect(() => {
@@ -84,7 +69,7 @@ const App: React.FC = () => {
       <Router>
         <CssBaseline />
         <Header />
-        <Box sx={{ paddingTop: 8, padding: 2 }}>
+        <Box component="main" sx={{ paddingTop: 8, padding: 2 }}>
           <Suspense fallback={<PageLoader />}>
           <Routes>
             <Route path="/" element={<HomePage />} />

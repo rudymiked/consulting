@@ -54,13 +54,13 @@ const Header: React.FC = () => {
 
         {isMobile ? (
           <>
-            <IconButton edge="end" onClick={toggleDrawer(true)} sx={{ color: 'white' }}>
+            <IconButton edge="end" aria-label="Open navigation menu" onClick={toggleDrawer(true)} sx={{ color: 'white' }}>
               <MenuIcon />
             </IconButton>
             <Drawer anchor="right" open={drawerOpen} onClose={toggleDrawer(false)}>
               <Box sx={{ width: 280, bgcolor: '#0f2744', height: '100%', color: 'white' }} role="presentation">
                 <Box sx={{ display: 'flex', justifyContent: 'flex-end', p: 1 }}>
-                  <IconButton onClick={toggleDrawer(false)} sx={{ color: 'white' }}>
+                  <IconButton aria-label="Close navigation menu" onClick={toggleDrawer(false)} sx={{ color: 'white' }}>
                     <CloseIcon />
                   </IconButton>
                 </Box>

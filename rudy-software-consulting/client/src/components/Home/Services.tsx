@@ -87,7 +87,7 @@ const Services: React.FC = () => (
                 {service.icon}
               </Box>
               <CardContent sx={{ p: 0, flexGrow: 1 }}>
-                <Typography variant="h6" sx={{ fontWeight: 700, mb: 1, color: '#0f2744' }}>
+                <Typography variant="h6" component="h3" sx={{ fontWeight: 700, mb: 1, color: '#0f2744' }}>
                   {service.title}
                 </Typography>
                 <Typography variant="body2" sx={{ color: '#64748B', lineHeight: 1.75 }}>

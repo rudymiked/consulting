@@ -10,10 +10,11 @@
     <!-- Preload LCP hero image -->
     <link rel="preload" as="image" href="/src/assets/tech.jpg" fetchpriority="high">
 
-    <!-- Google Fonts -->
+    <!-- Google Fonts — async to avoid render-blocking -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"></noscript>
 
     <link rel="stylesheet" href="src/styles/main.css">
     <link rel="icon" type="image/png" href="src/assets/rudyard.png">
