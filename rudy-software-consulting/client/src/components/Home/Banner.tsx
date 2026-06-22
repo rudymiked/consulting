@@ -155,6 +155,9 @@ const Banner: React.FC = () => {
                 <ImageFadeIn
                   src={realestatedash}
                   alt="Real Estate Dashboard"
+                  loading="lazy"
+                  width={460}
+                  height={288}
                   style={{ width: "100%", height: "auto", display: "block" }}
                 />
               </Box>
@@ -171,6 +174,9 @@ const Banner: React.FC = () => {
                 <ImageFadeIn
                   src={realestatedashiphone}
                   alt="Mobile App"
+                  loading="lazy"
+                  width={130}
+                  height={281}
                   style={{ width: 130, height: "auto", display: "block" }}
                 />
               </Box>

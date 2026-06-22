@@ -1,11 +1,48 @@
 {
   "navigationFallback": {
     "rewrite": "index.html",
-    "exclude": ["/assets/*.{png,jpg,jpeg,gif,svg}"]
+    "exclude": ["/assets/*.{png,jpg,jpeg,gif,svg,webp}", "/robots.txt", "/sitemap.xml"]
   },
   "mimeTypes": {
     ".png": "image/png",
     ".jpg": "image/jpeg",
+    ".webp": "image/webp",
     ".svg": "image/svg+xml"
-  }
+  },
+  "globalHeaders": {
+    "Strict-Transport-Security": "max-age=31536000; includeSubDomains; preload",
+    "X-Frame-Options": "SAMEORIGIN",
+    "X-Content-Type-Options": "nosniff",
+    "Referrer-Policy": "strict-origin-when-cross-origin",
+    "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+    "Cross-Origin-Opener-Policy": "same-origin",
+    "Cross-Origin-Resource-Policy": "same-origin",
+    "Content-Security-Policy": "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://*.applicationinsights.azure.com https://*.monitor.azure.com; frame-ancestors 'none'"
+  },
+  "routes": [
+    {
+      "route": "/assets/*",
+      "headers": {
+        "Cache-Control": "public, max-age=31536000, immutable"
+      }
+    },
+    {
+      "route": "/*.{js,css}",
+      "headers": {
+        "Cache-Control": "public, max-age=31536000, immutable"
+      }
+    },
+    {
+      "route": "/*.{png,jpg,jpeg,webp,svg,gif,ico}",
+      "headers": {
+        "Cache-Control": "public, max-age=86400, stale-while-revalidate=604800"
+      }
+    },
+    {
+      "route": "/robots.txt",
+      "headers": {
+        "Cache-Control": "public, max-age=86400"
+      }
+    }
+  ]
 }

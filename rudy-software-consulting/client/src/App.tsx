@@ -1,33 +1,41 @@
-import React from 'react';
+import React, { Suspense, lazy } from 'react';
 import CssBaseline from '@mui/material/CssBaseline';
 import Header from './components/Layout/Header';
 import Footer from './components/Layout/Footer';
 import './styles/main.css';
 import { Route, Routes, BrowserRouter as Router } from 'react-router-dom';
-import SoftwarePage from './pages/SoftwarePage';
-import ConsultingPage from './pages/ConsultingPage';
-import HomePage from './pages/Home';
-import { Box } from '@mui/material';
-import ContactPage from './pages/ContactPage';
-import AboutPage from './pages/AboutPage';
-import PrivacyPage from './pages/PrivacyPage';
-import TermsOfServicePage from './pages/TermsOfServicePage';
-import CreateInvoicePage from './pages/CreateInvoicePage';
-import EditInvoicePage from './pages/EditInvoicePage';
-import InvoicePage from './pages/InvoicePage';
-import LoginPage from './pages/LoginPage';
-import AdminPage from './pages/AdminPage';
+import { Box, CircularProgress } from '@mui/material';
 import { AuthProvider } from './components/Auth/AuthContext';
 import ProtectedRoute from './components/Auth/ProtectedRoute';
-import RegistrationPage from './pages/RegistrationPage';
-import InvoicesPage from './pages/InvoicesPage';
-import UserManagement from './components/Admin/UserManagement';
-import ClientManagement from './components/Admin/ClientManagement';
-import ClientDashboard from './components/Admin/ClientDashboard';
 import HttpClient from './services/Http/HttpClient';
 import { useAuth } from './components/Auth/AuthContext';
 import { useAppInsights } from './services/Telemtry/AppInsightsProvider';
-import ManagedITPage from './pages/ManagedIT';
+
+// Lazy-loaded page routes — each becomes its own JS chunk
+const HomePage = lazy(() => import('./pages/Home'));
+const SoftwarePage = lazy(() => import('./pages/SoftwarePage'));
+const ConsultingPage = lazy(() => import('./pages/ConsultingPage'));
+const ManagedITPage = lazy(() => import('./pages/ManagedIT'));
+const ContactPage = lazy(() => import('./pages/ContactPage'));
+const AboutPage = lazy(() => import('./pages/AboutPage'));
+const PrivacyPage = lazy(() => import('./pages/PrivacyPage'));
+const TermsOfServicePage = lazy(() => import('./pages/TermsOfServicePage'));
+const LoginPage = lazy(() => import('./pages/LoginPage'));
+const RegistrationPage = lazy(() => import('./pages/RegistrationPage'));
+const InvoicePage = lazy(() => import('./pages/InvoicePage'));
+const InvoicesPage = lazy(() => import('./pages/InvoicesPage'));
+const CreateInvoicePage = lazy(() => import('./pages/CreateInvoicePage'));
+const EditInvoicePage = lazy(() => import('./pages/EditInvoicePage'));
+const AdminPage = lazy(() => import('./pages/AdminPage'));
+const UserManagement = lazy(() => import('./components/Admin/UserManagement'));
+const ClientManagement = lazy(() => import('./components/Admin/ClientManagement'));
+const ClientDashboard = lazy(() => import('./components/Admin/ClientDashboard'));
+
+const PageLoader = () => (
+  <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
+    <CircularProgress />
+  </Box>
+);
 
 const App: React.FC = () => {
   const httpClient = new HttpClient();
@@ -77,6 +85,7 @@ const App: React.FC = () => {
         <CssBaseline />
         <Header />
         <Box sx={{ paddingTop: 8, padding: 2 }}>
+          <Suspense fallback={<PageLoader />}>
           <Routes>
             <Route path="/" element={<HomePage />} />
             <Route path="/software" element={<SoftwarePage />} />
@@ -140,6 +149,7 @@ const App: React.FC = () => {
             />
             <Route path="*" element={<div>404 Not Found</div>} />
           </Routes>
+          </Suspense>
         </Box>
         <Footer />
       </Router>

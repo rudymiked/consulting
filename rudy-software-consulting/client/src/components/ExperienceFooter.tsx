@@ -60,6 +60,9 @@ const ExperienceFooter: React.FC = () => (
                         <img
                             src={exp.logo}
                             alt={exp.altText}
+                            loading="lazy"
+                            height={36}
+                            width="auto"
                             style={{ height: 36, width: 'auto', display: 'block' }}
                         />
                     </Box>
