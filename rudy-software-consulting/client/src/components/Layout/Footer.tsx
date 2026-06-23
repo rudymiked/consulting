@@ -3,6 +3,7 @@ import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import { Link } from 'react-router-dom';
 import rudyard from '/src/assets/rudyardtech_clear.png';
+import rudyardWebP from '/src/assets/rudyardtech_clear.webp';
 
 const serviceLinks = [
   { label: 'Software Development', path: '/software' },
@@ -43,7 +44,10 @@ const Footer: React.FC = () => (
       {/* Brand column */}
       <Box sx={{ flex: '1 1 220px', maxWidth: 300 }}>
         <Box sx={{ mb: 2 }}>
-          <img src={rudyard} alt="Rudyard Technologies" style={{ height: 40, width: 'auto' }} />
+          <picture>
+            <source srcSet={rudyardWebP} type="image/webp" />
+            <img src={rudyard} alt="Rudyard Technologies" style={{ height: 40, width: 'auto' }} />
+          </picture>
         </Box>
         <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.6)', lineHeight: 1.85 }}>
           Expert software development and IT consulting for businesses ready to grow with technology.

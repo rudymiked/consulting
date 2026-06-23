@@ -3,22 +3,28 @@ import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import Container from '@mui/material/Container';
 import microsoft from '../assets/experience/microsoft.jpg';
+import microsoftWebP from '../assets/experience/microsoft.webp';
 import belcan from '../assets/experience/belcan.png';
+import belcanWebP from '../assets/experience/belcan.webp';
 import toyota from '../assets/experience/toyota.png';
+import toyotaWebP from '../assets/experience/toyota.webp';
 import sikorsky from '../assets/experience/Sikorsky.png';
+import sikorskyWebP from '../assets/experience/sikorsky.webp';
 import pratt from '../assets/experience/pratt.png';
+import prattWebP from '../assets/experience/pratt.webp';
 
 interface IExperience {
     logo: string;
+    logoWebP: string;
     altText: string;
 }
 
 const experiences: IExperience[] = [
-    { logo: microsoft, altText: 'Microsoft' },
-    { logo: belcan, altText: 'Belcan' },
-    { logo: toyota, altText: 'Toyota' },
-    { logo: sikorsky, altText: 'Sikorsky' },
-    { logo: pratt, altText: 'Pratt and Whitney' },
+    { logo: microsoft, logoWebP: microsoftWebP, altText: 'Microsoft' },
+    { logo: belcan, logoWebP: belcanWebP, altText: 'Belcan' },
+    { logo: toyota, logoWebP: toyotaWebP, altText: 'Toyota' },
+    { logo: sikorsky, logoWebP: sikorskyWebP, altText: 'Sikorsky' },
+    { logo: pratt, logoWebP: prattWebP, altText: 'Pratt and Whitney' },
 ];
 
 const ExperienceFooter: React.FC = () => (
@@ -57,14 +63,17 @@ const ExperienceFooter: React.FC = () => (
                             '&:hover': { opacity: 1, filter: 'grayscale(0%)' },
                         }}
                     >
-                        <img
-                            src={exp.logo}
-                            alt={exp.altText}
-                            loading="lazy"
-                            height={36}
-                            width="auto"
-                            style={{ height: 36, width: 'auto', display: 'block' }}
-                        />
+                        <picture>
+                            <source srcSet={exp.logoWebP} type="image/webp" />
+                            <img
+                                src={exp.logo}
+                                alt={exp.altText}
+                                loading="lazy"
+                                height={36}
+                                width="auto"
+                                style={{ height: 36, width: 'auto', display: 'block' }}
+                            />
+                        </picture>
                     </Box>
                 ))}
             </Box>

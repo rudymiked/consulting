@@ -17,6 +17,7 @@ import MenuIcon from '@mui/icons-material/Menu';
 import CloseIcon from '@mui/icons-material/Close';
 import { Link, useLocation } from 'react-router-dom';
 import rudyard from '/src/assets/rudyardtech_clear.png';
+import rudyardWebP from '/src/assets/rudyardtech_clear.webp';
 
 const navLinks = [
   { label: 'Software Development', path: '/software' },
@@ -48,7 +49,10 @@ const Header: React.FC = () => {
       <Toolbar sx={{ display: 'flex', justifyContent: 'space-between', px: { xs: 2, md: 4 }, py: 1 }}>
         <Box>
           <Link to="/">
-            <img src={rudyard} alt="Rudyard Technologies" style={{ width: 'auto', height: 48 }} />
+            <picture>
+              <source srcSet={rudyardWebP} type="image/webp" />
+              <img src={rudyard} alt="Rudyard Technologies" style={{ width: 'auto', height: 48 }} />
+            </picture>
           </Link>
         </Box>
 

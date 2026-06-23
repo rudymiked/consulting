@@ -8,8 +8,6 @@ import { StripeElementsOptions } from '@stripe/stripe-js';
 import { stripePromise } from '../../shared/stripe';
 import { useAuth } from '../Auth/AuthContext';
 import HttpClient from '../../services/Http/HttpClient';
-import { jsPDF } from 'jspdf';
-
 export interface IInvoiceProps {
     invoiceId: string;
 }
@@ -62,10 +60,10 @@ const Invoice: React.FC<IInvoiceProps> = (props: IInvoiceProps) => {
     const isInvoicePaid = invoice?.status?.toUpperCase() === IInvoiceStatus.PAID.toUpperCase()
         || paymentStatus === PaymentStatus.Succeeded;
 
-    const exportInvoicePdf = () => {
+    const exportInvoicePdf = async () => {
         if (!invoice) return;
 
-        const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+        const { jsPDF } = await import('jspdf');
         doc.setProperties({ title: `Invoice ${invoice.id}`, author: 'Rudyard Technologies' });
 
         const pageW = 210;
