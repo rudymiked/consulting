@@ -8,12 +8,12 @@ interface IImageFadeInProps {
   style?: React.CSSProperties;
   sx?: any;
   loading?: "lazy" | "eager";
-  fetchPriority?: "high" | "low" | "auto";
+  fetchpriority?: "high" | "low" | "auto";
   width?: number | string;
   height?: number | string;
 }
 
-const ImageFadeIn: React.FC<IImageFadeInProps> = ({ src, alt, style, sx, loading = "lazy", fetchPriority, width, height }) => {
+const ImageFadeIn: React.FC<IImageFadeInProps> = ({ src, alt, style, sx, loading = "lazy", fetchpriority, width, height }) => {
   const [loaded, setLoaded] = useState(false);
 
   return (
@@ -23,7 +23,7 @@ const ImageFadeIn: React.FC<IImageFadeInProps> = ({ src, alt, style, sx, loading
       alt={alt}
       onLoad={() => setLoaded(true)}
       loading={loading}
-      fetchPriority={fetchPriority}
+      fetchpriority={fetchpriority}
       width={width}
       height={height}
       sx={{

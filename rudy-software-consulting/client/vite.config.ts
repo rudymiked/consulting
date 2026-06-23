@@ -19,11 +19,10 @@ export default defineConfig({
     outDir: 'dist',
     rollupOptions: {
       output: {
-        manualChunks(id) {
-          if (!id.includes('/node_modules/')) return;
-          if (id.includes('/react/') || id.includes('/react-dom/') || id.includes('/react-router')) return 'vendor-react';
-          if (id.includes('/@mui/') || id.includes('/@emotion/')) return 'vendor-mui';
-          if (id.includes('/@stripe/')) return 'vendor-stripe';
+        manualChunks: {
+          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+          'vendor-mui': ['@mui/material', '@mui/icons-material', '@emotion/react', '@emotion/styled'],
+          'vendor-stripe': ['@stripe/react-stripe-js', '@stripe/stripe-js'],
         },
       },
     },
