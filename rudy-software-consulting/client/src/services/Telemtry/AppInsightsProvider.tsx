@@ -1,6 +1,6 @@
 // AppInsightsContext.tsx
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { ApplicationInsights } from '@microsoft/applicationinsights-web';
+import type { ApplicationInsights } from '@microsoft/applicationinsights-web';
 
 const key = import.meta.env.VITE_APPINSIGHTS_CONNECTION_STRING || '';
 
@@ -16,7 +16,8 @@ export const AppInsightsProvider: React.FC<{ children: ReactNode }> = ({ childre
       return;
     }
 
-    const init = () => {
+    const init = async () => {
+      const { ApplicationInsights } = await import('@microsoft/applicationinsights-web');
       const ai = new ApplicationInsights({
         config: {
           connectionString: key,

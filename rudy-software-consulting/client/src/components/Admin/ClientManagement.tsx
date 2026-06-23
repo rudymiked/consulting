@@ -19,7 +19,8 @@ import {
   DialogActions,
   IconButton,
 } from '@mui/material';
-import { Add as AddIcon, Delete as DeleteIcon } from '@mui/icons-material';
+import AddIcon from '@mui/icons-material/Add';
+import DeleteIcon from '@mui/icons-material/Delete';
 import { useAuth } from '../Auth/AuthContext';
 import HttpClient from '../../services/Http/HttpClient';
 import { Link } from 'react-router-dom';
