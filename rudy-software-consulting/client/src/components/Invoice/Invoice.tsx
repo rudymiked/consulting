@@ -474,7 +474,7 @@ const Invoice: React.FC<IInvoiceProps> = (props: IInvoiceProps) => {
                 >
                     Export PDF
                 </Button>
-
+                <Divider sx={{ my: 3 }} />
                 {isAdmin && (
                     <Box sx={{ mb: 2 }}>
                         <Button
