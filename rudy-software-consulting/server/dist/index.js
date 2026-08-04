@@ -721,6 +721,29 @@ app.put('/api/invoice/:invoiceId', customJwtCheck, async (req, res) => {
         return res.status(500).json({ error: 'Failed to update invoice.' });
     }
 });
+app.delete('/api/invoice/:invoiceId', customJwtCheck, async (req, res) => {
+    const { invoiceId } = req.params;
+    const user = getUserFromCustomToken(req);
+    if (!user) {
+        return res.status(403).json({ error: 'Unauthorized' });
+    }
+    if (!user.siteAdmin) {
+        return res.status(403).json({ error: 'Access denied: Admin only' });
+    }
+    try {
+        const result = await (0, invoiceHelper_1.deleteInvoice)(invoiceId);
+        (0, telemetry_1.trackEvent)('DeleteInvoice_API_Success', { invoiceId, adminEmail: user.email });
+        return res.status(200).json(result);
+    }
+    catch (error) {
+        const isNotFound = String(error?.message || '').toLowerCase().includes('not found');
+        if (isNotFound) {
+            return res.status(404).json({ error: 'Invoice not found.' });
+        }
+        (0, telemetry_1.trackException)(error, { endpoint: 'DELETE /api/invoice/:invoiceId', invoiceId, adminEmail: user.email });
+        return res.status(500).json({ error: 'Failed to delete invoice.' });
+    }
+});
 app.post('/api/register', registerLimiter, async (req, res) => {
     try {
         const { email, password } = req.body;
@@ -790,9 +813,9 @@ app.get('/api/protected', (req, res) => {
     res.json({ message: `Welcome ${user.email}` });
 });
 app.post('/api/invoice/create-payment-intent', async (req, res) => {
-    const { invoiceId } = req.body;
-    if (!invoiceId) {
-        return res.status(400).json({ error: 'Missing invoiceId' });
+    const { invoiceId, amount } = req.body;
+    if (!invoiceId || !Number.isInteger(amount) || amount <= 0) {
+        return res.status(400).json({ error: 'A valid invoiceId and payment amount are required' });
     }
     try {
         const invoice = await (0, invoiceHelper_1.getInvoiceDetails)(invoiceId);
@@ -805,16 +828,40 @@ app.post('/api/invoice/create-payment-intent', async (req, res) => {
         if (invoice.status.toUpperCase() === models_1.IInvoiceStatus.PAID.toUpperCase()) {
             return res.status(400).json({ error: 'Invoice is already paid' });
         }
-        // Server-side: Use the full invoice amount (not client-provided)
-        const amount = invoice.amount;
-        const paymentIntent = await stripe.paymentIntents.create({
-            amount,
-            currency: 'usd',
-            metadata: {
-                invoiceId,
-                clientId: invoice.clientId || invoice.partitionKey || 'unknown',
-            },
-            automatic_payment_methods: { enabled: true },
+        if (amount > invoice.amount) {
+            return res.status(400).json({ error: 'Payment amount exceeds the invoice amount' });
+        }
+        let paymentIntent;
+        if (invoice.paymentIntentId) {
+            try {
+                const existingIntent = await stripe.paymentIntents.retrieve(invoice.paymentIntentId);
+                const isReusable = existingIntent.metadata?.invoiceId === invoiceId &&
+                    ['requires_payment_method', 'requires_confirmation'].includes(existingIntent.status);
+                if (isReusable) {
+                    paymentIntent = existingIntent.amount === amount
+                        ? existingIntent
+                        : await stripe.paymentIntents.update(existingIntent.id, { amount });
+                }
+            }
+            catch (err) {
+                (0, telemetry_1.trackException)(err, { endpoint: '/api/invoice/create-payment-intent', invoiceId, paymentIntentId: invoice.paymentIntentId });
+            }
+        }
+        if (!paymentIntent) {
+            paymentIntent = await stripe.paymentIntents.create({
+                amount,
+                currency: 'usd',
+                metadata: {
+                    invoiceId,
+                    clientId: invoice.clientId || invoice.partitionKey || 'unknown',
+                },
+                automatic_payment_methods: { enabled: true },
+            });
+        }
+        await (0, invoiceHelper_1.updateInvoice)({
+            ...invoice,
+            paymentIntentId: paymentIntent.id,
+            clientId: invoice.clientId,
         });
         res.send({ clientSecret: paymentIntent.client_secret });
     }
@@ -1310,6 +1357,21 @@ app.post('/api/admin/send-license-report', authCheck, async (req, res) => {
             twoMonthsFromNow.setMonth(twoMonthsFromNow.getMonth() + 2);
             return expiry >= now && expiry <= twoMonthsFromNow;
         };
+        const formatExpirationDate = (rawExpiration) => {
+            const expDate = getExpirationDate(rawExpiration);
+            if (!expDate)
+                return 'unknown';
+            const mm = String(expDate.getUTCMonth() + 1).padStart(2, '0');
+            const dd = String(expDate.getUTCDate()).padStart(2, '0');
+            const yyyy = expDate.getUTCFullYear();
+            return `${mm}-${dd}-${yyyy}`;
+        };
+        const extractStatus = (rawExpiration) => {
+            if (!rawExpiration || rawExpiration === 'unknown')
+                return '-';
+            const match = rawExpiration.match(/\(status=([^)]+)\)/i);
+            return match ? match[1] : '-';
+        };
         const skuRows = skuDetails.map((s) => {
             const hasUnusedLicenses = s.availableUnits > 0;
             const expiresSoon = isWithinNextTwoMonths(s.expiration);
@@ -1321,6 +1383,9 @@ app.post('/api/admin/send-license-report', authCheck, async (req, res) => {
             const unusedPercent = typeof s.availablePercent === 'number'
                 ? `${Number(s.availablePercent).toFixed(2)}%`
                 : 'n/a';
+            const expirationDisplay = formatExpirationDate(s.expiration);
+            const statusDisplay = extractStatus(s.expiration);
+            const autoRenewDisplay = s.autoRenew === true ? 'Yes' : s.autoRenew === false ? 'No' : '-';
             return `<tr style="${rowStyle}">
         <td style="padding:8px;border:1px solid #ddd">${s.clientName || s.clientId || '-'}</td>
         <td style="padding:8px;border:1px solid #ddd">${s.tenantName || s.tenantId || '-'}</td>
@@ -1328,7 +1393,9 @@ app.post('/api/admin/send-license-report', authCheck, async (req, res) => {
         <td style="padding:8px;border:1px solid #ddd">${s.totalUnits}</td>
         <td style="padding:8px;border:1px solid #ddd">${s.consumedUnits}</td>
         <td style="padding:8px;border:1px solid #ddd">${unusedPercent}</td>
-        <td style="padding:8px;border:1px solid #ddd">${s.expiration || 'unknown'}</td>
+        <td style="padding:8px;border:1px solid #ddd">${expirationDisplay}</td>
+        <td style="padding:8px;border:1px solid #ddd">${statusDisplay}</td>
+        <td style="padding:8px;border:1px solid #ddd">${autoRenewDisplay}</td>
       </tr>`;
         }).join('');
         const unlicensedRows = unlicensedUsers.map((u) => `<tr>
@@ -1361,6 +1428,8 @@ app.post('/api/admin/send-license-report', authCheck, async (req, res) => {
             <th style="padding:8px;border:1px solid #ddd;text-align:left">Consumed</th>
             <th style="padding:8px;border:1px solid #ddd;text-align:left">Unused %</th>
             <th style="padding:8px;border:1px solid #ddd;text-align:left">Expiration</th>
+            <th style="padding:8px;border:1px solid #ddd;text-align:left">Status</th>
+            <th style="padding:8px;border:1px solid #ddd;text-align:left">Auto-Renew</th>
           </tr>
         </thead>
         <tbody>${skuRows}</tbody>

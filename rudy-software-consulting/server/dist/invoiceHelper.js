@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.finalizePayment = exports.payInvoice = exports.updateInvoice = exports.createInvoice = exports.getInvoiceDetails = exports.getInvoices = void 0;
+exports.deleteInvoice = exports.finalizePayment = exports.payInvoice = exports.updateInvoice = exports.createInvoice = exports.getInvoiceDetails = exports.getInvoices = void 0;
 const models_1 = require("./models");
 const crypto_1 = __importDefault(require("crypto"));
 const telemetry_1 = require("./telemetry");
@@ -254,7 +254,12 @@ paymentMethodId) => {
                     if (!existing.metadata?.invoiceId || existing.metadata.invoiceId !== invoiceId) {
                         throw new Error('Existing PaymentIntent does not match invoice.');
                     }
-                    paymentIntent = existing;
+                    if (existing.amount !== amount) {
+                        paymentIntent = await stripe.paymentIntents.update(existing.id, { amount });
+                    }
+                    else {
+                        paymentIntent = existing;
+                    }
                 }
                 else {
                     // Existing intent is not reusable — create a new one
@@ -389,3 +394,18 @@ const finalizePayment = async (invoiceId, paymentIntentId) => {
     return { success: true, message: 'Invoice finalized and email sent' };
 };
 exports.finalizePayment = finalizePayment;
+const deleteInvoice = async (invoiceId) => {
+    (0, telemetry_1.trackEvent)('DeleteInvoice_Attempt', { invoiceId });
+    const invoice = await (0, exports.getInvoiceDetails)(invoiceId);
+    try {
+        await (0, tableClientHelper_1.deleteEntity)(models_1.TableNames.Invoices, invoice.partitionKey, invoice.rowKey);
+        (0, telemetry_1.trackEvent)('DeleteInvoice_Success', { invoiceId });
+        return { success: true, message: 'Invoice deleted successfully' };
+    }
+    catch (error) {
+        (0, telemetry_1.trackException)(error, { invoiceId });
+        console.error('Error deleting invoice:', error);
+        throw error;
+    }
+};
+exports.deleteInvoice = deleteInvoice;

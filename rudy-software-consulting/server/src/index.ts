@@ -918,10 +918,10 @@ app.get('/api/protected', (req, res) => {
 });
 
 app.post('/api/invoice/create-payment-intent', async (req, res) => {
-  const { invoiceId } = req.body;
+  const { invoiceId, amount } = req.body;
 
-  if (!invoiceId) {
-    return res.status(400).json({ error: 'Missing invoiceId' });
+  if (!invoiceId || !Number.isInteger(amount) || amount <= 0) {
+    return res.status(400).json({ error: 'A valid invoiceId and payment amount are required' });
   }
 
   try {
@@ -936,18 +936,44 @@ app.post('/api/invoice/create-payment-intent', async (req, res) => {
     if (invoice.status.toUpperCase() === IInvoiceStatus.PAID.toUpperCase()) {
       return res.status(400).json({ error: 'Invoice is already paid' });
     }
+    if (amount > invoice.amount) {
+      return res.status(400).json({ error: 'Payment amount exceeds the invoice amount' });
+    }
 
-    // Server-side: Use the full invoice amount (not client-provided)
-    const amount = invoice.amount;
+    let paymentIntent: Stripe.PaymentIntent | undefined;
 
-    const paymentIntent = await stripe.paymentIntents.create({
-      amount,
-      currency: 'usd',
-      metadata: { 
-        invoiceId,
-        clientId: invoice.clientId || invoice.partitionKey || 'unknown',
-      },
-      automatic_payment_methods: { enabled: true },
+    if (invoice.paymentIntentId) {
+      try {
+        const existingIntent = await stripe.paymentIntents.retrieve(invoice.paymentIntentId);
+        const isReusable = existingIntent.metadata?.invoiceId === invoiceId &&
+          ['requires_payment_method', 'requires_confirmation'].includes(existingIntent.status);
+
+        if (isReusable) {
+          paymentIntent = existingIntent.amount === amount
+            ? existingIntent
+            : await stripe.paymentIntents.update(existingIntent.id, { amount });
+        }
+      } catch (err: any) {
+        trackException(err, { endpoint: '/api/invoice/create-payment-intent', invoiceId, paymentIntentId: invoice.paymentIntentId });
+      }
+    }
+
+    if (!paymentIntent) {
+      paymentIntent = await stripe.paymentIntents.create({
+        amount,
+        currency: 'usd',
+        metadata: {
+          invoiceId,
+          clientId: invoice.clientId || invoice.partitionKey || 'unknown',
+        },
+        automatic_payment_methods: { enabled: true },
+      });
+    }
+
+    await updateInvoice({
+      ...invoice,
+      paymentIntentId: paymentIntent.id,
+      clientId: invoice.clientId,
     });
 
     res.send({ clientSecret: paymentIntent.client_secret });

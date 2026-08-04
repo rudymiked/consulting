@@ -8,6 +8,7 @@ import { StripeElementsOptions } from '@stripe/stripe-js';
 import { stripePromise } from '../../shared/stripe';
 import { useAuth } from '../Auth/AuthContext';
 import HttpClient from '../../services/Http/HttpClient';
+import axios from 'axios';
 export interface IInvoiceProps {
     invoiceId: string;
 }
@@ -33,6 +34,8 @@ const Invoice: React.FC<IInvoiceProps> = (props: IInvoiceProps) => {
     const [error, setError] = useState<string | undefined>(undefined);
     const [clientSecret, setClientSecret] = React.useState<string | undefined>(undefined);
     const [stripeOptions, setStripeOptions] = React.useState<StripeElementsOptions | undefined>(undefined);
+    const [isInitializingPayment, setIsInitializingPayment] = useState(false);
+    const paymentSectionRef = React.useRef<HTMLDivElement>(null);
     const { isAuthenticated, token, isAdmin } = useAuth();
 
     const navigate = useNavigate();
@@ -263,6 +266,12 @@ const Invoice: React.FC<IInvoiceProps> = (props: IInvoiceProps) => {
     }, [isAuthenticated]);
 
     React.useEffect(() => {
+        if (clientSecret) {
+            paymentSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    }, [clientSecret]);
+
+    React.useEffect(() => {
         const checkStatus = async () => {
             try {
                 const res = await httpClient.get<{ status: PaymentStatus }>({
@@ -335,8 +344,10 @@ const Invoice: React.FC<IInvoiceProps> = (props: IInvoiceProps) => {
     }, [token]);
 
     const fetchClientSecret = async () => {
-        if (!invoice || !invoice.id || !editableAmount) return;
+        if (!invoice || !invoice.id || !editableAmount || isInitializingPayment || clientSecret) return;
 
+        setIsInitializingPayment(true);
+        setError(undefined);
         try {
             const res = await httpClient.post<{ clientSecret: string }>({
                 url: '/api/invoice/create-payment-intent',
@@ -353,7 +364,12 @@ const Invoice: React.FC<IInvoiceProps> = (props: IInvoiceProps) => {
                 appearance: { theme: 'stripe' },
             });
         } catch (err) {
-            setError('Failed to initialize payment.');
+            const responseMessage = axios.isAxiosError<{ error?: string }>(err)
+                ? err.response?.data?.error
+                : undefined;
+            setError(responseMessage || 'Failed to initialize payment. Please try again.');
+        } finally {
+            setIsInitializingPayment(false);
         }
     };
 
@@ -478,31 +494,30 @@ const Invoice: React.FC<IInvoiceProps> = (props: IInvoiceProps) => {
                             </Alert>
                         )}
 
-                        {paymentStatus != PaymentStatus.Succeeded && (
+                        {paymentStatus != PaymentStatus.Succeeded && !clientSecret && (
                             <Button
                                 variant="contained"
                                 className="main-button"
                                 onClick={fetchClientSecret}
-                                disabled={!isAmountValid}
+                                disabled={!isAmountValid || isInitializingPayment}
                                 sx={{ mt: 2 }}
                             >
-                                Confirm Amount & Proceed to Payment
+                                {isInitializingPayment ? 'Preparing Secure Payment...' : 'Confirm Amount & Proceed to Payment'}
                             </Button>
                         )}
                     </>
                 )}
                 <br />
                 <br />
-                {clientSecret && (
-                    <>
-                        {clientSecret && stripeOptions ? (
-                            <Elements stripe={stripePromise} options={stripeOptions}>
-                                <PaymentForm invoice={invoice} clientSecret={clientSecret} onPaymentSuccess={refreshInvoice} />
-                            </Elements>
-                        ) : (
-                            <CircularProgress />
-                        )}
-                    </>
+                {clientSecret && stripeOptions && (
+                    <Box ref={paymentSectionRef} tabIndex={-1} sx={{ scrollMarginTop: 24 }}>
+                        <Typography variant="h6" component="h3" sx={{ mb: 2 }}>
+                            Payment Details
+                        </Typography>
+                        <Elements key={clientSecret} stripe={stripePromise} options={stripeOptions}>
+                            <PaymentForm invoice={invoice} clientSecret={clientSecret} onPaymentSuccess={refreshInvoice} />
+                        </Elements>
+                    </Box>
                 )}
             </Paper>
             {isAuthenticated && (

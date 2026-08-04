@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useStripe, useElements, PaymentElement } from '@stripe/react-stripe-js';
+import { Alert, Box, Button, CircularProgress } from '@mui/material';
 import { IInvoice } from '../../pages/InvoicesPage';
 import { useAuth } from '../Auth/AuthContext';
 import HttpClient from '../../services/Http/HttpClient';
@@ -20,7 +21,7 @@ const PaymentForm: React.FC<IPaymentFormProps> = (props: IPaymentFormProps) => {
   const elements = useElements();
   const [message, setMessage] = useState<IMessage | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [invoice, setInvoice] = useState<IInvoice>(props.invoice); // local invoice state
+  const [isPaymentElementReady, setIsPaymentElementReady] = useState(false);
 
   const auth = useAuth();
   const httpClient = new HttpClient();
@@ -79,34 +80,38 @@ const PaymentForm: React.FC<IPaymentFormProps> = (props: IPaymentFormProps) => {
   return (
     <form onSubmit={handleSubmit}>
       {message && (
-        <div
-          style={{
-            marginTop: '1rem',
-            color:
-              message.type === 'error'
-                ? 'red'
-                : message.type === 'success'
-                  ? 'green'
-                  : 'black',
-          }}
-        >
+        <Alert severity={message.type} sx={{ mb: 2 }}>
           {message.text}
-        </div>
+        </Alert>
       )}
 
       {message?.type !== 'success' && (
         <>
-          <PaymentElement />
-          <button disabled={!stripe || isProcessing}>
-            {isProcessing ? 'Processing...' : 'Pay'}
-          </button>
+          {!isPaymentElementReady && (
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
+              <CircularProgress size={20} />
+              Loading secure payment form...
+            </Box>
+          )}
+          <PaymentElement
+            onReady={() => setIsPaymentElementReady(true)}
+            onLoadError={(event) => {
+              setIsPaymentElementReady(false);
+              setMessage({ type: 'error', text: event.error.message || 'Unable to load the secure payment form.' });
+            }}
+          />
+          <Button
+            type="submit"
+            variant="contained"
+            className="main-button"
+            fullWidth
+            disabled={!stripe || !elements || !isPaymentElementReady || isProcessing}
+            sx={{ mt: 2 }}
+          >
+            {isProcessing ? 'Processing Payment...' : 'Pay Securely'}
+          </Button>
         </>
       )}
-
-      {/* Show updated invoice status */}
-      {/* <div style={{ marginTop: '1rem' }}>
-        <strong>Invoice Status:</strong> {invoice.status}
-      </div> */}
     </form>
   );
 };
